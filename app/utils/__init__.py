@@ -1,0 +1,1 @@
+"""Utils: funções auxiliares genéricas."""

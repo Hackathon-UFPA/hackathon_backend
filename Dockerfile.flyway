@@ -1,0 +1,5 @@
+FROM flyway/flyway:11
+
+COPY migrations /flyway/sql
+
+CMD ["migrate"]

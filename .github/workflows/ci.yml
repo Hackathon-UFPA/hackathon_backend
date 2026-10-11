@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+
+jobs:
+  test:
+    name: Lint e testes
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d app_db"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: app_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Aplicar migrations (Flyway)
+        run: |
+          docker run --rm --network host \
+            -v "$PWD/migrations:/flyway/sql:ro" \
+            flyway/flyway:11 \
+            -url=jdbc:postgresql://localhost:5432/app_db \
+            -user=postgres -password=postgres \
+            -connectRetries=10 migrate
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Instalar dependências
+        run: |
+          pip install poetry==2.1.3
+          poetry install --no-root
+
+      - name: Lint
+        run: |
+          poetry run ruff check .
+          poetry run ruff format --check .
+
+      - name: Testes
+        run: poetry run pytest

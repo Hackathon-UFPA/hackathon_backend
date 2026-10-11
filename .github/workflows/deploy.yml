@@ -1,0 +1,63 @@
+# Deploy de exemplo em servidor próprio (mesmo fluxo do SAIA):
+# build da imagem -> flyway repair/migrate -> sobe o container.
+#
+# Requer um runner self-hosted no servidor e os secrets:
+#   POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD
+# e as variables (Settings > Secrets and variables > Actions > Variables):
+#   DOCKER_NETWORK (rede onde está o banco), APP_PORT (porta publicada), BASEPATH
+#
+# Para rodar automaticamente a cada push, descomente o bloco `push`.
+name: Deploy
+
+on:
+  workflow_dispatch:
+  # push:
+  #   branches: [main]
+
+env:
+  POSTGRES_HOST: ${{ secrets.POSTGRES_HOST }}
+  POSTGRES_PORT: ${{ secrets.POSTGRES_PORT }}
+  POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+  POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+  POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Definir nome da imagem
+        run: |
+          IMAGE=$(echo "${{ github.event.repository.name }}-${{ github.ref_name }}" | tr '[:upper:]' '[:lower:]')
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      - name: Build da imagem
+        run: docker build --target prod -t "$IMAGE" .
+
+      - name: Migrations (repair + migrate)
+        run: |
+          docker build -t "$IMAGE-flyway" -f Dockerfile.flyway .
+          FLYWAY_ARGS="-url=jdbc:postgresql://$POSTGRES_HOST:$POSTGRES_PORT/$POSTGRES_DB -user=$POSTGRES_USER -password=$POSTGRES_PASSWORD -schemas=public -connectRetries=2"
+          docker run --rm --network "${{ vars.DOCKER_NETWORK }}" "$IMAGE-flyway" $FLYWAY_ARGS repair
+          docker run --rm --network "${{ vars.DOCKER_NETWORK }}" "$IMAGE-flyway" $FLYWAY_ARGS -baselineOnMigrate=true migrate
+          docker rmi "$IMAGE-flyway" || true
+
+      - name: Subir container
+        run: |
+          docker stop "$IMAGE" || true
+          docker rm "$IMAGE" || true
+          docker run -d --restart unless-stopped \
+            --network "${{ vars.DOCKER_NETWORK }}" \
+            --name "$IMAGE" \
+            -p "${{ vars.APP_PORT }}:8000" \
+            -e POSTGRES_HOST -e POSTGRES_PORT -e POSTGRES_DB -e POSTGRES_USER -e POSTGRES_PASSWORD \
+            -e BASEPATH="${{ vars.BASEPATH }}" \
+            "$IMAGE"
+
+      - name: Limpar imagens antigas
+        if: always()
+        run: |
+          docker image prune -f
+          docker builder prune -f --keep-storage=512MB

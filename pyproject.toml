@@ -1,0 +1,34 @@
+[tool.poetry]
+name = "template-fastapi"
+version = "0.1.0"
+description = ""
+authors = []
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.13"
+fastapi = {extras = ["standard"], version = ">=0.115"}
+sqlmodel = ">=0.0.22"
+asyncpg = ">=0.30"
+pydantic-settings = ">=2.6"
+greenlet = ">=3.1"  # exigido pelo SQLAlchemy async
+
+[tool.poetry.group.dev.dependencies]
+pytest = ">=8.3"
+ruff = ">=0.8"
+
+[build-system]
+requires = ["poetry-core>=2.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# B008: Depends(...) como valor padrão é o padrão do FastAPI
+ignore = ["B008"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
