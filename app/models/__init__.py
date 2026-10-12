@@ -15,3 +15,21 @@ Exemplo (models/produto.py):
         id: UUID = Field(default_factory=uuid4, primary_key=True)
         nome: str = Field(max_length=255, nullable=False)
 """
+
+from .artefato import Artefato
+from .avaliacao import Avaliacao
+from .equipe import Equipe
+from .hackathon import Hackathon
+from .membro_equipe import MembroEquipe
+from .submissao import Submissao
+from .usuario import Usuario
+
+__all__ = [
+    "Artefato",
+    "Avaliacao",
+    "Equipe",
+    "Hackathon",
+    "MembroEquipe",
+    "Submissao",
+    "Usuario",
+]
