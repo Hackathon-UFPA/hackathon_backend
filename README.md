@@ -1,6 +1,6 @@
 # Hackathon — Backend
 
-API do sistema de gestão de hackathons (disciplina VH). Feita com **FastAPI + SQLModel (async) + PostgreSQL 17 + Flyway + Poetry + Docker Compose**.
+API do sistema de gestão de hackathons. Feita com **FastAPI + SQLModel (async) + PostgreSQL 17 + Flyway + Poetry + Docker Compose**.
 
 ## Situação atual
 
