@@ -40,6 +40,41 @@ class CategoriaArtefato(StrEnum):
     OUTRO = "OUTRO"
 
 
+class SituacaoEquipe(StrEnum):
+    EM_FORMACAO = "EM_FORMACAO"
+    AGUARDANDO_HOMOLOGACAO = "AGUARDANDO_HOMOLOGACAO"
+    HOMOLOGADA = "HOMOLOGADA"
+    NAO_HOMOLOGADA = "NAO_HOMOLOGADA"
+
+
+class StatusConvite(StrEnum):
+    PENDENTE = "PENDENTE"
+    ACEITO = "ACEITO"
+    RECUSADO = "RECUSADO"
+    CANCELADO = "CANCELADO"
+
+
+class TipoTermo(StrEnum):
+    REGULAMENTO = "REGULAMENTO"
+    TERMO_CONSENTIMENTO = "TERMO_CONSENTIMENTO"
+
+
+class StatusComprovante(StrEnum):
+    PENDENTE = "PENDENTE"
+    APROVADO = "APROVADO"
+    RECUSADO = "RECUSADO"
+
+
+class StatusProposta(StrEnum):
+    RASCUNHO = "RASCUNHO"
+    ENVIADA = "ENVIADA"
+
+
+class TipoProtocolo(StrEnum):
+    INSCRICAO_EQUIPE = "INSCRICAO_EQUIPE"
+    PROPOSTA = "PROPOSTA"
+
+
 def pg_enum(enum_cls: type[Enum], nome: str):
     """Mapeia um Enum Python para o tipo ENUM nativo do Postgres (criado pelo Flyway)."""
     return SAEnum(

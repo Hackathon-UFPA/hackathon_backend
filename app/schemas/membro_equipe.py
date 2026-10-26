@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -16,4 +17,7 @@ class MembroEquipeUpdate(BaseModel):
 
 
 class MembroEquipeResponse(MembroEquipeCreate):
+    hackathon_id: UUID
+    entrou_em: datetime | None = None
+
     model_config = ConfigDict(from_attributes=True)

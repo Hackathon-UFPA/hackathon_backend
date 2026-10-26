@@ -6,6 +6,7 @@ API do sistema de gestão de hackathons. Feita com **FastAPI + SQLModel (async) 
 
 - [x] Estrutura do projeto, Docker, CI
 - [x] Banco: tabelas e enums (migration `V202610110000__init.sql`)
+- [x] Banco: fluxos de inscrição e proposta (migration `V202610261200__fluxos_inscricao_proposta.sql`)
 - [x] Models (SQLModel) e schemas (Pydantic) de todas as entidades
 - [ ] Controllers e rotas (CRUD) — por enquanto a API só tem `/health`
 - [ ] Autenticação
@@ -45,17 +46,34 @@ erDiagram
     equipes ||--o{ submissoes : envia
     submissoes ||--o{ avaliacoes : recebe
     usuarios ||--o{ avaliacoes : avalia
+    hackathon ||--o{ temas : oferece
+    temas ||--o{ submissoes : escolhido
+    equipes ||--o{ convites : envia
+    hackathon ||--o{ termos : publica
+    termos ||--o{ aceites_termos : recebe
+    usuarios ||--o{ aceites_termos : aceita
+    usuarios ||--o{ comprovantes_vinculo : envia
+    equipes ||--o{ protocolos : recebe
+    submissoes ||--o{ protocolos : gera
 ```
 
-| Tabela           | Descrição                                                              |
-|------------------|------------------------------------------------------------------------|
-| `usuarios`       | Pessoas do sistema; `email` único e `papel`                             |
-| `hackathon`      | Edição do evento: nome, tema, datas e `status`                          |
-| `equipes`        | Equipes de um hackathon                                                 |
-| `membros_equipe` | Usuário ↔ equipe (PK composta `equipe_id, usuario_id`) com a `funcao`   |
-| `artefatos`      | Entregáveis da equipe (`url` externa: GitHub, Cloudinary...)            |
-| `submissoes`     | Projeto enviado pela equipe (uma equipe pode ter várias submissões)    |
-| `avaliacoes`     | Nota e comentários de um avaliador sobre uma submissão                 |
+| Tabela                 | Descrição                                                                                     |
+|------------------------|-----------------------------------------------------------------------------------------------|
+| `usuarios`             | Pessoas do sistema; `email` único, `papel`, instituição, curso e período                       |
+| `hackathon`            | Edição do evento: datas, `status`, tamanho da equipe (`min/max_integrantes`) e prazos da Fase 1 |
+| `equipes`              | Equipes de um hackathon, com a `situacao` (Em formação → Homologada)                           |
+| `membros_equipe`       | Usuário ↔ equipe com a `funcao`; uma equipe por pessoa em cada hackathon e um único `LIDER`     |
+| `convites`             | Integrantes informados pelo líder (nome e e-mail) aguardando confirmação                       |
+| `termos`               | Regulamento e termo de consentimento, versionados; uma versão vigente por tipo                 |
+| `aceites_termos`       | Aceite de um usuário a uma versão de termo, com data e hora                                    |
+| `comprovantes_vinculo` | Comprovante de vínculo e a conferência do Comitê Científico; reenvio cria uma linha nova       |
+| `temas`                | Temas do edital, com ODS relacionados e `ativo`                                               |
+| `submissoes`           | Proposta da equipe (uma por equipe): rascunho até ser enviada com tema, ODS e bases de dados    |
+| `protocolos`           | Comprovante da conclusão da inscrição e do envio da proposta (`numero` gerado pelo banco)       |
+| `artefatos`            | Entregáveis da equipe (`url` externa: GitHub, Cloudinary...)                                  |
+| `avaliacoes`           | Nota e comentários de um avaliador sobre uma submissão                                        |
+
+As constraints do banco garantem as regras que dependem de uma única tabela (ex.: proposta enviada exige tema, comprovante recusado exige motivo). Regras que dependem de contagem, prazo ou perfil (3 a 5 integrantes, homologação automática, bloqueio após o prazo) ficam nos services.
 
 Todos os IDs são **UUID** gerados pelo banco (`uuid_generate_v4()`).
 
@@ -69,6 +87,14 @@ Definidos como `ENUM` nativo no Postgres (migration) e espelhados em [`app/const
 | `status_hackathon`   | `RASCUNHO`, `INSCRICOES` (padrão), `INSCRICOES_ENCERRADAS`, `ATIVO`, `EM_AVALIACAO`, `FINALIZADO`, `CANCELADO` |
 | `funcao_membro`      | `LIDER`, `DESENVOLVEDOR`, `DESIGNER`, `NEGOCIOS`, `OUTRO`                                       |
 | `categoria_artefato` | `REPOSITORIO_CODIGO`, `DIAGRAMA`, `VIDEO`, `APRESENTACAO`, `DOCUMENTACAO`, `PROTOTIPO`, `OUTRO` |
+| `situacao_equipe`    | `EM_FORMACAO` (padrão), `AGUARDANDO_HOMOLOGACAO`, `HOMOLOGADA`, `NAO_HOMOLOGADA`                 |
+| `status_convite`     | `PENDENTE` (padrão), `ACEITO`, `RECUSADO`, `CANCELADO`                                          |
+| `tipo_termo`         | `REGULAMENTO`, `TERMO_CONSENTIMENTO`                                                            |
+| `status_comprovante` | `PENDENTE` (padrão), `APROVADO`, `RECUSADO`                                                     |
+| `status_proposta`    | `RASCUNHO` (padrão), `ENVIADA`                                                                  |
+| `tipo_protocolo`     | `INSCRICAO_EQUIPE`, `PROPOSTA`                                                                  |
+
+Colunas preenchidas pelo banco (datas de envio/aceite, número do protocolo) usam `server_default` no model (`AGORA_UTC` em `app/db/defaults.py`), para o ORM não mandar `NULL` no insert.
 
 Para adicionar um valor: crie uma migration nova com `ALTER TYPE <tipo> ADD VALUE '<VALOR>';` e acrescente o membro na classe correspondente em `enums.py`. Nos models, colunas enum usam o helper `pg_enum(...)`, que mapeia para o tipo criado pelo Flyway.
 
