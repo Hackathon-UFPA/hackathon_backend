@@ -210,6 +210,16 @@ docker compose exec app python -m app.scripts.criar_usuario --email organizador@
 
 Ficou de fora desta etapa: confirmação do e-mail, envio de acesso por e-mail, recuperação de senha, login com Google/GitHub, encerrar sessão e a aprovação do comprovante pelo Comitê Científico.
 
+### Diagramas da autenticação
+
+**Arquitetura.** Como o navegador, a API, o banco e o serviço de arquivos se falam no cadastro, no login e a cada pedido protegido. Os números seguem a ordem dos passos.
+
+![Arquitetura da autenticação e das permissões](docs/diagramas/arquitetura_autenticacao.webp)
+
+**Fluxograma.** O caminho de uma pessoa do cadastro até uma rota protegida, com todas as respostas de erro. Laranja é ação da pessoa ou da interface, roxo é verificação de segurança da API e branco é processamento do sistema.
+
+![Fluxograma de autenticação: cadastro, login e acesso às rotas](docs/diagramas/fluxograma_autenticacao.webp)
+
 ### Guia para a interface (front)
 
 O Swagger em `/docs` descreve cada rota, os campos e os erros possíveis e serve de contrato. Em resumo, o que a interface faz:
