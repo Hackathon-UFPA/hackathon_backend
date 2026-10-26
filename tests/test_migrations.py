@@ -1,5 +1,6 @@
 """
-Testes da migration V202610261200 (fluxos de inscrição e proposta).
+Testes das migrations V202610261200 (fluxos de inscrição e proposta)
+e V202610261300 (perfis de acesso).
 
 Cada teste roda numa transação desfeita no final, então não deixa dados no banco.
 Os casos inválidos conferem o nome da constraint que barrou o dado.
@@ -7,16 +8,18 @@ Os casos inválidos conferem o nome da constraint que barrou o dado.
 
 import asyncio
 import re
+from enum import StrEnum
 from uuid import uuid4
 
 import pytest
 from sqlalchemy import inspect, text
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+import app.const.enums as enums
 import app.models  # noqa: F401  (registra as tabelas no SQLModel.metadata)
 from app.const.config import settings
 from app.const.enums import PapelUsuario, TipoProtocolo, TipoTermo
@@ -111,13 +114,38 @@ async def novo_comprovante(conn, usuario_id, hackathon_id, status="PENDENTE", mo
     )
 
 
-def test_migration_aplicada():
+@pytest.mark.parametrize("versao", ["202610261200", "202610261300"])
+def test_migration_aplicada(versao):
     async def fn(conn):
         return await sql(
-            conn, "SELECT success FROM flyway_schema_history WHERE version = '202610261200'"
+            conn, "SELECT success FROM flyway_schema_history WHERE version = :v", v=versao
         )
 
     assert rodar(fn) is True
+
+
+def test_enums_batem_com_banco():
+    """Cada StrEnum de app/const/enums.py tem os valores (e a ordem) do tipo no banco."""
+
+    async def fn(conn):
+        linhas = await conn.execute(
+            text(
+                "SELECT t.typname, array_agg(e.enumlabel ORDER BY e.enumsortorder)"
+                " FROM pg_type t JOIN pg_enum e ON e.enumtypid = t.oid GROUP BY t.typname"
+            )
+        )
+        return dict(linhas.all())
+
+    banco = rodar(fn)
+    python = {
+        nome: [m.value for m in cls]
+        for nome, cls in vars(enums).items()
+        if isinstance(cls, type) and issubclass(cls, StrEnum) and cls is not StrEnum
+    }
+    assert len(python) == len(banco)
+    for cls in python:
+        tipo = re.sub(r"(?<!^)(?=[A-Z])", "_", cls).lower()
+        assert python[cls] == banco[tipo], f"{cls} diverge do tipo {tipo} no banco"
 
 
 def test_models_batem_com_banco():
@@ -446,4 +474,35 @@ def test_protocolo_de_proposta_sem_submissao():
         await sql(conn, "INSERT INTO protocolos (tipo, equipe_id) VALUES ('PROPOSTA', :e)", e=e)
 
     with pytest.raises(IntegrityError, match="ck_protocolos_proposta"):
+        rodar(fn)
+
+
+# --- Perfis de acesso (RF06, RF07, RF37) ---
+
+
+def test_usuario_novo_fica_ativo():
+    async def fn(conn):
+        return await sql(
+            conn, "SELECT ativo FROM usuarios WHERE id = :u", u=await novo_usuario(conn)
+        )
+
+    assert rodar(fn) is True
+
+
+def test_papel_antigo_nao_existe_mais():
+    async def fn(conn):
+        await sql(conn, "INSERT INTO usuarios (email, papel) VALUES ('p@teste.com', 'PROFESSOR')")
+
+    with pytest.raises(DBAPIError, match="papel_usuario"):
+        rodar(fn)
+
+
+def test_mentor_com_max_equipes_zero():
+    async def fn(conn):
+        await sql(
+            conn,
+            "INSERT INTO usuarios (email, papel, max_equipes) VALUES ('m@teste.com', 'MENTOR', 0)",
+        )
+
+    with pytest.raises(IntegrityError, match="ck_usuarios_max_equipes"):
         rodar(fn)

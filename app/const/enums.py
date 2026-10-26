@@ -3,12 +3,13 @@ from enum import Enum, StrEnum
 from sqlalchemy import Enum as SAEnum
 
 
+# Perfis do RF06. Líder técnico não é papel: é membros_equipe.funcao = LIDER
 class PapelUsuario(StrEnum):
     PARTICIPANTE = "PARTICIPANTE"
-    PROFESSOR = "PROFESSOR"
-    COORDENADOR = "COORDENADOR"
-    AVALIADOR = "AVALIADOR"
     MENTOR = "MENTOR"
+    COMITE_TECNICO = "COMITE_TECNICO"
+    COMITE_CIENTIFICO = "COMITE_CIENTIFICO"
+    ORGANIZADOR = "ORGANIZADOR"
     DEV = "DEV"
 
 

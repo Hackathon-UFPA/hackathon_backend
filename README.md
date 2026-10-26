@@ -7,6 +7,7 @@ API do sistema de gestão de hackathons. Feita com **FastAPI + SQLModel (async) 
 - [x] Estrutura do projeto, Docker, CI
 - [x] Banco: tabelas e enums (migration `V202610110000__init.sql`)
 - [x] Banco: fluxos de inscrição e proposta (migration `V202610261200__fluxos_inscricao_proposta.sql`)
+- [x] Banco: perfis de acesso do RF06 (migration `V202610261300__perfis_de_acesso.sql`)
 - [x] Models (SQLModel) e schemas (Pydantic) de todas as entidades
 - [ ] Controllers e rotas (CRUD) — por enquanto a API só tem `/health`
 - [ ] Autenticação
@@ -59,7 +60,7 @@ erDiagram
 
 | Tabela                 | Descrição                                                                                     |
 |------------------------|-----------------------------------------------------------------------------------------------|
-| `usuarios`             | Pessoas do sistema; `email` único, `papel`, instituição, curso e período                       |
+| `usuarios`             | Pessoas do sistema; `email` único, `papel`, `ativo`, instituição, curso e período; dados do mentor (empresa, área, máx. de equipes) |
 | `hackathon`            | Edição do evento: datas, `status`, tamanho da equipe (`min/max_integrantes`) e prazos da Fase 1 |
 | `equipes`              | Equipes de um hackathon, com a `situacao` (Em formação → Homologada)                           |
 | `membros_equipe`       | Usuário ↔ equipe com a `funcao`; uma equipe por pessoa em cada hackathon e um único `LIDER`     |
@@ -79,11 +80,13 @@ Todos os IDs são **UUID** gerados pelo banco (`uuid_generate_v4()`).
 
 ### Enums
 
+O líder técnico não é um papel: é `membros_equipe.funcao = LIDER`, porque vale por equipe.
+
 Definidos como `ENUM` nativo no Postgres (migration) e espelhados em [`app/const/enums.py`](app/const/enums.py). Valores sempre em **MAIÚSCULO**.
 
 | Tipo                 | Valores                                                                                         |
 |----------------------|-------------------------------------------------------------------------------------------------|
-| `papel_usuario`      | `PARTICIPANTE`, `PROFESSOR`, `COORDENADOR`, `AVALIADOR`, `MENTOR`, `DEV` (admin)                |
+| `papel_usuario`      | `PARTICIPANTE`, `MENTOR`, `COMITE_TECNICO`, `COMITE_CIENTIFICO`, `ORGANIZADOR`, `DEV` (admin técnico) |
 | `status_hackathon`   | `RASCUNHO`, `INSCRICOES` (padrão), `INSCRICOES_ENCERRADAS`, `ATIVO`, `EM_AVALIACAO`, `FINALIZADO`, `CANCELADO` |
 | `funcao_membro`      | `LIDER`, `DESENVOLVEDOR`, `DESIGNER`, `NEGOCIOS`, `OUTRO`                                       |
 | `categoria_artefato` | `REPOSITORIO_CODIGO`, `DIAGRAMA`, `VIDEO`, `APRESENTACAO`, `DOCUMENTACAO`, `PROTOTIPO`, `OUTRO` |
