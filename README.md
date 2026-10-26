@@ -8,8 +8,9 @@ API do sistema de gestão de hackathons. Feita com **FastAPI + SQLModel (async) 
 - [x] Banco: tabelas e enums (migration `V202610110000__init.sql`)
 - [x] Banco: fluxos de inscrição e proposta e perfis de acesso do RF06 (migration `V202610261200__fluxos_inscricao_proposta.sql`)
 - [x] Models (SQLModel) e schemas (Pydantic) de todas as entidades
-- [ ] Controllers e rotas (CRUD) — por enquanto a API só tem `/health`
-- [ ] Autenticação
+- [x] Banco: senha, bloqueio de login e situação da conta (migration `V202610261400__autenticacao_usuarios.sql`)
+- [x] Autenticação e permissões: cadastro, login, perfis e cadastro de usuários (ver [Autenticação e permissões](#autenticação-e-permissões))
+- [ ] Controllers e rotas (CRUD) das demais entidades — por enquanto a API só tem `/health` e as rotas de autenticação
 
 ## Rodando o projeto
 
@@ -66,7 +67,7 @@ erDiagram
 
 | Tabela                 | Descrição                                                                                     |
 |------------------------|-----------------------------------------------------------------------------------------------|
-| `usuarios`             | Pessoas do sistema; `email` único, `papel`, `ativo`, instituição, curso e período; dados do mentor (empresa, área, máx. de equipes) |
+| `usuarios`             | Pessoas do sistema; `email` único, `papel`, `ativo`, instituição, curso e período; dados do mentor (empresa, área, máx. de equipes); `senha_hash` (Argon2), `tentativas_login`, `bloqueado_ate` e `situacao_conta` |
 | `hackathon`            | Edição do evento: datas, `status`, tamanho da equipe (`min/max_integrantes`) e prazos da Fase 1 |
 | `equipes`              | Equipes de um hackathon, com a `situacao` (Em formação → Homologada)                           |
 | `membros_equipe`       | Usuário ↔ equipe com a `funcao`; uma equipe por pessoa em cada hackathon e um único `LIDER`     |
@@ -100,6 +101,7 @@ Definidos como `ENUM` nativo no Postgres (migration) e espelhados em [`app/const
 | `status_convite`     | `PENDENTE` (padrão), `ACEITO`, `RECUSADO`, `CANCELADO`                                          |
 | `tipo_termo`         | `REGULAMENTO`, `TERMO_CONSENTIMENTO`                                                            |
 | `status_comprovante` | `PENDENTE` (padrão), `APROVADO`, `RECUSADO`                                                     |
+| `situacao_conta`     | `ATIVA` (padrão), `PENDENTE` (participante até o comprovante ser aprovado)                      |
 | `status_proposta`    | `RASCUNHO` (padrão), `ENVIADA`                                                                  |
 | `tipo_protocolo`     | `INSCRICAO_EQUIPE`, `PROPOSTA`                                                                  |
 
@@ -122,7 +124,8 @@ Para adicionar um valor: crie uma migration nova com `ALTER TYPE <tipo> ADD VALU
 │   ├── views/             # routers FastAPI; views/__init__.py agrega todos
 │   ├── services/          # regras de negócio que juntam vários controllers
 │   ├── validations/       # validações reutilizáveis
-│   ├── security/          # autenticação/autorização
+│   ├── security/          # senha (Argon2), token JWT, dependências de rota e permissões por perfil
+│   ├── scripts/           # tarefas de apoio rodadas à mão (ex.: criar o primeiro Organizador)
 │   ├── exceptions/        # HTTPException padronizadas (404, constraint, 500)
 │   ├── middlewares/
 │   ├── integrations/      # clientes de APIs externas
@@ -143,6 +146,67 @@ Fluxo de uma requisição:
 view (rota) → controller (banco) → model (tabela)
      ↑ valida entrada/saída com schemas
 ```
+
+## Autenticação e permissões
+
+O participante se cadastra, faz login e recebe um **token JWT**, que envia em todo pedido no cabeçalho `Authorization: Bearer <token>`. No Swagger, use o botão **Authorize** e cole o token.
+
+| Rota                  | Quem acessa                                   | O que faz                                                                 |
+|-----------------------|-----------------------------------------------|---------------------------------------------------------------------------|
+| `POST /auth/cadastro` | Qualquer pessoa                               | Cria um **Participante** com conta pendente e registra o comprovante (RF01) |
+| `POST /auth/login`    | Qualquer pessoa                               | Devolve o token de acesso (RF02)                                          |
+| `GET /auth/me`        | Qualquer usuário logado, inclusive conta pendente | Dados de quem está logado                                             |
+| `POST /usuarios`      | Organizador e Comitê Científico (e DEV)       | Cadastra usuários de outros perfis, conforme a hierarquia abaixo (RF07, RF08) |
+
+**Cadastro.** Exige nome, e-mail, instituição, curso, período, senha e o link do comprovante de vínculo (`https`, terminando em `.pdf`, `.png`, `.jpg` ou `.jpeg`; o arquivo fica em um serviço externo como o Cloudinary). A senha precisa de 8 a 128 caracteres, com pelo menos uma letra e um número. O e-mail é guardado em minúsculas e não pode repetir. O perfil nunca vem do cliente. O comprovante é ligado ao hackathon com inscrições abertas (`status = INSCRICOES`); sem nenhum, o cadastro responde 409. A conta nasce `PENDENTE` e só passa a `ATIVA` quando o Comitê Científico aprovar o comprovante (RN25, tarefa futura).
+
+**Login.** Credenciais inválidas (e-mail inexistente, senha errada ou conta desativada) dão sempre a mesma resposta 401, sem dizer qual dado errou. Depois de `LOGIN_MAX_TENTATIVAS` falhas seguidas a conta fica bloqueada por `LOGIN_BLOQUEIO_MINUTOS`: nesse período até a senha correta é recusada, com 429 e o cabeçalho `Retry-After`. Um login correto zera o contador. O token vale `JWT_EXPIRE_MINUTES` e não é renovado: passado o prazo, é preciso entrar de novo.
+
+**Perfis (RF06).** A ordem Organizador, Comitê Científico, Mentor, Comitê Técnico, Líder e Membro define só quem cadastra quem; não há herança de permissões. O líder técnico não é um perfil: é `membros_equipe.funcao = LIDER`.
+
+| Perfil               | Pode cadastrar                                    |
+|----------------------|---------------------------------------------------|
+| `ORGANIZADOR`        | Qualquer perfil, menos `DEV`                      |
+| `COMITE_CIENTIFICO`  | `COMITE_TECNICO` e `MENTOR`                       |
+| `MENTOR`, `COMITE_TECNICO`, `PARTICIPANTE` | Nenhum                      |
+| `DEV`                | Qualquer perfil, e acessa todas as rotas          |
+
+**Protegendo uma rota.** As dependências ficam em `app/security/dependencias.py`. O perfil e a situação da conta são lidos do banco a cada pedido (o token guarda só o id), então desativar uma conta ou trocar o perfil vale na hora.
+
+```python
+from app.security.dependencias import exigir_papeis, usuario_ativo, usuario_atual
+
+# Só os perfis listados (DEV sempre passa). Conta pendente recebe 403.
+@router.post("")
+async def criar(usuario: Usuario = Depends(exigir_papeis(PapelUsuario.ORGANIZADOR))): ...
+
+# Qualquer usuário com conta ativa
+@router.get("")
+async def listar(usuario: Usuario = Depends(usuario_ativo)): ...
+
+# Qualquer usuário logado, até com conta pendente (usado em /auth/me)
+@router.get("/eu")
+async def eu(usuario: Usuario = Depends(usuario_atual)): ...
+```
+
+Respostas: sem token, token inválido, vencido ou de conta desativada dão **401**; token válido sem permissão, ou conta pendente em rota que exige conta ativa, dão **403**.
+
+**Variáveis de ambiente** (no `.env.example`):
+
+| Variável                 | Padrão | Descrição                                                              |
+|--------------------------|--------|------------------------------------------------------------------------|
+| `JWT_SECRET`             | —      | Chave que assina os tokens, mínimo de 32 caracteres. **Obrigatória**: a API não sobe sem ela. Em produção use um valor próprio e secreto |
+| `JWT_EXPIRE_MINUTES`     | `60`   | Validade do token                                                      |
+| `LOGIN_MAX_TENTATIVAS`   | `5`    | Falhas seguidas até bloquear a conta                                   |
+| `LOGIN_BLOQUEIO_MINUTOS` | `15`   | Duração do bloqueio                                                    |
+
+**Primeiro Organizador.** Como só o Organizador cadastra os demais perfis, o primeiro usuário é criado por um script, dentro do container da API (a senha é pedida no terminal e não fica no histórico):
+
+```bash
+docker compose exec app python -m app.scripts.criar_usuario --email organizador@ufpa.br --nome "Nome Completo" --papel ORGANIZADOR
+```
+
+Ficou de fora desta etapa: confirmação do e-mail, envio de acesso por e-mail, recuperação de senha, login com Google/GitHub, encerrar sessão e a aprovação do comprovante pelo Comitê Científico.
 
 ## Criando as rotas de uma entidade (ex.: `equipe`)
 
