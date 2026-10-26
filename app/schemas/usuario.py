@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
-from app.const.enums import PapelUsuario
+from app.const.enums import PapelUsuario, SituacaoConta
 
 
 class UsuarioCreate(BaseModel):
@@ -36,6 +36,7 @@ class UsuarioUpdate(BaseModel):
 class UsuarioResponse(UsuarioCreate):
     id: UUID
     ativo: bool
+    situacao_conta: SituacaoConta
     criado_em: datetime | None = None
     atualizado_em: datetime | None = None
 
