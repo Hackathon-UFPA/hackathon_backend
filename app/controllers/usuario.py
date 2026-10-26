@@ -2,9 +2,12 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import case, func, update
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.exceptions.auth import email_ja_cadastrado
+from app.exceptions.db import erro_de_integridade_sql
 from app.models import Usuario
 
 
@@ -17,7 +20,15 @@ async def get_usuario_by_email(db: AsyncSession, email: str) -> Usuario | None:
 async def criar_usuario(db: AsyncSession, usuario: Usuario) -> Usuario:
     """Só adiciona à sessão; quem chama decide quando confirmar a transação."""
     db.add(usuario)
-    await db.flush()
+    try:
+        await db.flush()
+    except IntegrityError as error:
+        await db.rollback()
+        mensagem = str(error.orig)
+        # Índices únicos do e-mail: o do banco original e o que ignora maiúsculas
+        if "uq_usuarios_email_lower" in mensagem or "usuarios_email_key" in mensagem:
+            email_ja_cadastrado()
+        erro_de_integridade_sql(error)
     return usuario
 
 

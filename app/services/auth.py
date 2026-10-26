@@ -1,7 +1,6 @@
 import asyncio
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.const.config import settings
@@ -14,12 +13,7 @@ from app.controllers.usuario import (
     registrar_falha_de_login,
     zerar_falhas_de_login,
 )
-from app.exceptions.auth import (
-    conta_bloqueada,
-    credenciais_invalidas,
-    email_ja_cadastrado,
-    inscricoes_indisponiveis,
-)
+from app.exceptions.auth import conta_bloqueada, credenciais_invalidas, inscricoes_indisponiveis
 from app.models import ComprovanteVinculo, Usuario
 from app.schemas.auth import CadastroRequest
 from app.security.senha import gastar_tempo_de_verificacao, gerar_hash, senha_confere
@@ -29,31 +23,23 @@ from app.security.token import criar_token
 async def cadastrar_participante(db: AsyncSession, dados: CadastroRequest) -> Usuario:
     """Cria a conta pendente e registra o comprovante de vínculo na mesma transação (RF01, RN25).
     A conta só fica ativa quando o Comitê Científico aprovar o comprovante."""
-    email = dados.email.lower()
-    if await get_usuario_by_email(db, email):
-        email_ja_cadastrado()
-
     hackathon = await get_hackathon_com_inscricoes(db)
     if hackathon is None:
         inscricoes_indisponiveis()
 
-    usuario = Usuario(
-        nome=dados.nome,
-        email=email,
-        papel=PapelUsuario.PARTICIPANTE,
-        instituicao=dados.instituicao,
-        curso=dados.curso,
-        periodo=dados.periodo,
-        senha_hash=await asyncio.to_thread(gerar_hash, dados.senha),
-        situacao_conta=SituacaoConta.PENDENTE,
+    usuario = await criar_usuario(
+        db,
+        Usuario(
+            nome=dados.nome,
+            email=dados.email.lower(),
+            papel=PapelUsuario.PARTICIPANTE,
+            instituicao=dados.instituicao,
+            curso=dados.curso,
+            periodo=dados.periodo,
+            senha_hash=await asyncio.to_thread(gerar_hash, dados.senha),
+            situacao_conta=SituacaoConta.PENDENTE,
+        ),
     )
-    try:
-        await criar_usuario(db, usuario)
-    except IntegrityError:
-        # Dois cadastros simultâneos com o mesmo e-mail: o índice único barra o segundo
-        await db.rollback()
-        email_ja_cadastrado()
-
     await criar_comprovante(
         db,
         ComprovanteVinculo(
