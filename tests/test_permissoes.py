@@ -12,7 +12,7 @@ import pytest
 
 from app.const.config import settings
 from app.const.enums import PapelUsuario
-from app.security.permissoes import pode_cadastrar
+from app.security.permissoes import perfis_cadastraveis, pode_cadastrar
 from app.security.token import ALGORITMO, criar_token
 
 SENHA = "segredo123"
@@ -282,3 +282,38 @@ def test_hierarquia_de_cadastro(quem, perfil):
     assert pode_cadastrar(PapelUsuario(quem), PapelUsuario(perfil)) == (
         perfil in PODE_CADASTRAR[quem]
     )
+
+
+# --- Perfis que o usuário pode cadastrar (GET /admin/usuarios/perfis) ---
+
+
+@pytest.mark.parametrize("quem", ["ORGANIZADOR", "COMITE_CIENTIFICO", "DEV"])
+def test_lista_os_perfis_que_o_usuario_pode_cadastrar(client, usuario_no_banco, quem):
+    usuario = usuario_no_banco(papel=quem)
+
+    resposta = client.get("/admin/usuarios/perfis", headers=com_token(usuario["id"]))
+
+    assert resposta.status_code == 200
+    esperado = [papel for papel in PAPEIS if papel in PODE_CADASTRAR[quem]]
+    assert resposta.json() == {"perfis": esperado}
+
+
+@pytest.mark.parametrize("papel", PAPEIS_SEM_ACESSO)
+def test_perfil_sem_permissao_nao_lista_perfis(client, usuario_no_banco, papel):
+    usuario = usuario_no_banco(papel=papel)
+
+    resposta = client.get("/admin/usuarios/perfis", headers=com_token(usuario["id"]))
+
+    assert resposta.status_code == 403
+
+
+def test_lista_de_perfis_sem_token(client):
+    assert client.get("/admin/usuarios/perfis").status_code == 401
+
+
+@pytest.mark.parametrize("quem", PAPEIS)
+def test_todo_perfil_listado_pode_ser_cadastrado(quem):
+    """A lista que a interface mostra e a regra que a API aplica não podem divergir."""
+    for perfil in PAPEIS:
+        listado = PapelUsuario(perfil) in perfis_cadastraveis(PapelUsuario(quem))
+        assert listado == pode_cadastrar(PapelUsuario(quem), PapelUsuario(perfil))
