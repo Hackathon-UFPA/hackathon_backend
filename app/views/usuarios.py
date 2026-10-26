@@ -9,7 +9,7 @@ from app.schemas.usuario import UsuarioResponse
 from app.security.dependencias import exigir_papeis
 from app.services.usuario import cadastrar_usuario_por_perfil
 
-router = APIRouter(prefix="/usuarios", tags=["Usuários"])
+router = APIRouter(prefix="/admin/usuarios", tags=["Usuários"])
 
 
 @router.post("", response_model=UsuarioResponse, status_code=status.HTTP_201_CREATED)

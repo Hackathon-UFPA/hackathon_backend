@@ -31,7 +31,9 @@ def dados_de_usuario(email: str, papel: str, **extras) -> dict:
 
 def cadastrar_usuario(client, quem, email: str, papel: str, **extras):
     return client.post(
-        "/usuarios", json=dados_de_usuario(email, papel, **extras), headers=com_token(quem["id"])
+        "/admin/usuarios",
+        json=dados_de_usuario(email, papel, **extras),
+        headers=com_token(quem["id"]),
     )
 
 
@@ -128,21 +130,27 @@ def test_token_de_conta_desativada_deixa_de_valer(client, sql, usuario_no_banco)
 def test_troca_de_perfil_vale_no_pedido_seguinte(client, sql, usuario_no_banco, novo_email):
     usuario = usuario_no_banco(papel="ORGANIZADOR")
     corpo = dados_de_usuario(novo_email(), "MENTOR")
-    assert client.post("/usuarios", json=corpo, headers=com_token(usuario["id"])).status_code == 201
+    assert (
+        client.post("/admin/usuarios", json=corpo, headers=com_token(usuario["id"])).status_code
+        == 201
+    )
 
     sql("UPDATE usuarios SET papel = 'PARTICIPANTE' WHERE id = :id", id=usuario["id"])
     corpo = dados_de_usuario(novo_email(), "MENTOR")
 
-    assert client.post("/usuarios", json=corpo, headers=com_token(usuario["id"])).status_code == 403
+    assert (
+        client.post("/admin/usuarios", json=corpo, headers=com_token(usuario["id"])).status_code
+        == 403
+    )
 
 
-# --- Cadastro de usuários por perfil (POST /usuarios) ---
+# --- Cadastro de usuários por perfil (POST /admin/usuarios) ---
 
 
 def test_cadastro_de_usuario_sem_token(client, novo_email):
     corpo = dados_de_usuario(novo_email(), "MENTOR")
 
-    assert client.post("/usuarios", json=corpo).status_code == 401
+    assert client.post("/admin/usuarios", json=corpo).status_code == 401
 
 
 @pytest.mark.parametrize("papel", PAPEIS_SEM_ACESSO)
