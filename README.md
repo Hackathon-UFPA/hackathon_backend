@@ -178,13 +178,16 @@ O participante se cadastra, faz login e recebe um **token JWT**, que envia em to
 ```python
 from app.security.dependencias import exigir_papeis, usuario_ativo, usuario_atual
 
+
 # Só os perfis listados (DEV sempre passa). Conta pendente recebe 403.
 @router.post("")
 async def criar(usuario: Usuario = Depends(exigir_papeis(PapelUsuario.ORGANIZADOR))): ...
 
+
 # Qualquer usuário com conta ativa
 @router.get("")
 async def listar(usuario: Usuario = Depends(usuario_ativo)): ...
+
 
 # Qualquer usuário logado, até com conta pendente (usado em /auth/me)
 @router.get("/eu")
