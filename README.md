@@ -39,6 +39,7 @@ docker compose up -d --build
 
 - No pgAdmin, registre o servidor com host **`db`** e porta **`5432`** (ele roda dentro da rede do Docker).
 - Pelo terminal: `make db-shell` abre o `psql` já conectado.
+- **Os testes usam outro banco.** Junto com o `POSTGRES_DB`, o compose cria o `POSTGRES_DB_test` (ex.: `hackathon_db_test`) no mesmo Postgres e aplica nele as migrations. O `pytest` troca para esse banco sozinho (`tests/__init__.py`) e um teste confere isso, então rodar os testes nunca mexe nos dados de desenvolvimento. Para inspecionar o banco de testes, conecte no `psql` ou no pgAdmin com o nome `<POSTGRES_DB>_test`. No CI, o banco `app_db_test` é criado antes das migrations.
 
 > **Portas ocupadas?** Se outro projeto já usa a 5432/4040/8000, mude `POSTGRES_PORT`, `PGADMIN_PORT` e `APP_PORT` no `.env` (ex.: 5434 e 4041) e rode `make up` de novo.
 
@@ -222,7 +223,7 @@ Para uma tabela nova: migration → model em `app/models/` (e importar em `model
 
 - Nome: `V<AAAAMMDDHHMM>__descricao.sql` (ex.: `V202610151530__adicionar_coluna_premio.sql`).
 - **Nunca edite uma migration já aplicada**; crie uma nova. Se você subiu o banco antes de uma migration ser alterada, rode `make clean && make up` (apaga os dados locais).
-- O compose roda as migrations ao subir. Para aplicar sem reiniciar: `make migrate`.
+- O compose roda as migrations ao subir, no banco de desenvolvimento e no de testes. Para aplicar sem reiniciar: `make migrate`.
 
 ## Comandos
 
@@ -235,8 +236,8 @@ Cada alvo do `Makefile` é um atalho para o comando `docker compose` da coluna a
 | `make down`     | `docker compose down`                                                               | Para os containers                                |
 | `make restart`  | `docker compose down && docker compose up -d --build`                               | Reinicia                                          |
 | `make logs`     | `docker compose logs -f app`                                                        | Acompanha os logs da API                          |
-| `make migrate`  | `docker compose run --rm flyway`                                                    | Aplica migrations pendentes                       |
-| `make test`     | `docker compose exec app pytest`                                                    | Roda o pytest dentro do container                 |
+| `make migrate`  | `docker compose run --rm flyway` e `docker compose run --rm flyway_test`            | Aplica migrations pendentes nos dois bancos       |
+| `make test`     | `docker compose exec app pytest`                                                    | Roda o pytest no banco de testes, dentro do container |
 | `make lint`     | `docker compose exec app ruff check .` e `docker compose exec app ruff format --check .` | Ruff (lint + checagem de formatação)         |
 | `make format`   | `docker compose exec app ruff check --fix .` e `docker compose exec app ruff format .` | Corrige lint e formata o código                |
 | `make shell`    | `docker compose exec app bash`                                                      | Terminal dentro do container da API               |
