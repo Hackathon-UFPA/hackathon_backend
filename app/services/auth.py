@@ -17,7 +17,6 @@ from app.exceptions.auth import conta_bloqueada, credenciais_invalidas, inscrico
 from app.models import ComprovanteVinculo, Usuario
 from app.schemas.auth import CadastroRequest
 from app.security.senha import gastar_tempo_de_verificacao, gerar_hash, senha_confere
-from app.security.token import criar_token
 
 
 async def cadastrar_participante(db: AsyncSession, dados: CadastroRequest) -> Usuario:
@@ -52,8 +51,8 @@ async def cadastrar_participante(db: AsyncSession, dados: CadastroRequest) -> Us
     return usuario
 
 
-async def autenticar(db: AsyncSession, email: str, senha: str) -> str:
-    """Confere e-mail e senha e devolve o token de acesso (RF02).
+async def autenticar(db: AsyncSession, email: str, senha: str) -> Usuario:
+    """Confere e-mail e senha e devolve o usuário autenticado (RF02).
 
     E-mail inexistente, conta sem senha, conta desativada e senha errada geram a mesma
     resposta. Depois de LOGIN_MAX_TENTATIVAS falhas seguidas a conta fica bloqueada por
@@ -81,4 +80,4 @@ async def autenticar(db: AsyncSession, email: str, senha: str) -> str:
     if usuario.tentativas_login or usuario.bloqueado_ate:
         zerar_falhas_de_login(db, usuario)
         await db.commit()
-    return criar_token(usuario.id)
+    return usuario

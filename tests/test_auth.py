@@ -259,3 +259,17 @@ def test_login_correto_zera_as_falhas(client, sql, usuario_no_banco):
     assert fazer_login(client, usuario["email"]).status_code == 200
 
     assert estado_de_login(sql, usuario["email"])["tentativas_login"] == 0
+
+
+# --- Dados do usuário no login (a interface escolhe o painel pelo papel) ---
+
+
+def test_login_devolve_os_dados_do_usuario(client, usuario_no_banco):
+    usuario = usuario_no_banco(papel="MENTOR", situacao_conta="PENDENTE")
+
+    corpo = fazer_login(client, usuario["email"]).json()
+
+    assert corpo["usuario"]["email"] == usuario["email"]
+    assert corpo["usuario"]["papel"] == "MENTOR"
+    assert corpo["usuario"]["situacao_conta"] == "PENDENTE"
+    assert "senha_hash" not in corpo["usuario"]

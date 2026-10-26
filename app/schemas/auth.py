@@ -2,7 +2,7 @@ from typing import Annotated
 
 from pydantic import AfterValidator, BaseModel, EmailStr, Field, HttpUrl, StringConstraints
 
-from app.schemas.usuario import UsuarioCreate
+from app.schemas.usuario import UsuarioCreate, UsuarioResponse
 from app.security.senha import SENHA_MAX_CARACTERES, SENHA_MIN_CARACTERES, validar_forca_da_senha
 
 # O arquivo fica em um serviço externo (ex.: Cloudinary); a API guarda só o link
@@ -50,6 +50,8 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     # Validade em segundos
     expires_in: int
+    # Dados de quem entrou: a interface escolhe o painel pelo papel, sem precisar chamar /auth/me
+    usuario: UsuarioResponse
 
 
 # Cadastro de outros perfis por quem tem permissão (RF07, RF08): o criador define a senha inicial
