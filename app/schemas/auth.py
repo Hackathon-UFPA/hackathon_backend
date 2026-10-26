@@ -2,6 +2,7 @@ from typing import Annotated
 
 from pydantic import AfterValidator, BaseModel, EmailStr, Field, HttpUrl, StringConstraints
 
+from app.const.enums import PapelUsuario
 from app.schemas.usuario import UsuarioCreate, UsuarioResponse
 from app.security.senha import SENHA_MAX_CARACTERES, SENHA_MIN_CARACTERES, validar_forca_da_senha
 
@@ -57,3 +58,7 @@ class TokenResponse(BaseModel):
 # Cadastro de outros perfis por quem tem permissão (RF07, RF08): o criador define a senha inicial
 class UsuarioAdminCreate(UsuarioCreate):
     senha: SenhaNova = Field(examples=["segredo123"])
+
+
+class PerfisCadastraveisResponse(BaseModel):
+    perfis: list[PapelUsuario] = Field(examples=[["COMITE_TECNICO", "MENTOR"]])

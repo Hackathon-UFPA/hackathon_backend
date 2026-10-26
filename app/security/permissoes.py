@@ -10,7 +10,13 @@ PERFIS_QUE_CADASTRAM: dict[PapelUsuario, frozenset[PapelUsuario]] = {
 }
 
 
-def pode_cadastrar(quem_cadastra: PapelUsuario, perfil: PapelUsuario) -> bool:
+def perfis_cadastraveis(quem_cadastra: PapelUsuario) -> list[PapelUsuario]:
+    """Perfis que `quem_cadastra` pode criar, na ordem do enum."""
     if quem_cadastra == PapelUsuario.DEV:
-        return True
-    return perfil in PERFIS_QUE_CADASTRAM.get(quem_cadastra, frozenset())
+        return list(PapelUsuario)
+    permitidos = PERFIS_QUE_CADASTRAM.get(quem_cadastra, frozenset())
+    return [papel for papel in PapelUsuario if papel in permitidos]
+
+
+def pode_cadastrar(quem_cadastra: PapelUsuario, perfil: PapelUsuario) -> bool:
+    return perfil in perfis_cadastraveis(quem_cadastra)
