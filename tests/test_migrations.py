@@ -1,6 +1,5 @@
 """
-Testes das migrations V202610261200 (fluxos de inscrição e proposta)
-e V202610261300 (perfis de acesso).
+Testes da migration V202610261200 (fluxos de inscrição e proposta e perfis de acesso).
 
 Cada teste roda numa transação desfeita no final, então não deixa dados no banco.
 Os casos inválidos conferem o nome da constraint que barrou o dado.
@@ -114,11 +113,10 @@ async def novo_comprovante(conn, usuario_id, hackathon_id, status="PENDENTE", mo
     )
 
 
-@pytest.mark.parametrize("versao", ["202610261200", "202610261300"])
-def test_migration_aplicada(versao):
+def test_migration_aplicada():
     async def fn(conn):
         return await sql(
-            conn, "SELECT success FROM flyway_schema_history WHERE version = :v", v=versao
+            conn, "SELECT success FROM flyway_schema_history WHERE version = '202610261200'"
         )
 
     assert rodar(fn) is True

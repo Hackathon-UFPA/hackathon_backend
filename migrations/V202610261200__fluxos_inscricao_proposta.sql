@@ -1,5 +1,5 @@
--- BE-S4-01: fluxos de inscrição da equipe e de proposta (Fase 1).
--- Requisitos: RF18 a RF23, RF26 a RF28; regras RN01 a RN07, RN25, RN30.
+-- BE-S4-01: fluxos de inscrição da equipe e de proposta (Fase 1) e perfis de acesso.
+-- Requisitos: RF06, RF07, RF18 a RF23, RF26 a RF28, RF37; regras RN01 a RN07, RN11, RN25, RN30.
 -- Regras que dependem de contagem, prazo ou perfil (3 a 5 integrantes, homologação
 -- automática, bloqueio após o prazo) ficam na camada de serviço, não no banco.
 
@@ -208,3 +208,36 @@ CREATE INDEX idx_submissoes_tema_id ON submissoes (tema_id);
 CREATE INDEX idx_protocolos_equipe_id ON protocolos (equipe_id);
 CREATE INDEX idx_protocolos_submissao_id ON protocolos (submissao_id);
 CREATE INDEX idx_protocolos_emitido_por ON protocolos (emitido_por);
+
+-- Perfis de acesso: atores da seção 3 do documento de requisitos e RF06.
+-- PROFESSOR, COORDENADOR e AVALIADOR saem; os comitês passam a ser papéis separados (RN11).
+-- Líder técnico não é papel: fica em membros_equipe.funcao = 'LIDER' (vale por equipe).
+
+-- O Postgres não remove valores de enum: o tipo é recriado.
+-- Não há mapeamento óbvio dos papéis antigos, então a migration para se algum usuário ainda os usar.
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM usuarios WHERE papel IN ('PROFESSOR', 'COORDENADOR', 'AVALIADOR')) THEN
+        RAISE EXCEPTION 'Há usuários com papel PROFESSOR, COORDENADOR ou AVALIADOR; '
+            'atualize-os para ORGANIZADOR, COMITE_CIENTIFICO ou COMITE_TECNICO antes desta migration';
+    END IF;
+END
+$$;
+
+ALTER TYPE papel_usuario RENAME TO papel_usuario_antigo;
+
+CREATE TYPE papel_usuario AS ENUM ('PARTICIPANTE', 'MENTOR', 'COMITE_TECNICO', 'COMITE_CIENTIFICO', 'ORGANIZADOR', 'DEV');
+
+ALTER TABLE usuarios ALTER COLUMN papel TYPE papel_usuario USING papel::text::papel_usuario;
+
+DROP TYPE papel_usuario_antigo;
+
+-- Usuário desativado pelo Organizador (RF07) e dados do perfil Mentor (RF37, RV09)
+ALTER TABLE usuarios
+    ADD COLUMN ativo            boolean NOT NULL DEFAULT true,
+    ADD COLUMN empresa_parceira varchar,
+    ADD COLUMN area_atuacao     varchar,
+    ADD COLUMN max_equipes      smallint CONSTRAINT ck_usuarios_max_equipes CHECK (max_equipes > 0);
+
+COMMENT ON COLUMN usuarios.empresa_parceira IS 'Mentor: empresa parceira que o indicou';
+COMMENT ON COLUMN usuarios.max_equipes IS 'Mentor: quantidade máxima de equipes acompanhadas';

@@ -6,8 +6,7 @@ API do sistema de gestão de hackathons. Feita com **FastAPI + SQLModel (async) 
 
 - [x] Estrutura do projeto, Docker, CI
 - [x] Banco: tabelas e enums (migration `V202610110000__init.sql`)
-- [x] Banco: fluxos de inscrição e proposta (migration `V202610261200__fluxos_inscricao_proposta.sql`)
-- [x] Banco: perfis de acesso do RF06 (migration `V202610261300__perfis_de_acesso.sql`)
+- [x] Banco: fluxos de inscrição e proposta e perfis de acesso do RF06 (migration `V202610261200__fluxos_inscricao_proposta.sql`)
 - [x] Models (SQLModel) e schemas (Pydantic) de todas as entidades
 - [ ] Controllers e rotas (CRUD) — por enquanto a API só tem `/health`
 - [ ] Autenticação
