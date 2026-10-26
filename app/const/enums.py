@@ -10,6 +10,7 @@ class PapelUsuario(StrEnum):
     COMITE_TECNICO = "COMITE_TECNICO"
     COMITE_CIENTIFICO = "COMITE_CIENTIFICO"
     ORGANIZADOR = "ORGANIZADOR"
+    # Time de desenvolvimento: acesso a todas as rotas para testes (exceção à RN24)
     DEV = "DEV"
 
 
