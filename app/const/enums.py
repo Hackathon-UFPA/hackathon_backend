@@ -3,12 +3,14 @@ from enum import Enum, StrEnum
 from sqlalchemy import Enum as SAEnum
 
 
+# Perfis do RF06. Líder técnico não é papel: é membros_equipe.funcao = LIDER
 class PapelUsuario(StrEnum):
     PARTICIPANTE = "PARTICIPANTE"
-    PROFESSOR = "PROFESSOR"
-    COORDENADOR = "COORDENADOR"
-    AVALIADOR = "AVALIADOR"
     MENTOR = "MENTOR"
+    COMITE_TECNICO = "COMITE_TECNICO"
+    COMITE_CIENTIFICO = "COMITE_CIENTIFICO"
+    ORGANIZADOR = "ORGANIZADOR"
+    # Time de desenvolvimento: acesso a todas as rotas para testes (exceção à RN24)
     DEV = "DEV"
 
 
@@ -38,6 +40,41 @@ class CategoriaArtefato(StrEnum):
     DOCUMENTACAO = "DOCUMENTACAO"
     PROTOTIPO = "PROTOTIPO"
     OUTRO = "OUTRO"
+
+
+class SituacaoEquipe(StrEnum):
+    EM_FORMACAO = "EM_FORMACAO"
+    AGUARDANDO_HOMOLOGACAO = "AGUARDANDO_HOMOLOGACAO"
+    HOMOLOGADA = "HOMOLOGADA"
+    NAO_HOMOLOGADA = "NAO_HOMOLOGADA"
+
+
+class StatusConvite(StrEnum):
+    PENDENTE = "PENDENTE"
+    ACEITO = "ACEITO"
+    RECUSADO = "RECUSADO"
+    CANCELADO = "CANCELADO"
+
+
+class TipoTermo(StrEnum):
+    REGULAMENTO = "REGULAMENTO"
+    TERMO_CONSENTIMENTO = "TERMO_CONSENTIMENTO"
+
+
+class StatusComprovante(StrEnum):
+    PENDENTE = "PENDENTE"
+    APROVADO = "APROVADO"
+    RECUSADO = "RECUSADO"
+
+
+class StatusProposta(StrEnum):
+    RASCUNHO = "RASCUNHO"
+    ENVIADA = "ENVIADA"
+
+
+class TipoProtocolo(StrEnum):
+    INSCRICAO_EQUIPE = "INSCRICAO_EQUIPE"
+    PROPOSTA = "PROPOSTA"
 
 
 def pg_enum(enum_cls: type[Enum], nome: str):

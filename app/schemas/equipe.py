@@ -3,6 +3,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.const.enums import SituacaoEquipe
+
 
 class EquipeCreate(BaseModel):
     hackathon_id: UUID
@@ -15,6 +17,10 @@ class EquipeUpdate(BaseModel):
 
 class EquipeResponse(EquipeCreate):
     id: UUID
+    # Controlada pelo sistema (RF22, RF23), não pelo cliente
+    situacao: SituacaoEquipe
+    inscricao_concluida_em: datetime | None = None
+    homologada_em: datetime | None = None
     criado_em: datetime | None = None
     atualizado_em: datetime | None = None
 
