@@ -27,3 +27,25 @@ def conta_bloqueada(segundos_restantes: int):
         detail="Muitas tentativas de login. Tente novamente mais tarde.",
         headers={"Retry-After": str(segundos_restantes)},
     )
+
+
+def nao_autenticado():
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Não autenticado.",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+def acesso_negado():
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Você não tem permissão para acessar este recurso.",
+    )
+
+
+def conta_pendente():
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Conta pendente: aguarde a aprovação do comprovante de vínculo.",
+    )
