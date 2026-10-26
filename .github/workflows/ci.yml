@@ -36,12 +36,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Os testes usam o banco <POSTGRES_DB>_test, então é nele que as migrations são aplicadas
+      - name: Criar o banco de testes
+        run: PGPASSWORD=postgres createdb -h localhost -U postgres app_db_test
+
       - name: Aplicar migrations (Flyway)
         run: |
           docker run --rm --network host \
             -v "$PWD/migrations:/flyway/sql:ro" \
             flyway/flyway:11 \
-            -url=jdbc:postgresql://localhost:5432/app_db \
+            -url=jdbc:postgresql://localhost:5432/app_db_test \
             -user=postgres -password=postgres \
             -connectRetries=10 migrate
 
