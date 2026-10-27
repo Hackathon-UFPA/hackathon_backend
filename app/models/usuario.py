@@ -4,7 +4,7 @@ from uuid import UUID, uuid4
 from sqlalchemy import SmallInteger
 from sqlmodel import Field, SQLModel
 
-from app.const.enums import PapelUsuario, pg_enum
+from app.const.enums import PapelUsuario, SituacaoConta, pg_enum
 
 
 class Usuario(SQLModel, table=True):
@@ -18,6 +18,16 @@ class Usuario(SQLModel, table=True):
     curso: str | None = Field(default=None)
     periodo: int | None = Field(default=None, sa_type=SmallInteger)
     ativo: bool = Field(default=True, nullable=False)
+    # Autenticação (RF01, RF02): a senha nunca é guardada, só o hash
+    senha_hash: str | None = Field(default=None)
+    tentativas_login: int = Field(default=0, sa_type=SmallInteger, nullable=False)
+    bloqueado_ate: datetime | None = Field(default=None)
+    # PENDENTE até o comprovante de vínculo ser aprovado (RN25)
+    situacao_conta: SituacaoConta = Field(
+        default=SituacaoConta.ATIVA,
+        sa_type=pg_enum(SituacaoConta, "situacao_conta"),
+        nullable=False,
+    )
     # Perfil Mentor (RF37)
     empresa_parceira: str | None = Field(default=None)
     area_atuacao: str | None = Field(default=None)

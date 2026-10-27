@@ -504,3 +504,51 @@ def test_mentor_com_max_equipes_zero():
 
     with pytest.raises(IntegrityError, match="ck_usuarios_max_equipes"):
         rodar(fn)
+
+
+# --- Autenticação (RF01, RF02, RN25) ---
+
+
+def test_migration_de_autenticacao_aplicada():
+    async def fn(conn):
+        return await sql(
+            conn, "SELECT success FROM flyway_schema_history WHERE version = '202610261400'"
+        )
+
+    assert rodar(fn) is True
+
+
+def test_usuario_novo_nasce_ativo_sem_senha_nem_bloqueio():
+    async def fn(conn):
+        id_ = await novo_usuario(conn)
+        linha = await conn.execute(
+            text(
+                "SELECT situacao_conta::text, tentativas_login, bloqueado_ate, senha_hash"
+                " FROM usuarios WHERE id = :id"
+            ),
+            {"id": id_},
+        )
+        return tuple(linha.one())
+
+    assert rodar(fn) == ("ATIVA", 0, None, None)
+
+
+def test_email_repetido_em_outras_maiusculas():
+    async def fn(conn):
+        await sql(conn, "INSERT INTO usuarios (email, papel) VALUES ('Maria@teste.com', 'MENTOR')")
+        await sql(conn, "INSERT INTO usuarios (email, papel) VALUES ('MARIA@teste.com', 'MENTOR')")
+
+    with pytest.raises(IntegrityError, match="uq_usuarios_email_lower"):
+        rodar(fn)
+
+
+def test_tentativas_de_login_negativas():
+    async def fn(conn):
+        await sql(
+            conn,
+            "INSERT INTO usuarios (email, papel, tentativas_login)"
+            " VALUES ('t@teste.com', 'MENTOR', -1)",
+        )
+
+    with pytest.raises(IntegrityError, match="ck_usuarios_tentativas_login"):
+        rodar(fn)

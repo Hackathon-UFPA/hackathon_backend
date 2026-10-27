@@ -1,3 +1,4 @@
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -16,6 +17,12 @@ class Settings(BaseSettings):
     POSTGRES_DB: str = "app_db"
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "postgres"
+
+    # Autenticação (RF02, RNF15): sem valor padrão, a API não sobe sem a chave
+    JWT_SECRET: str = Field(min_length=32)
+    JWT_EXPIRE_MINUTES: int = Field(default=60, gt=0)
+    LOGIN_MAX_TENTATIVAS: int = Field(default=5, gt=0)
+    LOGIN_BLOQUEIO_MINUTOS: int = Field(default=15, gt=0)
 
     @property
     def DATABASE_URL(self) -> str:

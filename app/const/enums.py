@@ -77,6 +77,11 @@ class TipoProtocolo(StrEnum):
     PROPOSTA = "PROPOSTA"
 
 
+class SituacaoConta(StrEnum):
+    PENDENTE = "PENDENTE"
+    ATIVA = "ATIVA"
+
+
 def pg_enum(enum_cls: type[Enum], nome: str):
     """Mapeia um Enum Python para o tipo ENUM nativo do Postgres (criado pelo Flyway)."""
     return SAEnum(

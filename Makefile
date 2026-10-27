@@ -14,9 +14,10 @@ restart: down up
 logs:
 	docker compose logs -f app
 
-# Roda as migrations pendentes sem reiniciar a API
+# Roda as migrations pendentes (banco de desenvolvimento e banco de testes) sem reiniciar a API
 migrate:
 	docker compose run --rm flyway
+	docker compose run --rm flyway_test
 
 test:
 	docker compose exec app pytest
