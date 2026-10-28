@@ -39,8 +39,7 @@ from app.services.termo import validar_termos_aceitos
 
 
 def _agora_utc() -> datetime:
-    """UTC sem fuso: as colunas `timestamp` do banco guardam UTC sem informação de fuso."""
-    return datetime.now(UTC).replace(tzinfo=None)
+    return datetime.now(UTC)
 
 
 async def _equipe_e_hackathon(

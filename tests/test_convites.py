@@ -78,7 +78,8 @@ class Cenario:
 
     def definir_maximo(self, maximo: int):
         self.sql(
-            "UPDATE hackathon SET max_integrantes = :m WHERE id = :id",
+            "UPDATE hackathon SET max_integrantes = :m,"
+            " min_integrantes = LEAST(min_integrantes, :m) WHERE id = :id",
             m=maximo,
             id=self.hackathon_id,
         )
