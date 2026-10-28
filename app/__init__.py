@@ -4,6 +4,10 @@ tags = [
     {"name": "Autenticação", "description": "Cadastro de participante e login (RF01, RF02)"},
     {"name": "Usuários", "description": "Cadastro de usuários de outros perfis (RF07, RF08)"},
     {
+        "name": "Equipes",
+        "description": "Criação, consulta e edição de equipes e membros (RF18, RF24)",
+    },
+    {
         "name": "Convites",
         "description": "Convidar integrantes, aceitar ou recusar convites (RF18, RF19)",
     },

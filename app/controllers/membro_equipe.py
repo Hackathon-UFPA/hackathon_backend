@@ -1,10 +1,12 @@
 from uuid import UUID
 
 from sqlalchemy import func
-from sqlmodel import select
+from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.models import MembroEquipe
+from app.schemas.membro_equipe import MembroEquipeUpdate
+from app.utils.generic_db_operations import atualizar_instancia
 
 
 async def get_membro(db: AsyncSession, equipe_id: UUID, usuario_id: UUID) -> MembroEquipe | None:
@@ -31,3 +33,28 @@ async def contar_membros(db: AsyncSession, equipe_id: UUID) -> int:
 def adicionar_membro(db: AsyncSession, membro: MembroEquipe) -> None:
     """Só adiciona à sessão; quem chama decide quando confirmar a transação."""
     db.add(membro)
+
+
+async def listar_membros(db: AsyncSession, equipe_id: UUID) -> list[MembroEquipe]:
+    consulta = (
+        select(MembroEquipe)
+        .where(MembroEquipe.equipe_id == equipe_id)
+        .order_by(col(MembroEquipe.entrou_em).nulls_last(), col(MembroEquipe.usuario_id))
+    )
+    return list((await db.exec(consulta)).all())
+
+
+async def atualizar_membro(
+    db: AsyncSession, membro: MembroEquipe, dados: MembroEquipeUpdate
+) -> MembroEquipe:
+    """Sem commit: autorização e confirmação pertencem ao service."""
+    await atualizar_instancia(membro, dados)
+    db.add(membro)
+    await db.flush()
+    return membro
+
+
+async def remover_membro(db: AsyncSession, membro: MembroEquipe) -> None:
+    """Remove apenas o vínculo, preservando convites e aceites de termos."""
+    await db.delete(membro)
+    await db.flush()
