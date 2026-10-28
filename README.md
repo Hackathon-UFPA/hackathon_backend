@@ -303,15 +303,37 @@ Rotas de RF18, RF19 e RF20. Todas exigem token e **conta ativa** (conta pendente
 
 **Guia para a interface.** Painel do convidado: `GET /convites/meus`. Ao clicar em aceitar, buscar `GET /hackathons/{hackathon_id}/termos/vigentes` (o `hackathon_id` vem no próprio convite), mostrar `conteudo` ou `url` de cada documento e, quando a pessoa concordar, enviar os ids para `POST /convites/{id}/aceitar` com `{ "termos_ids": ["...", "..."] }`.
 
-Ficou de fora desta etapa: envio do convite por e-mail e aviso ao líder quando alguém recusa (RF19; depende da infraestrutura de e-mail, decisão Q16). Por enquanto o líder consulta `GET /equipes/{id}/convites`. Também não há rota para criar a equipe e o líder (BE-S4-03).
+Ficou de fora desta etapa: envio do convite por e-mail e aviso ao líder quando alguém recusa (RF19; depende da infraestrutura de e-mail, decisão Q16). Por enquanto o líder consulta `GET /equipes/{id}/convites`.
+
+## Equipes — primeira etapa da BE-S4-03
+
+Todas as rotas exigem token e conta ativa; conta pendente recebe 403.
+
+| Rota | Quem acessa | O que faz |
+|------|-------------|-----------|
+| `POST /equipes` | Usuário autenticado | Recebe `hackathon_id` e `nome` opcional; cria equipe em `EM_FORMACAO` e vínculo `LIDER` do próprio usuário na mesma transação |
+| `GET /equipes/minhas` | Usuário autenticado | Lista somente equipes das quais participa, em todas as edições; sem vínculo retorna `[]`, inclusive para DEV |
+| `GET /equipes/{equipe_id}` | Integrante ou DEV | Consulta os dados da equipe |
+| `PATCH /equipes/{equipe_id}` | Líder ou DEV | Altera somente `nome`, enquanto a equipe está em `EM_FORMACAO` e as inscrições estão abertas |
+
+A criação e a edição seguem o critério de inscrições já usado pelos convites: `hackathon.status = INSCRICOES`. Os campos de datas de inscrições não são avaliados por esses fluxos. Fora das inscrições, a resposta é 409. Edição em outra situação também retorna 409. Equipe ou hackathon inexistente retorna 404; falta de vínculo ou liderança retorna 403.
+
+O cliente não pode escolher outro líder nem enviar situação ou datas; campos extras são rejeitados com 422. No PATCH, `hackathon_id` também é rejeitado. `nome` continua opcional, aceita `null` e tem limite de 255 caracteres; PATCH vazio preserva os dados.
+
+RN02 é garantida na consulta prévia e pela restrição única do banco, inclusive em disputa com aceites de convites. Falhas na criação revertem tanto a equipe quanto o vínculo do líder. Uma pessoa pode participar de edições diferentes.
+
+A equipe pode ser criada com somente o líder, sem exigir o mínimo de integrantes, conclusão da inscrição, homologação ou aceite de termos nesta operação. O aceite continua nos endpoints próprios. Os limites permanecem configurados em `hackathon.min_integrantes` e `hackathon.max_integrantes`, sem novos valores fixos; o fluxo de convites continua usando o máximo configurado. A Q04 ainda precisa de validação.
+
+O gerenciamento completo dos membros fica para a segunda etapa. Exclusão de equipes, alteração de funções, remoção de membros, conclusão da inscrição, homologação e notificações por e-mail não fazem parte desta entrega.
 
 ## Criando as rotas de uma entidade (ex.: `equipe`)
 
-Model e schemas já existem; falta:
+Ao criar uma nova entidade, siga a separação usada por `equipe`:
 
-1. **Controller** — `app/controllers/equipe.py` (`get_equipe_by_id`, `criar_equipe`, `atualizar_equipe`, `deletar_equipe`), usando `app/exceptions/db.py` para os erros e `atualizar_instancia` (em `app/utils/generic_db_operations.py`) com o schema `EquipeUpdate`.
-2. **View** — `app/views/equipe.py` com `router = APIRouter(prefix="/equipes", tags=["Equipes"])`, recebendo `EquipeCreate`/`EquipeUpdate` e devolvendo `EquipeResponse`.
-3. Registrar o router em `app/views/__init__.py` e a tag em `app/__init__.py`.
+1. **Controller** — consultas e persistência sem commit, como `app/controllers/equipe.py`; `atualizar_instancia` (em `app/utils/generic_db_operations.py`) copia somente os campos enviados no schema.
+2. **Service** — regras, autorização e transação, como `app/services/equipe.py`, usando as exceções de negócio e `app/exceptions/db.py` para erros de integridade.
+3. **View** — contrato HTTP e documentação Swagger, como `app/views/equipe.py`, recebendo `EquipeCreate`/`EquipeUpdate` e devolvendo `EquipeResponse`.
+4. Registrar o router em `app/views/__init__.py` e a tag em `app/__init__.py`.
 
 Para uma tabela nova: migration → model em `app/models/` (e importar em `models/__init__.py`) → schemas → passos acima.
 

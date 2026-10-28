@@ -7,11 +7,15 @@ from app.const.enums import SituacaoEquipe
 
 
 class EquipeCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     hackathon_id: UUID
     nome: str | None = Field(default=None, max_length=255, examples=["Equipe Backend"])
 
 
 class EquipeUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     nome: str | None = Field(default=None, max_length=255)
 
 
