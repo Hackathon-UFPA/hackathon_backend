@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class AceiteTermoCreate(BaseModel):
@@ -14,3 +14,8 @@ class AceiteTermoResponse(AceiteTermoCreate):
     aceito_em: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# Ids das versões de termo aceitas, como listadas em /hackathons/{id}/termos/vigentes
+class AceiteTermosCreate(BaseModel):
+    termos_ids: list[UUID] = Field(min_length=1)
