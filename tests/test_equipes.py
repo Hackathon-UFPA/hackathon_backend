@@ -70,6 +70,38 @@ def test_criar_equipe_com_lider_automatico_sem_minimo_ou_termos(client, equipes,
     assert sql("SELECT * FROM aceites_termos WHERE usuario_id = :u", u=equipes.lider["id"]) == []
 
 
+@pytest.mark.parametrize("papel", ["MENTOR", "ORGANIZADOR", "COMITE_TECNICO", "COMITE_CIENTIFICO"])
+def test_perfis_sem_permissao_nao_criam_equipe(client, equipes, usuario_no_banco, sql, papel):
+    usuario = usuario_no_banco(papel=papel)
+
+    resposta = equipes.criar(client, usuario=usuario)
+
+    assert resposta.status_code == 403
+    assert sql("SELECT * FROM equipes WHERE hackathon_id = :h", h=equipes.hackathon_id) == []
+    assert sql("SELECT * FROM membros_equipe WHERE hackathon_id = :h", h=equipes.hackathon_id) == []
+
+
+@pytest.mark.parametrize("papel", ["PARTICIPANTE", "DEV"])
+def test_perfis_permitidos_criam_equipe_respeitando_regras(
+    client, equipes, usuario_no_banco, sql, papel
+):
+    usuario = usuario_no_banco(papel=papel)
+
+    resposta = equipes.criar(client, usuario=usuario)
+
+    assert resposta.status_code == 201, resposta.text
+    membro = sql(
+        "SELECT usuario_id, funcao FROM membros_equipe WHERE equipe_id = :e",
+        e=resposta.json()["id"],
+    )
+    assert len(membro) == 1
+    assert membro[0]["usuario_id"] == usuario["id"]
+    assert membro[0]["funcao"] == "LIDER"
+    assert equipes.criar(client, usuario=usuario).status_code == 409
+    fechado = equipes.hackathon(status="INSCRICOES_ENCERRADAS")
+    assert equipes.criar(client, usuario=usuario, hackathon=fechado).status_code == 409
+
+
 def test_criar_sem_nome_e_com_maximo_configurado_em_um(client, equipes):
     hackathon = equipes.hackathon(minimo=1, maximo=1)
     resposta = equipes.criar(client, hackathon=hackathon)

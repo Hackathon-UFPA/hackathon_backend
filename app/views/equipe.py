@@ -3,10 +3,11 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, status
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.const.enums import PapelUsuario
 from app.db.db import get_session
 from app.models import Usuario
 from app.schemas.equipe import EquipeCreate, EquipeResponse, EquipeUpdate
-from app.security.dependencias import usuario_ativo
+from app.security.dependencias import exigir_papeis, usuario_ativo
 from app.services.equipe import consultar, criar, editar, listar_minhas
 from app.utils.openapi import respostas_de_erro
 
@@ -23,7 +24,8 @@ ERRO_403 = "Conta pendente, ou quem pede não tem permissão para esta rota"
     summary="Criar equipe",
     description=(
         "Cria a equipe em `EM_FORMACAO` e o vínculo `LIDER` do usuário autenticado na mesma "
-        "transação (RF18). Exige hackathon existente com `status = INSCRICOES` (RN06) e "
+        "transação (RF18). Restrito a `PARTICIPANTE`, com a exceção técnica `DEV`. "
+        "Exige hackathon existente com `status = INSCRICOES` (RN06) e "
         "nenhum vínculo do usuário nesta edição (RN02). Não exige mínimo de integrantes ou "
         "aceites de termos nesta operação. Aceites têm endpoints próprios. "
         "Aceita somente `hackathon_id` e `nome` opcional; o líder é definido pelo sistema."
@@ -40,7 +42,7 @@ ERRO_403 = "Conta pendente, ou quem pede não tem permissão para esta rota"
 async def criar_uma_equipe(
     dados: EquipeCreate,
     db: AsyncSession = Depends(get_session),
-    usuario: Usuario = Depends(usuario_ativo),
+    usuario: Usuario = Depends(exigir_papeis(PapelUsuario.PARTICIPANTE)),
 ):
     return await criar(db, usuario, dados)
 

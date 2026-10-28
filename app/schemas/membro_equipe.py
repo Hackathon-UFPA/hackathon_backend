@@ -13,6 +13,8 @@ class MembroEquipeCreate(BaseModel):
 
 
 class MembroEquipeUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     funcao: FuncaoMembro | None = None
 
 
