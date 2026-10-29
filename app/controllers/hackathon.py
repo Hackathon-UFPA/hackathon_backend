@@ -3,6 +3,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.const.enums import StatusHackathon
 from app.models import Hackathon
+from app.validations.inscricao import inscricoes_abertas
 
 
 async def get_hackathon_com_inscricoes(db: AsyncSession) -> Hackathon | None:
@@ -11,6 +12,6 @@ async def get_hackathon_com_inscricoes(db: AsyncSession) -> Hackathon | None:
         select(Hackathon)
         .where(Hackathon.status == StatusHackathon.INSCRICOES)
         .order_by(Hackathon.data_inicio.desc().nulls_last())
-        .limit(1)
     )
-    return (await db.exec(consulta)).first()
+    hackathons = (await db.exec(consulta)).all()
+    return next((hackathon for hackathon in hackathons if inscricoes_abertas(hackathon)), None)

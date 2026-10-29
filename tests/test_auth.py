@@ -81,6 +81,20 @@ def test_cadastro_registra_comprovante_pendente_no_hackathon_aberto(
     assert comprovante[0]["status"] == "PENDENTE"
 
 
+def test_cadastro_ignora_edicoes_mais_recentes_fora_do_periodo(
+    client, sql, hackathon_aberto, novo_email, edicoes_fora_do_periodo
+):
+    resposta = cadastrar(client, novo_email())
+
+    assert resposta.status_code == 201, resposta.text
+    comprovante = sql(
+        "SELECT hackathon_id FROM comprovantes_vinculo WHERE usuario_id = :u",
+        u=resposta.json()["id"],
+    )
+    assert [c["hackathon_id"] for c in comprovante] == [hackathon_aberto]
+    assert hackathon_aberto not in edicoes_fora_do_periodo
+
+
 def test_cadastro_guarda_email_em_minusculas(client, hackathon_aberto, novo_email):
     email = novo_email()
 

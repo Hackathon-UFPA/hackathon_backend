@@ -9,7 +9,6 @@ from app.const.enums import (
     PapelUsuario,
     SituacaoEquipe,
     StatusConvite,
-    StatusHackathon,
 )
 from app.controllers.convite import (
     contar_pendentes,
@@ -43,6 +42,7 @@ from app.exceptions.equipe import equipe_nao_editavel
 from app.models import Convite, Equipe, Hackathon, MembroEquipe, Usuario
 from app.schemas.convite import ConviteEnvio, ConviteRecebidoResponse
 from app.services.termo import validar_termos_aceitos
+from app.validations.inscricao import inscricoes_abertas
 
 
 def _agora_utc() -> datetime:
@@ -61,7 +61,7 @@ async def _equipe_e_hackathon(
 
 def _exigir_inscricoes_abertas(hackathon: Hackathon) -> None:
     """RN06: convites só valem durante as inscrições."""
-    if hackathon.status != StatusHackathon.INSCRICOES:
+    if not inscricoes_abertas(hackathon):
         fora_do_periodo_de_inscricao()
 
 
