@@ -60,3 +60,26 @@ async def criar_convite(db: AsyncSession, convite: Convite) -> Convite:
             convite_repetido()
         erro_de_integridade_sql(error)
     return convite
+
+
+async def listar_usuarios_com_convite_aceito(db: AsyncSession, equipe_id: UUID) -> set[UUID]:
+    consulta = select(Convite.usuario_id).where(
+        Convite.equipe_id == equipe_id, Convite.status == StatusConvite.ACEITO
+    )
+    return {usuario_id for usuario_id in (await db.exec(consulta)).all() if usuario_id}
+
+
+async def cancelar_convites_pendentes(db: AsyncSession, equipe_id: UUID) -> int:
+    """Sem commit. Usado ao fechar a inscrição: o que ficou sem resposta deixa de valer."""
+    pendentes = (
+        await db.exec(
+            select(Convite).where(
+                Convite.equipe_id == equipe_id, Convite.status == StatusConvite.PENDENTE
+            )
+        )
+    ).all()
+    for convite in pendentes:
+        convite.status = StatusConvite.CANCELADO
+        db.add(convite)
+    await db.flush()
+    return len(pendentes)

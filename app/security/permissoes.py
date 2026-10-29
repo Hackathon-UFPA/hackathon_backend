@@ -20,3 +20,8 @@ def perfis_cadastraveis(quem_cadastra: PapelUsuario) -> list[PapelUsuario]:
 
 def pode_cadastrar(quem_cadastra: PapelUsuario, perfil: PapelUsuario) -> bool:
     return perfil in perfis_cadastraveis(quem_cadastra)
+
+
+# Quem confere o comprovante de vínculo (RF21). A Q25 ainda não decidiu se é só o Organizador ou
+# também o Comitê Científico; enquanto isso os dois podem. Ajustar aqui muda todas as rotas.
+PERFIS_QUE_VALIDAM_COMPROVANTE = (PapelUsuario.ORGANIZADOR, PapelUsuario.COMITE_CIENTIFICO)

@@ -4,7 +4,13 @@ from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.const.enums import FuncaoMembro, PapelUsuario, StatusConvite, StatusHackathon
+from app.const.enums import (
+    FuncaoMembro,
+    PapelUsuario,
+    SituacaoEquipe,
+    StatusConvite,
+    StatusHackathon,
+)
 from app.controllers.convite import (
     contar_pendentes,
     criar_convite,
@@ -33,6 +39,7 @@ from app.exceptions.convite import (
     ja_esta_em_outra_equipe,
 )
 from app.exceptions.db import erro_de_integridade_sql
+from app.exceptions.equipe import equipe_nao_editavel
 from app.models import Convite, Equipe, Hackathon, MembroEquipe, Usuario
 from app.schemas.convite import ConviteEnvio, ConviteRecebidoResponse
 from app.services.termo import validar_termos_aceitos
@@ -58,6 +65,12 @@ def _exigir_inscricoes_abertas(hackathon: Hackathon) -> None:
         fora_do_periodo_de_inscricao()
 
 
+def _exigir_equipe_em_formacao(equipe: Equipe) -> None:
+    """Concluir a inscrição fecha a composição da equipe (RF22): sem convites novos nem aceites."""
+    if equipe.situacao != SituacaoEquipe.EM_FORMACAO:
+        equipe_nao_editavel()
+
+
 async def _exigir_lider(db: AsyncSession, equipe_id: UUID, usuario: Usuario) -> None:
     """Líder técnico = `membros_equipe.funcao = LIDER`. DEV passa em tudo (exceção do time)."""
     if usuario.papel == PapelUsuario.DEV:
@@ -76,6 +89,7 @@ async def enviar_convite(
     equipe, hackathon = await _equipe_e_hackathon(db, equipe_id, para_atualizar=True)
     await _exigir_lider(db, equipe.id, lider)
     _exigir_inscricoes_abertas(hackathon)
+    _exigir_equipe_em_formacao(equipe)
 
     email = str(dados.email).lower()
     convidado = await get_usuario_by_email(db, email)
@@ -149,6 +163,7 @@ async def aceitar_convite(
     # Trava a equipe para que aceites simultâneos não passem do máximo de integrantes
     equipe, hackathon = await _equipe_e_hackathon(db, convite.equipe_id, para_atualizar=True)
     _exigir_inscricoes_abertas(hackathon)
+    _exigir_equipe_em_formacao(equipe)
 
     if await get_membro_no_hackathon(db, hackathon.id, usuario.id) is not None:
         ja_esta_em_outra_equipe()

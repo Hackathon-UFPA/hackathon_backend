@@ -36,3 +36,17 @@ async def listar_aceites(
         .order_by(AceiteTermo.aceito_em)
     )
     return list((await db.exec(consulta)).all())
+
+
+async def listar_aceites_dos_usuarios(
+    db: AsyncSession, usuarios_ids: list[UUID], termos_ids: set[UUID]
+) -> dict[UUID, set[UUID]]:
+    """Quais das versões `termos_ids` cada pessoa aceitou."""
+    consulta = select(AceiteTermo.usuario_id, AceiteTermo.termo_id).where(
+        col(AceiteTermo.usuario_id).in_(usuarios_ids),
+        col(AceiteTermo.termo_id).in_(termos_ids),
+    )
+    aceites: dict[UUID, set[UUID]] = {}
+    for usuario_id, termo_id in (await db.exec(consulta)).all():
+        aceites.setdefault(usuario_id, set()).add(termo_id)
+    return aceites
