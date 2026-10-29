@@ -1,0 +1,19 @@
+from enum import StrEnum
+
+
+class CodigoPendencia(StrEnum):
+    """O que ainda falta para a equipe concluir a inscrição ou ser homologada (RF25).
+
+    Fica fora de `enums.py` de propósito: aquele arquivo espelha só os tipos do Postgres.
+    """
+
+    INSCRICOES_ENCERRADAS = "INSCRICOES_ENCERRADAS"
+    EQUIPE_ABAIXO_DO_MINIMO = "EQUIPE_ABAIXO_DO_MINIMO"
+    EQUIPE_ACIMA_DO_MAXIMO = "EQUIPE_ACIMA_DO_MAXIMO"
+    TERMOS_NAO_PUBLICADOS = "TERMOS_NAO_PUBLICADOS"
+    CONVITE_NAO_ACEITO = "CONVITE_NAO_ACEITO"
+    TERMOS_NAO_ACEITOS = "TERMOS_NAO_ACEITOS"
+    CONTA_DESATIVADA = "CONTA_DESATIVADA"
+    COMPROVANTE_NAO_ENVIADO = "COMPROVANTE_NAO_ENVIADO"
+    COMPROVANTE_PENDENTE = "COMPROVANTE_PENDENTE"
+    COMPROVANTE_RECUSADO = "COMPROVANTE_RECUSADO"

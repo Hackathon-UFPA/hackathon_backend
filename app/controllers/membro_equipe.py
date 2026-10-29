@@ -4,7 +4,7 @@ from sqlalchemy import func
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.models import MembroEquipe
+from app.models import MembroEquipe, Usuario
 from app.schemas.membro_equipe import MembroEquipeUpdate
 from app.utils.generic_db_operations import atualizar_instancia
 
@@ -58,3 +58,15 @@ async def remover_membro(db: AsyncSession, membro: MembroEquipe) -> None:
     """Remove apenas o vínculo, preservando convites e aceites de termos."""
     await db.delete(membro)
     await db.flush()
+
+
+async def listar_membros_com_usuario(
+    db: AsyncSession, equipe_id: UUID
+) -> list[tuple[MembroEquipe, Usuario]]:
+    consulta = (
+        select(MembroEquipe, Usuario)
+        .join(Usuario, col(Usuario.id) == col(MembroEquipe.usuario_id))
+        .where(MembroEquipe.equipe_id == equipe_id)
+        .order_by(col(MembroEquipe.entrou_em).nulls_last(), col(MembroEquipe.usuario_id))
+    )
+    return [(membro, usuario) for membro, usuario in (await db.exec(consulta)).all()]

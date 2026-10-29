@@ -15,4 +15,12 @@ tags = [
         "name": "Termos",
         "description": "Regulamento e termo de consentimento vigentes e seus aceites (RF20)",
     },
+    {
+        "name": "Comprovantes",
+        "description": "Conferência e reenvio do comprovante de vínculo (RF21, RN25)",
+    },
+    {
+        "name": "Inscrição",
+        "description": "Painel da equipe, conclusão da inscrição e homologação (RF22, RF23, RF25)",
+    },
 ]
