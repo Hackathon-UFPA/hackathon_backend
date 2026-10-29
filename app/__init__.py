@@ -23,4 +23,5 @@ tags = [
         "name": "Inscrição",
         "description": "Painel da equipe, conclusão da inscrição e homologação (RF22, RF23, RF25)",
     },
+    {"name": "Propostas", "description": "Criação, consulta e edição de rascunhos (RF27)"},
 ]

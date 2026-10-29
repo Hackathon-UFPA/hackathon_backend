@@ -9,8 +9,8 @@ from app.schemas.tema import Ods
 
 # Rascunho (RF27): todos os campos da proposta são opcionais até o envio
 class SubmissaoCreate(BaseModel):
-    equipe_id: UUID
-    hackathon_id: UUID
+    model_config = ConfigDict(extra="forbid")
+
     tema_id: UUID | None = None
     titulo: str | None = Field(default=None, max_length=255, examples=["App de coleta seletiva"])
     descricao: str | None = None
@@ -20,6 +20,8 @@ class SubmissaoCreate(BaseModel):
 
 
 class SubmissaoUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     tema_id: UUID | None = None
     titulo: str | None = Field(default=None, max_length=255)
     descricao: str | None = None
@@ -30,6 +32,8 @@ class SubmissaoUpdate(BaseModel):
 
 class SubmissaoResponse(SubmissaoCreate):
     id: UUID
+    equipe_id: UUID
+    hackathon_id: UUID
     status: StatusProposta
     enviado_em: datetime | None = None
     criado_em: datetime | None = None
