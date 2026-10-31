@@ -143,6 +143,70 @@ def cenario(sql, usuario_no_banco, novo_email):
     c.limpar()
 
 
+@pytest.mark.parametrize("operacao", ["enviar", "aceitar", "recusar"])
+def test_convites_respeitam_periodo_do_edital(client, cenario, sql, periodo_inscricoes, operacao):
+    convidado = cenario.usuario_no_banco()
+    if operacao != "enviar":
+        convite = cenario.convidar(client, email=convidado["email"])
+        assert convite.status_code == 201, convite.text
+        convite_id = convite.json()["id"]
+    permitido = periodo_inscricoes(cenario.hackathon_id)
+
+    if operacao == "enviar":
+        resposta = cenario.convidar(client, email=convidado["email"])
+    else:
+        resposta = getattr(cenario, operacao)(client, convidado, convite_id)
+
+    assert resposta.status_code == ((201 if operacao == "enviar" else 200) if permitido else 409)
+    if not permitido:
+        assert resposta.json() == {"detail": "As inscrições deste hackathon não estão abertas."}
+    convites = sql("SELECT status FROM convites WHERE equipe_id = :e", e=cenario.equipe_id)
+    esperado = {"enviar": "PENDENTE", "aceitar": "ACEITO", "recusar": "RECUSADO"}[operacao]
+    assert [c["status"] for c in convites] == (
+        [esperado] if permitido else ([] if operacao == "enviar" else ["PENDENTE"])
+    )
+    membros = sql(
+        "SELECT * FROM membros_equipe WHERE equipe_id = :e AND usuario_id = :u",
+        e=cenario.equipe_id,
+        u=convidado["id"],
+    )
+    aceites = sql("SELECT * FROM aceites_termos WHERE usuario_id = :u", u=convidado["id"])
+    assert len(membros) == (1 if permitido and operacao == "aceitar" else 0)
+    assert len(aceites) == (2 if permitido and operacao == "aceitar" else 0)
+
+
+def test_cancelamento_continua_permitido_apos_prazo(client, cenario, sql):
+    _, convite_id = cenario.convidar_usuario(client)
+    sql(
+        "UPDATE hackathon SET inscricoes_fim = now() - interval '1 day' WHERE id = :h",
+        h=cenario.hackathon_id,
+    )
+    sql("UPDATE equipes SET situacao = 'HOMOLOGADA' WHERE id = :e", e=cenario.equipe_id)
+
+    resposta = client.post(
+        f"/convites/{convite_id}/cancelar", headers=com_token(cenario.lider["id"])
+    )
+
+    assert resposta.status_code == 200
+    assert resposta.json()["status"] == "CANCELADO"
+
+
+def test_aceite_de_termos_continua_permitido_apos_prazo(client, cenario, sql):
+    sql(
+        "UPDATE hackathon SET inscricoes_fim = now() - interval '1 day' WHERE id = :h",
+        h=cenario.hackathon_id,
+    )
+
+    resposta = client.post(
+        f"/hackathons/{cenario.hackathon_id}/termos/aceites",
+        json={"termos_ids": cenario.termos_ids},
+        headers=com_token(cenario.lider["id"]),
+    )
+
+    assert resposta.status_code == 201
+    assert sorted(a["termo_id"] for a in resposta.json()) == sorted(cenario.termos_ids)
+
+
 # --- Enviar convite (RF18) ---
 
 

@@ -3,7 +3,7 @@ from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.const.enums import FuncaoMembro, PapelUsuario, SituacaoEquipe, StatusHackathon
+from app.const.enums import FuncaoMembro, PapelUsuario, SituacaoEquipe
 from app.controllers.equipe import get_equipe_by_id, get_hackathon_by_id
 from app.controllers.membro_equipe import (
     atualizar_membro,
@@ -22,6 +22,7 @@ from app.exceptions.equipe import equipe_nao_editavel, lider_protegido, membro_n
 from app.models import MembroEquipe, Usuario
 from app.schemas.membro_equipe import MembroEquipeUpdate
 from app.services.equipe import consultar
+from app.validations.inscricao import inscricoes_abertas
 
 
 async def listar(db: AsyncSession, usuario: Usuario, equipe_id: UUID) -> list[MembroEquipe]:
@@ -43,7 +44,7 @@ async def _membro_para_alteracao(
     hackathon = await get_hackathon_by_id(db, equipe.hackathon_id)
     if hackathon is None:
         hackathon_nao_encontrado()
-    if hackathon.status != StatusHackathon.INSCRICOES:
+    if not inscricoes_abertas(hackathon):
         fora_do_periodo_de_inscricao()
     if equipe.situacao != SituacaoEquipe.EM_FORMACAO:
         equipe_nao_editavel()

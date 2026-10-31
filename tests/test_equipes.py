@@ -280,6 +280,31 @@ def test_criar_fora_das_inscricoes(client, equipes, status, sql):
     assert sql("SELECT * FROM equipes WHERE hackathon_id = :h", h=hackathon) == []
 
 
+@pytest.mark.parametrize("operacao", ["criar", "editar"])
+def test_equipes_respeitam_periodo_do_edital(client, equipes, sql, periodo_inscricoes, operacao):
+    if operacao == "editar":
+        equipe = equipes.criar(client, nome="Original").json()
+    permitido = periodo_inscricoes(equipes.hackathon_id)
+
+    if operacao == "criar":
+        resposta = equipes.criar(client, nome="Novo")
+    else:
+        resposta = client.patch(
+            f"/equipes/{equipe['id']}", headers=com_token(equipes.lider), json={"nome": "Novo"}
+        )
+
+    assert resposta.status_code == ((201 if operacao == "criar" else 200) if permitido else 409)
+    if not permitido:
+        assert resposta.json() == {"detail": "As inscrições deste hackathon não estão abertas."}
+    atuais = sql("SELECT nome FROM equipes WHERE hackathon_id = :h", h=equipes.hackathon_id)
+    assert [e["nome"] for e in atuais] == (
+        ["Novo"] if permitido else (["Original"] if operacao == "editar" else [])
+    )
+    assert len(
+        sql("SELECT * FROM membros_equipe WHERE hackathon_id = :h", h=equipes.hackathon_id)
+    ) == (1 if permitido or operacao == "editar" else 0)
+
+
 @pytest.mark.parametrize("status", [s.value for s in StatusHackathon if s != "INSCRICOES"])
 def test_editar_fora_das_inscricoes(client, equipes, sql, status):
     equipe = equipes.criar(client).json()

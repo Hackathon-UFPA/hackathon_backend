@@ -4,7 +4,7 @@ from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.const.enums import FuncaoMembro, PapelUsuario, SituacaoEquipe, StatusHackathon
+from app.const.enums import FuncaoMembro, PapelUsuario, SituacaoEquipe
 from app.controllers.equipe import (
     atualizar_equipe,
     criar_equipe,
@@ -24,14 +24,14 @@ from app.exceptions.db import erro_de_integridade_sql
 from app.exceptions.equipe import consulta_apenas_por_integrante, equipe_nao_editavel
 from app.models import Equipe, MembroEquipe, Usuario
 from app.schemas.equipe import EquipeCreate, EquipeUpdate
+from app.validations.inscricao import inscricoes_abertas
 
 
 async def criar(db: AsyncSession, usuario: Usuario, dados: EquipeCreate) -> Equipe:
     hackathon = await get_hackathon_by_id(db, dados.hackathon_id)
     if hackathon is None:
         hackathon_nao_encontrado()
-    # Mesmo critério do fluxo de convites: o status controla as inscrições (RN06).
-    if hackathon.status != StatusHackathon.INSCRICOES:
+    if not inscricoes_abertas(hackathon):
         fora_do_periodo_de_inscricao()
     if await get_membro_no_hackathon(db, hackathon.id, usuario.id) is not None:
         ja_esta_em_outra_equipe()
@@ -90,7 +90,7 @@ async def editar(
     hackathon = await get_hackathon_by_id(db, equipe.hackathon_id)
     if hackathon is None:
         hackathon_nao_encontrado()
-    if hackathon.status != StatusHackathon.INSCRICOES:
+    if not inscricoes_abertas(hackathon):
         fora_do_periodo_de_inscricao()
     if equipe.situacao != SituacaoEquipe.EM_FORMACAO:
         equipe_nao_editavel()

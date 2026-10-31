@@ -1,4 +1,5 @@
 import asyncio
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
@@ -41,6 +42,36 @@ def sql():
     return executar_sql
 
 
+@pytest.fixture(
+    params=[
+        pytest.param(("INSCRICOES", -2, -1, False), id="prazo-encerrado"),
+        pytest.param(("INSCRICOES", 1, 2, False), id="inicio-futuro"),
+        pytest.param(("INSCRICOES", -1, 1, True), id="periodo-valido"),
+        pytest.param(("INSCRICOES_ENCERRADAS", -1, 1, False), id="status-encerrado"),
+        pytest.param(("INSCRICOES", None, None, True), id="sem-datas"),
+        pytest.param(("INSCRICOES", -1, None, True), id="sem-fim"),
+        pytest.param(("INSCRICOES", None, 1, True), id="sem-inicio"),
+    ]
+)
+def periodo_inscricoes(request, sql):
+    """Aplica os cenários da RN06 a uma edição e informa se a operação é permitida."""
+    status, inicio, fim, permitido = request.param
+    agora = datetime.now(UTC).replace(tzinfo=None)
+
+    def configurar(hackathon_id):
+        sql(
+            "UPDATE hackathon SET status = CAST(:s AS status_hackathon),"
+            " inscricoes_inicio = :inicio, inscricoes_fim = :fim WHERE id = :h",
+            s=status,
+            inicio=agora + timedelta(days=inicio) if inicio is not None else None,
+            fim=agora + timedelta(days=fim) if fim is not None else None,
+            h=hackathon_id,
+        )
+        return permitido
+
+    return configurar
+
+
 @pytest.fixture
 def hackathon_aberto():
     """Hackathon com inscrições abertas. A data de início distante faz dele o escolhido no
@@ -52,6 +83,36 @@ def hackathon_aberto():
     yield id_
     executar_sql("DELETE FROM comprovantes_vinculo WHERE hackathon_id = :id", id=id_)
     executar_sql("DELETE FROM hackathon WHERE id = :id", id=id_)
+
+
+@pytest.fixture
+def edicoes_fora_do_periodo(sql, hackathon_aberto):
+    """Edições mais recentes que a aberta, mas indisponíveis por datas ou status."""
+    ids = []
+    try:
+        for status, inicio, fim, data_inicio in [
+            ("INSCRICOES", -2, -1, datetime(2100, 1, 1)),
+            ("INSCRICOES", 1, 2, datetime(2101, 1, 1)),
+            ("INSCRICOES_ENCERRADAS", -1, 1, datetime(2102, 1, 1)),
+        ]:
+            agora = datetime.now(UTC).replace(tzinfo=None)
+            ids.append(
+                sql(
+                    "INSERT INTO hackathon (nome, status, data_inicio, inscricoes_inicio,"
+                    " inscricoes_fim) VALUES ('Edição indisponível',"
+                    " CAST(:s AS status_hackathon), CAST(:d AS timestamp), :inicio, :fim)"
+                    " RETURNING id",
+                    s=status,
+                    d=data_inicio,
+                    inicio=agora + timedelta(days=inicio),
+                    fim=agora + timedelta(days=fim),
+                )[0]["id"]
+            )
+        yield ids
+    finally:
+        for id_ in ids:
+            sql("DELETE FROM comprovantes_vinculo WHERE hackathon_id = :h", h=id_)
+            sql("DELETE FROM hackathon WHERE id = :h", h=id_)
 
 
 @pytest.fixture

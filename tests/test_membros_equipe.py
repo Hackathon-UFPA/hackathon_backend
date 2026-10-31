@@ -34,6 +34,27 @@ def membros(client, sql, usuario_no_banco, novo_email):
         c.limpar()
 
 
+@pytest.mark.parametrize("metodo", ["patch", "delete"])
+def test_alterar_membros_respeita_periodo_do_edital(
+    client, membros, sql, periodo_inscricoes, metodo
+):
+    permitido = periodo_inscricoes(membros.hackathon_id)
+
+    resposta = membros.requisitar(client, metodo)
+
+    assert resposta.status_code == ((200 if metodo == "patch" else 204) if permitido else 409)
+    if not permitido:
+        assert resposta.json() == {"detail": "As inscrições deste hackathon não estão abertas."}
+    atuais = sql(
+        "SELECT funcao FROM membros_equipe WHERE equipe_id = :e AND usuario_id = :u",
+        e=membros.equipe_id,
+        u=membros.integrante["id"],
+    )
+    assert [m["funcao"] for m in atuais] == (
+        (["DESIGNER"] if metodo == "patch" else []) if permitido else [None]
+    )
+
+
 @pytest.mark.parametrize("quem", ["lider", "integrante", "dev"])
 def test_listar_membros_restritos_a_equipe(client, membros, usuario_no_banco, quem):
     outro_lider = usuario_no_banco()
