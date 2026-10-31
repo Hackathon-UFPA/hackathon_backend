@@ -4,6 +4,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.const.enums import StatusProposta
+from app.schemas.protocolo import ProtocoloResponse
 from app.schemas.tema import Ods
 
 
@@ -40,3 +41,7 @@ class SubmissaoResponse(SubmissaoCreate):
     atualizado_em: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class SubmissaoEnviadaResponse(SubmissaoResponse):
+    protocolo: ProtocoloResponse

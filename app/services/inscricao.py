@@ -15,7 +15,7 @@ from app.controllers.equipe import (
     listar_equipes_para_homologacao,
 )
 from app.controllers.membro_equipe import get_membro, get_membro_no_hackathon
-from app.controllers.protocolo import criar_protocolo
+from app.controllers.protocolo import criar_protocolo, get_protocolo_da_proposta
 from app.exceptions.convite import (
     apenas_lider_da_equipe,
     equipe_nao_encontrada,
@@ -76,6 +76,7 @@ async def painel(db: AsyncSession, usuario: Usuario, equipe_id: UUID) -> PainelE
     avaliacao = await avaliar(db, equipe, hackathon)
     voce_e_lider = await _eh_lider(db, usuario, equipe.id)
     protocolo = await _protocolo_da_inscricao(db, equipe.id)
+    protocolo_proposta = await get_protocolo_da_proposta(db, equipe.id)
 
     integrantes = [
         IntegrantePainelResponse(
@@ -109,6 +110,9 @@ async def painel(db: AsyncSession, usuario: Usuario, equipe_id: UUID) -> PainelE
         inscricao_concluida_em=equipe.inscricao_concluida_em,
         homologada_em=equipe.homologada_em,
         protocolo=ProtocoloResponse.model_validate(protocolo) if protocolo else None,
+        protocolo_proposta=(
+            ProtocoloResponse.model_validate(protocolo_proposta) if protocolo_proposta else None
+        ),
         minimo_integrantes=hackathon.min_integrantes,
         maximo_integrantes=hackathon.max_integrantes,
         total_integrantes=avaliacao.total,
