@@ -34,3 +34,8 @@ async def atualizar_submissao(
     db.add(submissao)
     await db.flush()
     return submissao
+
+
+async def salvar_envio(db: AsyncSession, submissao: Submissao) -> None:
+    db.add(submissao)
+    await db.flush()

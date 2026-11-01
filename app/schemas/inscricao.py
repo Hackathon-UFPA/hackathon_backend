@@ -50,6 +50,7 @@ class PainelEquipeResponse(BaseModel):
     inscricao_concluida_em: datetime | None = None
     homologada_em: datetime | None = None
     protocolo: ProtocoloResponse | None = None
+    protocolo_proposta: ProtocoloResponse | None = None
     minimo_integrantes: int
     maximo_integrantes: int
     total_integrantes: int

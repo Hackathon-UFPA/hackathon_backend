@@ -35,3 +35,34 @@ def tema_nao_disponivel():
         status_code=status.HTTP_409_CONFLICT,
         detail="O tema deve estar ativo e pertencer ao mesmo hackathon da equipe.",
     )
+
+
+def equipe_nao_homologada():
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail="Somente equipes HOMOLOGADA podem enviar uma proposta.",
+    )
+
+
+def proposta_ja_enviada():
+    raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Proposta já enviada.")
+
+
+def fora_do_periodo_de_propostas():
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail="Envio fora do período de propostas ou prazo não configurado.",
+    )
+
+
+def proposta_incompleta(campos: list[str]):
+    raise HTTPException(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        detail=f"Campos obrigatórios da proposta incompletos ou inválidos: {', '.join(campos)}.",
+    )
+
+
+def proposta_enviada_nao_encontrada():
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND, detail="Proposta enviada não encontrada."
+    )

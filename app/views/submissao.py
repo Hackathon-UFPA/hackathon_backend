@@ -5,12 +5,18 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.db.db import get_session
 from app.models import Usuario
-from app.schemas.submissao import SubmissaoCreate, SubmissaoResponse, SubmissaoUpdate
+from app.schemas.submissao import (
+    SubmissaoCreate,
+    SubmissaoEnviadaResponse,
+    SubmissaoResponse,
+    SubmissaoUpdate,
+)
 from app.security.dependencias import usuario_ativo
-from app.services.submissao import consultar_rascunho, criar, editar
+from app.services.submissao import consultar_enviada, consultar_rascunho, criar, editar, enviar
 from app.utils.openapi import respostas_de_erro
 
 router = APIRouter(prefix="/equipes/{equipe_id}/proposta/rascunho", tags=["Propostas"])
+router_proposta = APIRouter(prefix="/equipes/{equipe_id}/proposta", tags=["Propostas"])
 
 ERRO_401 = "Sem token, ou token inválido, vencido ou de conta desativada"
 ERRO_403 = "Conta pendente, ou quem pede não tem permissão para esta rota"
@@ -79,3 +85,54 @@ async def editar_rascunho(
     usuario: Usuario = Depends(usuario_ativo),
 ):
     return await editar(db, usuario, equipe_id, dados)
+
+
+@router_proposta.post(
+    "/enviar",
+    response_model=SubmissaoEnviadaResponse,
+    summary="Enviar proposta definitiva e emitir protocolo",
+    description=(
+        "RF26/RF28: somente líder técnico ou DEV com conta ativa. Exige equipe HOMOLOGADA, "
+        "rascunho completo, tema ativo da mesma edição e ambos os limites do prazo de propostas "
+        "configurados, com o momento atual no intervalo inclusivo em UTC. documento_url é "
+        "opcional. O envio torna a proposta imutável e emite um protocolo PROPOSTA na mesma "
+        "transação. Reenvio retorna 409. A resposta inclui enviado_em, protocolo.numero e "
+        "protocolo.emitido_em. Não envia e-mail."
+    ),
+    responses=respostas_de_erro(
+        {
+            401: ERRO_401,
+            403: ERRO_403,
+            404: ERRO_404,
+            409: "Proposta enviada, equipe não homologada, tema indisponível ou prazo fechado",
+            422: "Campos obrigatórios da proposta incompletos ou inválidos",
+        }
+    ),
+)
+async def enviar_proposta(
+    equipe_id: UUID,
+    db: AsyncSession = Depends(get_session),
+    usuario: Usuario = Depends(usuario_ativo),
+):
+    return await enviar(db, usuario, equipe_id)
+
+
+@router_proposta.get(
+    "",
+    response_model=SubmissaoEnviadaResponse,
+    summary="Consultar proposta enviada e protocolo",
+    description=(
+        "Somente integrantes da equipe ou DEV com conta ativa. Retorna conteúdo, status, "
+        "enviado_em e protocolo persistido. Rascunhos não são expostos; sem proposta enviada "
+        "retorna 404. O protocolo também pode ser consultado no campo protocolo_proposta do painel."
+    ),
+    responses=respostas_de_erro(
+        {401: ERRO_401, 403: ERRO_403, 404: "Equipe ou proposta enviada não encontrada"}
+    ),
+)
+async def obter_proposta_enviada(
+    equipe_id: UUID,
+    db: AsyncSession = Depends(get_session),
+    usuario: Usuario = Depends(usuario_ativo),
+):
+    return await consultar_enviada(db, usuario, equipe_id)
