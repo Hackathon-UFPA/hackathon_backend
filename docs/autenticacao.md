@@ -1,3 +1,5 @@
+[← Voltar ao README](../README.md)
+
 # Autenticação e permissões
 
 O participante se cadastra, faz login e recebe um **token JWT**, que envia em todo pedido no cabeçalho `Authorization: Bearer <token>`. No Swagger, use o botão **Authorize** e cole o token.
@@ -126,3 +128,7 @@ POST /admin/usuarios
 - No 429 a API manda o tempo restante no cabeçalho `Retry-After`. O navegador só deixa o front ler esse cabeçalho se ele for exposto no CORS, o que ainda não foi configurado; enquanto isso, use a mensagem fixa acima.
 - Para o front rodar em outra origem, defina `CORS_ORIGINS` no `.env` da API (hoje o padrão é `*`).
 - Uma conta nova fica `PENDENTE` até um Organizador ou o Comitê Científico aprovar o comprovante (`POST /admin/comprovantes/{id}/aprovar`). Para testar telas que exigem conta ativa sem esse passo, ative-a no banco: `UPDATE usuarios SET situacao_conta = 'ATIVA' WHERE email = '...'`.
+
+---
+
+[← Voltar ao README](../README.md)

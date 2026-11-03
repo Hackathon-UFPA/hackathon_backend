@@ -1,3 +1,5 @@
+[← Voltar ao README](../README.md)
+
 # Convites e termos
 
 Rotas de RF18, RF19 e RF20. Todas exigem token e **conta ativa** (conta pendente recebe 403).
@@ -24,3 +26,7 @@ Rotas de RF18, RF19 e RF20. Todas exigem token e **conta ativa** (conta pendente
 **Guia para a interface.** Painel do convidado: `GET /convites/meus`. Ao clicar em aceitar, buscar `GET /hackathons/{hackathon_id}/termos/vigentes` (o `hackathon_id` vem no próprio convite), mostrar `conteudo` ou `url` de cada documento e, quando a pessoa concordar, enviar os ids para `POST /convites/{id}/aceitar` com `{ "termos_ids": ["...", "..."] }`.
 
 Ficou de fora desta etapa: envio do convite por e-mail e aviso ao líder quando alguém recusa (RF19; depende da infraestrutura de e-mail, decisão Q16). Por enquanto o líder consulta `GET /equipes/{id}/convites`.
+
+---
+
+[← Voltar ao README](../README.md)

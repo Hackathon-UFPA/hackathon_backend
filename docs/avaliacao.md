@@ -1,3 +1,5 @@
+[← Voltar ao README](../README.md)
+
 # Distribuição de propostas aos avaliadores — BE-S4-09
 
 RF29 e Q07 (2 a 3 avaliadores por proposta). Todas as rotas exigem token e conta ativa.
@@ -28,3 +30,7 @@ RF29 e Q07 (2 a 3 avaliadores por proposta). Todas as rotas exigem token e conta
 **Isolamento.** `GET /avaliador/propostas` filtra por `usuario.id`. Proposta de outro avaliador ou inexistente responde 404 com a mesma mensagem, sem revelar que existe. A resposta ao avaliador não traz `equipe_id`, para não expor quem escreveu a proposta.
 
 **Erros.** 401 (sem token ou token inválido), 403 (perfil sem permissão ou conta pendente), 404 (hackathon ou proposta inexistente, ou proposta não designada ao avaliador), 409 (quantidade não configurada, avaliação já iniciada, proposta com nota ou não enviada, avaliadores insuficientes ou não elegíveis) e 422 (quantidade fora de 2 a 3, lista de tamanho errado ou com repetidos). Os detalhes de cada rota estão no Swagger.
+
+---
+
+[← Voltar ao README](../README.md)

@@ -1,3 +1,5 @@
+[← Voltar ao README](../README.md)
+
 # Guia de desenvolvimento
 
 ## Criando as rotas de uma entidade (ex.: `equipe`)
@@ -39,3 +41,7 @@ Para adicionar uma dependência: edite o `pyproject.toml`, rode `make lock` (ou 
 
 - `.github/workflows/ci.yml` — a cada push/PR em `main`/`dev`: sobe Postgres, aplica as migrations, roda ruff e pytest.
 - `.github/workflows/deploy.yml` — deploy manual (workflow_dispatch) em servidor com runner self-hosted. Configure os secrets/variables listados no topo do arquivo. **Nunca coloque senhas direto no workflow.**
+
+---
+
+[← Voltar ao README](../README.md)

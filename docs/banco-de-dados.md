@@ -1,3 +1,5 @@
+[← Voltar ao README](../README.md)
+
 # Banco de dados
 
 ## Modelo de dados
@@ -79,3 +81,7 @@ Para adicionar um valor: crie uma migration nova com `ALTER TYPE <tipo> ADD VALU
 - Nome: `V<AAAAMMDDHHMM>__descricao.sql` (ex.: `V202610151530__adicionar_coluna_premio.sql`).
 - **Nunca edite uma migration já aplicada**; crie uma nova. Se você subiu o banco antes de uma migration ser alterada, rode `make clean && make up` (apaga os dados locais).
 - O compose roda as migrations ao subir, no banco de desenvolvimento e no de testes. Para aplicar sem reiniciar: `make migrate`.
+
+---
+
+[← Voltar ao README](../README.md)

@@ -1,3 +1,5 @@
+[← Voltar ao README](../README.md)
+
 # Temas e rubrica — BE-S4-06
 
 RF15, RF16 e RF17. Quem gerencia é o perfil em `PERFIS_QUE_GERENCIAM_EDITAL`
@@ -52,3 +54,7 @@ Exemplo do corpo do `PUT`:
 nomes em `CRITERIOS_MINIMOS_RN10` (Inovação, Impacto, Viabilidade técnica, Aderência ao tema)
 são provisórios. As regras de temas ainda dependem das validações Q02 (Fase 0 dentro ou fora
 do sistema) e Q03 (quantidade de temas e participação).
+
+---
+
+[← Voltar ao README](../README.md)

@@ -1,3 +1,5 @@
+[← Voltar ao README](../README.md)
+
 # Inscrição e homologação
 
 BE-S4-05 (RF21, RF22, RF23, RF25).
@@ -28,3 +30,7 @@ BE-S4-05 (RF21, RF22, RF23, RF25).
 - **Recusa.** Só comprovantes `PENDENTE` são decididos; um comprovante aprovado não é revogado por esta API.
 - **Avisos.** A documentação já registra que não há infraestrutura de e-mail ou notificações. "O integrante é avisado" (RF21) e "a equipe é avisada" (RF23) ficam atendidos pela consulta: `GET /comprovantes/meus` e `GET /equipes/{id}/painel`.
 - **Prazo.** A conclusão confere também as datas do edital quando existem, ao contrário das demais rotas, que olham só o `status`.
+
+---
+
+[← Voltar ao README](../README.md)

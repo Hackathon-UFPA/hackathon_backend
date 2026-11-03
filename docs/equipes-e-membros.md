@@ -1,3 +1,5 @@
+[← Voltar ao README](../README.md)
+
 # Equipes e membros — BE-S4-03
 
 Todas as rotas exigem token e conta ativa; conta pendente recebe 403.
@@ -33,3 +35,7 @@ PATCH e DELETE usam o mesmo bloqueio da linha da equipe que o fluxo de convites,
 **Aviso ao removido (RF24).** Não há serviço, fila ou integração de notificações/e-mail implementados no projeto. O aviso permanece pendente de infraestrutura; o endpoint não envia nem simula notificação. A resposta 204 confirma apenas a remoção do vínculo. A Q04 sobre tamanho de equipes também continua pendente.
 
 Exclusão de equipes, transferência de liderança, conclusão da inscrição, homologação e notificações por e-mail não fazem parte desta entrega. Migrations e o fluxo de convites e termos foram preservados nesta etapa.
+
+---
+
+[← Voltar ao README](../README.md)

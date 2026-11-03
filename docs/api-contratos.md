@@ -1,3 +1,5 @@
+[← Voltar ao README](../README.md)
+
 # Contratos da API
 
 Resumo do que a interface (front) precisa saber para consumir a API. O detalhe de cada rota, com campos, exemplos e erros, está no **Swagger** (`/docs`); o contrato em JSON está em `/openapi.json`.
@@ -75,3 +77,7 @@ Cada rota lista no Swagger os códigos que ela pode devolver.
 | Rascunho e envio da proposta    | [propostas.md](propostas.md)                                |
 | Temas e rubrica                 | [temas-e-rubrica.md](temas-e-rubrica.md)                    |
 | Distribuição aos avaliadores    | [avaliacao.md](avaliacao.md)                                |
+
+---
+
+[← Voltar ao README](../README.md)
