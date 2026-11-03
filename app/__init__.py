@@ -35,4 +35,8 @@ tags = [
         "name": "Rubrica",
         "description": "Critérios, pesos e escalas da avaliação; publicação imutável (RF16, RF17)",
     },
+    {
+        "name": "Avaliação",
+        "description": "Distribuição de propostas aos avaliadores e consulta (RF29)",
+    },
 ]

@@ -22,6 +22,7 @@ from .avaliacao import Avaliacao
 from .comprovante_vinculo import ComprovanteVinculo
 from .convite import Convite
 from .criterio_rubrica import CriterioRubrica
+from .designacao_avaliacao import DesignacaoAvaliacao
 from .equipe import Equipe
 from .hackathon import Hackathon
 from .membro_equipe import MembroEquipe
@@ -39,6 +40,7 @@ __all__ = [
     "ComprovanteVinculo",
     "Convite",
     "CriterioRubrica",
+    "DesignacaoAvaliacao",
     "Equipe",
     "Hackathon",
     "MembroEquipe",

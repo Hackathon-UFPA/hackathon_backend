@@ -27,3 +27,5 @@ class Hackathon(SQLModel, table=True):
     homologacao_fim: datetime | None = Field(default=None)
     propostas_inicio: datetime | None = Field(default=None)
     propostas_fim: datetime | None = Field(default=None)
+    # Avaliadores por proposta (RF29, Q07): 2 a 3; NULL até o Organizador configurar
+    avaliadores_por_proposta: int | None = Field(default=None, sa_type=SmallInteger)

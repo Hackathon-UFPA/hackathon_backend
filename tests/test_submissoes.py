@@ -482,7 +482,9 @@ def test_swagger_documenta_contrato_e_nao_expoe_rotas_de_avaliacao(client):
             "bases_dados",
             "documento_url",
         }
-    assert not any("avaliac" in p or "submissoes" in p for p in documento["paths"])
+    # As rotas de avaliação (BE-S4-09) são de outra tag; as de proposta não vazam notas
+    assert not any("submissoes" in p for p in documento["paths"])
+    assert not any("avaliac" in p for p in documento["paths"] if "/proposta" in p)
 
 
 def test_salvar_rascunho_nao_cria_avaliacao_ou_protocolo(client, propostas):

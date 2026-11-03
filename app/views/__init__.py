@@ -1,6 +1,8 @@
 from fastapi import APIRouter
 
 from app.views.auth import router as auth
+from app.views.avaliacao import router_admin as avaliacao_admin
+from app.views.avaliacao import router_avaliador as avaliacao_avaliador
 from app.views.comprovantes import router as comprovantes
 from app.views.convites import router as convites
 from app.views.equipe import router as equipes
@@ -31,3 +33,5 @@ router.include_router(router_proposta)
 router.include_router(temas_hackathon)
 router.include_router(temas)
 router.include_router(rubrica)
+router.include_router(avaliacao_admin)
+router.include_router(avaliacao_avaliador)

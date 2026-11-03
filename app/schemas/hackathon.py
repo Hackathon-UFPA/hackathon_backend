@@ -19,6 +19,7 @@ class HackathonCreate(BaseModel):
     homologacao_fim: datetime | None = None
     propostas_inicio: datetime | None = None
     propostas_fim: datetime | None = None
+    avaliadores_por_proposta: int | None = Field(default=None, ge=2, le=3)
 
     @model_validator(mode="after")
     def validar_integrantes(self):
@@ -40,6 +41,7 @@ class HackathonUpdate(BaseModel):
     homologacao_fim: datetime | None = None
     propostas_inicio: datetime | None = None
     propostas_fim: datetime | None = None
+    avaliadores_por_proposta: int | None = Field(default=None, ge=2, le=3)
 
 
 class HackathonResponse(HackathonCreate):
