@@ -29,11 +29,13 @@ class TemaCreate(BaseModel):
 class TemaUpdate(BaseModel):
     """Altera apenas os campos enviados. `ativo` ativa ou desativa o tema (RF15)."""
 
-    titulo: Titulo | None = None
-    descricao: TextoObrigatorio | None = None
+    titulo: Titulo | None = Field(default=None, examples=["Monitoramento do desmatamento"])
+    descricao: TextoObrigatorio | None = Field(
+        default=None, examples=["Soluções para acompanhar a perda de floresta"]
+    )
     contexto: str | None = None
-    ods: list[Ods] | None = Field(default=None, min_length=1)
-    ativo: bool | None = None
+    ods: list[Ods] | None = Field(default=None, min_length=1, examples=[[13, 15]])
+    ativo: bool | None = Field(default=None, examples=[False])
 
     @field_validator("titulo", "descricao", "ods", "ativo", mode="before")
     @classmethod

@@ -16,7 +16,7 @@ class EquipeCreate(BaseModel):
 class EquipeUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    nome: str | None = Field(default=None, max_length=255)
+    nome: str | None = Field(default=None, max_length=255, examples=["Equipe Backend"])
 
 
 class EquipeResponse(EquipeCreate):
