@@ -7,8 +7,11 @@ from app.views.equipe import router as equipes
 from app.views.health import router as health
 from app.views.inscricao import router as inscricao
 from app.views.membro_equipe import router as membros_equipe
+from app.views.rubrica import router as rubrica
 from app.views.submissao import router as submissoes
 from app.views.submissao import router_proposta
+from app.views.temas import router as temas
+from app.views.temas import router_hackathon as temas_hackathon
 from app.views.termos import router as termos
 from app.views.usuarios import router as usuarios
 
@@ -25,3 +28,6 @@ router.include_router(comprovantes)
 router.include_router(inscricao)
 router.include_router(submissoes)
 router.include_router(router_proposta)
+router.include_router(temas_hackathon)
+router.include_router(temas)
+router.include_router(rubrica)

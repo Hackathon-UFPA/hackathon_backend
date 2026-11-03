@@ -25,3 +25,6 @@ def pode_cadastrar(quem_cadastra: PapelUsuario, perfil: PapelUsuario) -> bool:
 # Quem confere o comprovante de vínculo (RF21). A Q25 ainda não decidiu se é só o Organizador ou
 # também o Comitê Científico; enquanto isso os dois podem. Ajustar aqui muda todas as rotas.
 PERFIS_QUE_VALIDAM_COMPROVANTE = (PapelUsuario.ORGANIZADOR, PapelUsuario.COMITE_CIENTIFICO)
+
+# Quem cadastra temas e monta/publica a rubrica (RF15, RF16, RF17). DEV passa sempre.
+PERFIS_QUE_GERENCIAM_EDITAL = (PapelUsuario.ORGANIZADOR,)

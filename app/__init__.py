@@ -27,4 +27,12 @@ tags = [
         "name": "Propostas",
         "description": "Rascunhos e envio definitivo com protocolo (RF26, RF27, RF28)",
     },
+    {
+        "name": "Temas",
+        "description": "Cadastro, edição, ativação e exclusão de temas do edital (RF15, RN04)",
+    },
+    {
+        "name": "Rubrica",
+        "description": "Critérios, pesos e escalas da avaliação; publicação imutável (RF16, RF17)",
+    },
 ]
