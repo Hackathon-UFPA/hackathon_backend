@@ -11,7 +11,21 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/health", tags=["Health"])
 
 
-@router.get("")
+@router.get(
+    "",
+    summary="Verificar saúde da API",
+    description=(
+        "Rota pública, sem login. Responde 200 com `status` e `database` (`ok` ou "
+        "`indisponivel`), mesmo que o banco esteja fora do ar."
+    ),
+    responses={
+        200: {
+            "content": {
+                "application/json": {"example": {"status": "ok", "database": "ok"}},
+            }
+        }
+    },
+)
 async def health(db: AsyncSession = Depends(get_session)):
     try:
         await db.exec(select(1))

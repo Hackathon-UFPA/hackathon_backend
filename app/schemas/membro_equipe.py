@@ -15,7 +15,7 @@ class MembroEquipeCreate(BaseModel):
 class MembroEquipeUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    funcao: FuncaoMembro | None = None
+    funcao: FuncaoMembro | None = Field(default=None, examples=["DESIGNER"])
 
 
 class MembroEquipeResponse(MembroEquipeCreate):

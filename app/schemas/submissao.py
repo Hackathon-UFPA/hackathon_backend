@@ -24,10 +24,10 @@ class SubmissaoUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     tema_id: UUID | None = None
-    titulo: str | None = Field(default=None, max_length=255)
-    descricao: str | None = None
-    ods: list[Ods] | None = None
-    bases_dados: str | None = None
+    titulo: str | None = Field(default=None, max_length=255, examples=["App de coleta seletiva"])
+    descricao: str | None = Field(default=None, examples=["Aplicativo que conecta catadores"])
+    ods: list[Ods] | None = Field(default=None, examples=[[11, 12]])
+    bases_dados: str | None = Field(default=None, examples=["IBGE - Censo 2022"])
     documento_url: str | None = None
 
 

@@ -34,7 +34,27 @@ class RubricaUpdate(BaseModel):
     """Lista completa de critérios: substitui a anterior. Pode ficar incompleta no rascunho;
     soma de 100% e critérios mínimos são exigidos só na publicação."""
 
-    criterios: list[CriterioRubricaIn] = Field(max_length=50)
+    criterios: list[CriterioRubricaIn] = Field(
+        max_length=50,
+        examples=[
+            [
+                {
+                    "nome": "Inovação",
+                    "descricao": "Originalidade da solução proposta",
+                    "peso": "30",
+                    "escala_min": 0,
+                    "escala_max": 10,
+                },
+                {
+                    "nome": "Impacto",
+                    "descricao": "Benefício social da solução",
+                    "peso": "70",
+                    "escala_min": 0,
+                    "escala_max": 10,
+                },
+            ]
+        ],
+    )
 
     @model_validator(mode="after")
     def nomes_unicos(self):

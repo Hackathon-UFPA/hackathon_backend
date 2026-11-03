@@ -1,149 +1,133 @@
-# Hackathon — Backend
+Hackathon Backend
+=================
 
-API do sistema de gestão de hackathons. Feita com **FastAPI + SQLModel (async) + PostgreSQL 17 + Flyway + Poetry + Docker Compose**.
+API do sistema de gestão de hackathons da UFPA, construída com **FastAPI**. Cuida do cadastro e login, das equipes e convites, da inscrição e homologação, das propostas, dos temas e da rubrica de avaliação e da distribuição das propostas aos avaliadores.
+
+## Stack
+
+- **FastAPI** + **SQLModel** (async)
+- **PostgreSQL 17** com migrations em **Flyway**
+- **Poetry** para dependências (Python 3.13)
+- **Docker Compose** para rodar tudo localmente
+- **Ruff** (lint e formatação) e **pytest** (testes)
+- **GitHub Actions** para CI e deploy
+
+## Documentação
+
+- [Contratos da API](docs/api-contratos.md): Swagger, autenticação e formato dos erros
+- [Autenticação e permissões](docs/autenticacao.md): cadastro, login, perfis e guia para o front
+- [Convites e termos](docs/convites-e-termos.md)
+- [Equipes e membros](docs/equipes-e-membros.md)
+- [Inscrição e homologação](docs/inscricao-e-homologacao.md)
+- [Propostas](docs/propostas.md): envio definitivo e protocolo
+- [Temas e rubrica](docs/temas-e-rubrica.md)
+- [Avaliação](docs/avaliacao.md): distribuição das propostas aos avaliadores
+- [Banco de dados](docs/banco-de-dados.md): tabelas, enums e migrations
+- [Guia de desenvolvimento](docs/desenvolvimento.md): como criar rotas, comandos e CI/CD
+
+Com a API no ar, a documentação interativa das rotas fica em `http://localhost:8000/docs`.
 
 ## Situação atual
 
-- [x] Estrutura do projeto, Docker, CI
-- [x] Banco: tabelas e enums (migration `V202610110000__init.sql`)
-- [x] Banco: fluxos de inscrição e proposta e perfis de acesso do RF06 (migration `V202610261200__fluxos_inscricao_proposta.sql`)
-- [x] Models (SQLModel) e schemas (Pydantic) de todas as entidades
-- [x] Banco: senha, bloqueio de login e situação da conta (migration `V202610261400__autenticacao_usuarios.sql`)
-- [x] Autenticação e permissões: cadastro, login, perfis e cadastro de usuários (ver [Autenticação e permissões](#autenticação-e-permissões))
-- [x] Convites, aceite de participação e aceite do regulamento/termo de consentimento (ver [Convites e termos](#convites-e-termos))
-- [x] Distribuição de propostas aos avaliadores, com consulta por designação e redistribuição (ver [Distribuição de propostas aos avaliadores](#distribuição-de-propostas-aos-avaliadores--be-s4-09))
-- [x] Temas e rubrica de avaliação, com publicação imutável (ver [Temas e rubrica — BE-S4-06](#temas-e-rubrica--be-s4-06))
-- [ ] Controllers e rotas (CRUD) das demais entidades — por enquanto a API tem `/health`, autenticação, convites e termos
+| Módulo                                  | Requisitos         | Situação  |
+|-----------------------------------------|--------------------|-----------|
+| Estrutura do projeto, Docker e CI       | —                  | Concluído |
+| Autenticação, perfis e cadastro de usuários | RF01, RF02, RF06 a RF08 | Concluído |
+| Convites, aceite de participação e termos | RF18 a RF20      | Concluído |
+| Equipes e membros                       | RF18, RF24         | Concluído |
+| Comprovantes, inscrição e homologação   | RF21 a RF23, RF25  | Concluído |
+| Rascunho e envio da proposta            | RF26 a RF28        | Concluído |
+| Temas e rubrica de avaliação            | RF15 a RF17        | Concluído |
+| Distribuição de propostas aos avaliadores | RF29             | Concluído |
+| Lançamento de notas pelos avaliadores   | BE-S4-10           | Pendente  |
+| Envio de e-mails e notificações         | —                  | Pendente  |
 
-## Rodando o projeto
+## Requisitos
 
-Pré-requisitos: Docker com o plugin `docker compose`. O `make` é opcional — ele é só um atalho, e a seção [Comandos](#comandos) traz o equivalente em `docker compose` de cada alvo (no Windows o `make` não vem instalado).
+- Docker com o plugin `docker compose`
+- `make` (opcional): é só um atalho. Cada comando tem o equivalente em `docker compose` no [Guia de desenvolvimento](docs/desenvolvimento.md#comandos). No Windows o `make` não vem instalado.
+
+## Instalação
 
 ```bash
-git clone https://github.com/lthiago849/hackathon-backend.git
-cd hackathon-backend
+git clone https://github.com/Hackathon-UFPA/hackathon_backend.git
+cd hackathon_backend
 make env    # cria o .env a partir do .env.example
 make up     # sobe db, flyway (migrations), app e pgadmin
 ```
 
-Sem o `make`, os dois comandos acima são:
+Sem o `make`, os dois comandos são:
 
 ```bash
 cp .env.example .env
 docker compose up -d --build
 ```
 
-| Serviço         | Endereço                        | Acesso                                          |
-|-----------------|---------------------------------|-------------------------------------------------|
-| API (Swagger)   | http://localhost:8000/docs      | —                                               |
-| Health          | http://localhost:8000/health    | —                                               |
-| pgAdmin         | http://localhost:`PGADMIN_PORT` | `admin@example.com` / `admin`                   |
-| Postgres        | `localhost:POSTGRES_PORT`       | `postgres` / `postgres`, banco `POSTGRES_DB`    |
+Para criar o primeiro Organizador (só ele cadastra os demais perfis), veja [Autenticação e permissões](docs/autenticacao.md).
+
+## Uso
+
+Depois do `make up`, estes serviços ficam disponíveis:
+
+| Serviço       | Endereço                        | Acesso                                       |
+|---------------|---------------------------------|----------------------------------------------|
+| API (Swagger) | http://localhost:8000/docs      | —                                            |
+| Health        | http://localhost:8000/health    | —                                            |
+| pgAdmin       | http://localhost:`PGADMIN_PORT` | `admin@example.com` / `admin`                |
+| Postgres      | `localhost:POSTGRES_PORT`       | `postgres` / `postgres`, banco `POSTGRES_DB` |
 
 - No pgAdmin, registre o servidor com host **`db`** e porta **`5432`** (ele roda dentro da rede do Docker).
-- Pelo terminal: `make db-shell` abre o `psql` já conectado.
-- **Os testes usam outro banco.** Junto com o `POSTGRES_DB`, o compose cria o `POSTGRES_DB_test` (ex.: `hackathon_db_test`) no mesmo Postgres e aplica nele as migrations. O `pytest` troca para esse banco sozinho (`tests/__init__.py`) e um teste confere isso, então rodar os testes nunca mexe nos dados de desenvolvimento. Para inspecionar o banco de testes, conecte no `psql` ou no pgAdmin com o nome `<POSTGRES_DB>_test`. No CI, o banco `app_db_test` é criado antes das migrations.
+- Pelo terminal, `make db-shell` abre o `psql` já conectado.
+- **Portas ocupadas?** Mude `POSTGRES_PORT`, `PGADMIN_PORT` e `APP_PORT` no `.env` (ex.: 5434 e 4041) e rode `make up` de novo.
 
-> **Portas ocupadas?** Se outro projeto já usa a 5432/4040/8000, mude `POSTGRES_PORT`, `PGADMIN_PORT` e `APP_PORT` no `.env` (ex.: 5434 e 4041) e rode `make up` de novo.
+### Comandos principais
 
-## Modelo de dados
+| Comando         | O que faz                                          |
+|-----------------|----------------------------------------------------|
+| `make up`       | Sobe os containers (com build)                     |
+| `make down`     | Para os containers                                 |
+| `make logs`     | Acompanha os logs da API                           |
+| `make migrate`  | Aplica as migrations pendentes                     |
+| `make test`     | Roda o pytest no banco de testes                   |
+| `make lint`     | Ruff: lint e checagem de formatação                |
+| `make format`   | Corrige lint e formata o código                    |
+| `make clean`    | Para tudo e **apaga os dados do banco**            |
 
-```mermaid
-erDiagram
-    hackathon ||--o{ equipes : possui
-    hackathon ||--o{ submissoes : recebe
-    equipes ||--o{ membros_equipe : tem
-    usuarios ||--o{ membros_equipe : participa
-    equipes ||--o{ artefatos : produz
-    equipes ||--o{ submissoes : envia
-    submissoes ||--o{ avaliacoes : recebe
-    usuarios ||--o{ avaliacoes : avalia
-    submissoes ||--o{ designacoes_avaliacao : designada
-    usuarios ||--o{ designacoes_avaliacao : avalia_se_designado
-    hackathon ||--o{ temas : oferece
-    temas ||--o{ submissoes : escolhido
-    hackathon ||--o| rubricas : avalia_com
-    rubricas ||--o{ criterios_rubrica : tem
-    equipes ||--o{ convites : envia
-    hackathon ||--o{ termos : publica
-    termos ||--o{ aceites_termos : recebe
-    usuarios ||--o{ aceites_termos : aceita
-    usuarios ||--o{ comprovantes_vinculo : envia
-    equipes ||--o{ protocolos : recebe
-    submissoes ||--o{ protocolos : gera
+A lista completa, com o equivalente sem `make`, está no [Guia de desenvolvimento](docs/desenvolvimento.md#comandos).
+
+### Testes
+
+Os testes usam outro banco, o `<POSTGRES_DB>_test` (ex.: `app_db_test`), criado e migrado pelo `docker compose`. O `pytest` troca para ele sozinho, então rodar os testes nunca mexe nos dados de desenvolvimento.
+
+```bash
+make test
 ```
 
-| Tabela                 | Descrição                                                                                     |
-|------------------------|-----------------------------------------------------------------------------------------------|
-| `usuarios`             | Pessoas do sistema; `email` único, `papel`, `ativo`, instituição, curso e período; dados do mentor (empresa, área, máx. de equipes); `senha_hash` (Argon2), `tentativas_login`, `bloqueado_ate` e `situacao_conta` |
-| `hackathon`            | Edição do evento: datas, `status`, tamanho da equipe (`min/max_integrantes`), prazos da Fase 1 e `avaliadores_por_proposta` (2 a 3, sem padrão) |
-| `equipes`              | Equipes de um hackathon, com a `situacao` (Em formação → Homologada)                           |
-| `membros_equipe`       | Usuário ↔ equipe com a `funcao`; uma equipe por pessoa em cada hackathon e um único `LIDER`     |
-| `convites`             | Integrantes informados pelo líder (nome e e-mail) aguardando confirmação                       |
-| `termos`               | Regulamento e termo de consentimento, versionados; uma versão vigente por tipo                 |
-| `aceites_termos`       | Aceite de um usuário a uma versão de termo, com data e hora                                    |
-| `comprovantes_vinculo` | Comprovante de vínculo e a conferência do Comitê Científico; reenvio cria uma linha nova       |
-| `temas`                | Temas do edital, com ODS relacionados e `ativo`                                               |
-| `rubricas`             | Rubrica de avaliação da edição (uma por hackathon); `publicada_em` preenchida a torna imutável |
-| `criterios_rubrica`    | Critérios da rubrica: nome, descrição, peso (%), escala mínima e máxima e ordem de exibição    |
-| `submissoes`           | Proposta da equipe (uma por equipe): rascunho até ser enviada com tema, ODS e bases de dados    |
-| `protocolos`           | Comprovante da conclusão da inscrição e do envio da proposta (`numero` gerado pelo banco)       |
-| `artefatos`            | Entregáveis da equipe (`url` externa: GitHub, Cloudinary...)                                  |
-| `avaliacoes`           | Nota e comentários de um avaliador sobre uma submissão                                        |
-| `designacoes_avaliacao` | Proposta designada a um avaliador (RF29); `unique(submissao_id, avaliador_id)`. A nota continua em `avaliacoes` |
-
-As constraints do banco garantem as regras que dependem de uma única tabela (ex.: proposta enviada exige tema, comprovante recusado exige motivo). Regras que dependem de contagem, prazo ou perfil (3 a 5 integrantes, homologação automática, bloqueio após o prazo) ficam nos services.
-
-Todos os IDs são **UUID** gerados pelo banco (`uuid_generate_v4()`).
-
-### Enums
-
-O líder técnico não é um papel: é `membros_equipe.funcao = LIDER`, porque vale por equipe.
-
-Definidos como `ENUM` nativo no Postgres (migration) e espelhados em [`app/const/enums.py`](app/const/enums.py). Valores sempre em **MAIÚSCULO**.
-
-| Tipo                 | Valores                                                                                         |
-|----------------------|-------------------------------------------------------------------------------------------------|
-| `papel_usuario`      | `PARTICIPANTE`, `MENTOR`, `COMITE_TECNICO`, `COMITE_CIENTIFICO`, `ORGANIZADOR`, `DEV` (time de desenvolvimento: acesso a todas as rotas) |
-| `status_hackathon`   | `RASCUNHO`, `INSCRICOES` (padrão), `INSCRICOES_ENCERRADAS`, `ATIVO`, `EM_AVALIACAO`, `FINALIZADO`, `CANCELADO` |
-| `funcao_membro`      | `LIDER`, `DESENVOLVEDOR`, `DESIGNER`, `NEGOCIOS`, `OUTRO`                                       |
-| `categoria_artefato` | `REPOSITORIO_CODIGO`, `DIAGRAMA`, `VIDEO`, `APRESENTACAO`, `DOCUMENTACAO`, `PROTOTIPO`, `OUTRO` |
-| `situacao_equipe`    | `EM_FORMACAO` (padrão), `AGUARDANDO_HOMOLOGACAO`, `HOMOLOGADA`, `NAO_HOMOLOGADA`                 |
-| `status_convite`     | `PENDENTE` (padrão), `ACEITO`, `RECUSADO`, `CANCELADO`                                          |
-| `tipo_termo`         | `REGULAMENTO`, `TERMO_CONSENTIMENTO`                                                            |
-| `status_comprovante` | `PENDENTE` (padrão), `APROVADO`, `RECUSADO`                                                     |
-| `situacao_conta`     | `ATIVA` (padrão), `PENDENTE` (participante até o comprovante ser aprovado)                      |
-| `status_proposta`    | `RASCUNHO` (padrão), `ENVIADA`                                                                  |
-| `tipo_protocolo`     | `INSCRICAO_EQUIPE`, `PROPOSTA`                                                                  |
-
-Colunas preenchidas pelo banco (datas de envio/aceite, número do protocolo) usam `server_default` no model (`AGORA_UTC` em `app/db/defaults.py`), para o ORM não mandar `NULL` no insert.
-
-Para adicionar um valor: crie uma migration nova com `ALTER TYPE <tipo> ADD VALUE '<VALOR>';` e acrescente o membro na classe correspondente em `enums.py`. Nos models, colunas enum usam o helper `pg_enum(...)`, que mapeia para o tipo criado pelo Flyway.
-
-## Estrutura
+## Estrutura do projeto
 
 ```
 .
 ├── app/
 │   ├── main.py            # cria o FastAPI, CORS e inclui os routers
 │   ├── __init__.py        # tags do Swagger
-│   ├── const/             # config.py (variáveis de ambiente) e enums.py
+│   ├── const/             # variáveis de ambiente (config.py) e enums
 │   ├── db/                # engine e get_session
 │   ├── models/            # tabelas SQLModel (1 arquivo por tabela)
 │   ├── schemas/           # Pydantic: XCreate, XUpdate, XResponse
-│   ├── controllers/       # acesso ao banco (get/criar/atualizar/deletar)
-│   ├── views/             # routers FastAPI; views/__init__.py agrega todos
-│   ├── services/          # regras de negócio que juntam vários controllers
+│   ├── controllers/       # acesso ao banco
+│   ├── views/             # routers FastAPI (rotas e Swagger)
+│   ├── services/          # regras de negócio e transações
 │   ├── validations/       # validações reutilizáveis
-│   ├── security/          # senha (Argon2), token JWT, dependências de rota e permissões por perfil
-│   ├── scripts/           # tarefas de apoio rodadas à mão (ex.: criar o primeiro Organizador)
-│   ├── exceptions/        # HTTPException padronizadas (404, constraint, 500)
+│   ├── security/          # senha (Argon2), token JWT e permissões por perfil
+│   ├── exceptions/        # HTTPException padronizadas
+│   ├── scripts/           # tarefas de apoio (ex.: criar o primeiro Organizador)
 │   ├── middlewares/
 │   ├── integrations/      # clientes de APIs externas
-│   ├── jobs/              # tarefas agendadas (iniciar no lifespan)
-│   └── utils/             # lifespan, helpers genéricos (atualizar_instancia)
+│   ├── jobs/              # tarefas agendadas
+│   └── utils/             # lifespan, openapi e helpers genéricos
 ├── migrations/            # SQL do Flyway
 ├── tests/
+├── docs/                  # documentação por assunto e diagramas
 ├── Dockerfile             # targets: dev (compose) e prod (deploy)
 ├── Dockerfile.flyway      # imagem com as migrations para o deploy
 ├── docker-compose.yml
@@ -154,398 +138,23 @@ Para adicionar um valor: crie uma migration nova com `ALTER TYPE <tipo> ADD VALU
 Fluxo de uma requisição:
 
 ```
-view (rota) → controller (banco) → model (tabela)
-     ↑ valida entrada/saída com schemas
+view (rota) → service (regras) → controller (banco) → model (tabela)
+     ↑ valida entrada e saída com schemas
 ```
 
-## Autenticação e permissões
+## CI/CD
 
-O participante se cadastra, faz login e recebe um **token JWT**, que envia em todo pedido no cabeçalho `Authorization: Bearer <token>`. No Swagger, use o botão **Authorize** e cole o token.
+- `.github/workflows/ci.yml`: a cada push na `main` ou `dev` e em todo PR, sobe o Postgres, aplica as migrations, roda o Ruff e o pytest.
+- `.github/workflows/deploy.yml`: deploy manual (`workflow_dispatch`) em servidor com runner self-hosted. **Nunca coloque senhas direto no workflow.**
 
-| Rota                  | Quem acessa                                   | O que faz                                                                 |
-|-----------------------|-----------------------------------------------|---------------------------------------------------------------------------|
-| `POST /auth/cadastro` | Qualquer pessoa                               | Cria um **Participante** com conta pendente e registra o comprovante (RF01) |
-| `POST /auth/login`    | Qualquer pessoa                               | Devolve o token de acesso e os dados do usuário (RF02)                    |
-| `GET /auth/me`        | Qualquer usuário logado, inclusive conta pendente | Dados de quem está logado                                             |
-| `GET /admin/usuarios/perfis` | Organizador e Comitê Científico (e DEV) | Perfis que o usuário logado pode cadastrar                             |
-| `POST /admin/usuarios` | Organizador e Comitê Científico (e DEV)      | Cadastra usuários de outros perfis, conforme a hierarquia abaixo (RF07, RF08) |
+## Fluxo de contribuição
 
-**Cadastro.** Exige nome, e-mail, instituição, curso, período, senha e o link do comprovante de vínculo (`https`, terminando em `.pdf`, `.png`, `.jpg` ou `.jpeg`; o arquivo fica em um serviço externo como o Cloudinary). A senha precisa de 8 a 128 caracteres, com pelo menos uma letra e um número. O e-mail é guardado em minúsculas e não pode repetir. O perfil nunca vem do cliente. O comprovante é ligado ao hackathon com inscrições abertas (`status = INSCRICOES`); sem nenhum, o cadastro responde 409. A conta nasce `PENDENTE` e só passa a `ATIVA` quando o Comitê Científico aprovar o comprovante (RN25, tarefa futura).
+1. Crie uma branch a partir da `main`, com o código da tarefa: `feat/be-s4-13-contratos-api`.
+2. Faça commits pequenos, com prefixo e mensagem em português: `feat:`, `fix:`, `docs:`, `test:`, `refactor:`.
+3. Rode `make lint` e `make test` antes de abrir o PR.
+4. Abra o Pull Request para a `main`. O CI precisa passar.
+5. Migrations já aplicadas nunca são editadas: crie uma nova.
 
-**Login.** Credenciais inválidas (e-mail inexistente, senha errada ou conta desativada) dão sempre a mesma resposta 401, sem dizer qual dado errou. Depois de `LOGIN_MAX_TENTATIVAS` falhas seguidas a conta fica bloqueada por `LOGIN_BLOQUEIO_MINUTOS`: nesse período até a senha correta é recusada, com 429 e o cabeçalho `Retry-After`. Um login correto zera o contador. O token vale `JWT_EXPIRE_MINUTES` e não é renovado: passado o prazo, é preciso entrar de novo.
+## Equipe
 
-**Perfis (RF06).** A ordem Organizador, Comitê Científico, Mentor, Comitê Técnico, Líder e Membro define só quem cadastra quem; não há herança de permissões. O líder técnico não é um perfil: é `membros_equipe.funcao = LIDER`.
-
-| Perfil               | Pode cadastrar                                    |
-|----------------------|---------------------------------------------------|
-| `ORGANIZADOR`        | Qualquer perfil, menos `DEV`                      |
-| `COMITE_CIENTIFICO`  | `COMITE_TECNICO` e `MENTOR`                       |
-| `MENTOR`, `COMITE_TECNICO`, `PARTICIPANTE` | Nenhum                      |
-| `DEV`                | Qualquer perfil, e acessa todas as rotas          |
-
-**Protegendo uma rota.** As dependências ficam em `app/security/dependencias.py`. O perfil e a situação da conta são lidos do banco a cada pedido (o token guarda só o id), então desativar uma conta ou trocar o perfil vale na hora.
-
-```python
-from app.security.dependencias import exigir_papeis, usuario_ativo, usuario_atual
-
-
-# Só os perfis listados (DEV sempre passa). Conta pendente recebe 403.
-@router.post("")
-async def criar(usuario: Usuario = Depends(exigir_papeis(PapelUsuario.ORGANIZADOR))): ...
-
-
-# Qualquer usuário com conta ativa
-@router.get("")
-async def listar(usuario: Usuario = Depends(usuario_ativo)): ...
-
-
-# Qualquer usuário logado, até com conta pendente (usado em /auth/me)
-@router.get("/eu")
-async def eu(usuario: Usuario = Depends(usuario_atual)): ...
-```
-
-Respostas: sem token, token inválido, vencido ou de conta desativada dão **401**; token válido sem permissão, ou conta pendente em rota que exige conta ativa, dão **403**.
-
-**Variáveis de ambiente** (no `.env.example`):
-
-| Variável                 | Padrão | Descrição                                                              |
-|--------------------------|--------|------------------------------------------------------------------------|
-| `JWT_SECRET`             | —      | Chave que assina os tokens, mínimo de 32 caracteres. **Obrigatória**: a API não sobe sem ela. Em produção use um valor próprio e secreto |
-| `JWT_EXPIRE_MINUTES`     | `60`   | Validade do token                                                      |
-| `LOGIN_MAX_TENTATIVAS`   | `5`    | Falhas seguidas até bloquear a conta                                   |
-| `LOGIN_BLOQUEIO_MINUTOS` | `15`   | Duração do bloqueio                                                    |
-
-**Primeiro Organizador.** Como só o Organizador cadastra os demais perfis, o primeiro usuário é criado por um script, dentro do container da API (a senha é pedida no terminal e não fica no histórico):
-
-```bash
-docker compose exec app python -m app.scripts.criar_usuario --email organizador@ufpa.br --nome "Nome Completo" --papel ORGANIZADOR
-```
-
-Ficou de fora desta etapa: confirmação do e-mail, envio de acesso por e-mail, recuperação de senha, login com Google/GitHub, encerrar sessão e a aprovação do comprovante pelo Comitê Científico.
-
-### Diagramas da autenticação
-
-**Arquitetura.** Como o navegador, a API, o banco e o serviço de arquivos se falam no cadastro, no login e a cada pedido protegido. Os números seguem a ordem dos passos.
-
-![Arquitetura da autenticação e das permissões](docs/diagramas/arquitetura_autenticacao.webp)
-
-**Fluxograma.** O caminho de uma pessoa do cadastro até uma rota protegida, com todas as respostas de erro. Laranja é ação da pessoa ou da interface, roxo é verificação de segurança da API e branco é processamento do sistema.
-
-![Fluxograma de autenticação: cadastro, login e acesso às rotas](docs/diagramas/fluxograma_autenticacao.webp)
-
-### Guia para a interface (front)
-
-O Swagger em `/docs` descreve cada rota, os campos e os erros possíveis e serve de contrato. Em resumo, o que a interface faz:
-
-**1. Cadastro do participante** (tela pública). Envia o comprovante (PDF ou imagem, até 10 MB) para um serviço externo, como o Cloudinary, e manda só o link:
-
-```
-POST /auth/cadastro
-{ "nome": "Ana Souza", "email": "ana@ufpa.br", "senha": "segredo123",
-  "instituicao": "UFPA", "curso": "Sistemas de Informação", "periodo": 5,
-  "comprovante_url": "https://res.cloudinary.com/.../comprovante.pdf" }
-→ 201  { "id": "...", "email": "ana@ufpa.br", "papel": "PARTICIPANTE", "situacao_conta": "PENDENTE", ... }
-```
-
-**2. Login.** A resposta já traz o usuário, então não é preciso chamar `/auth/me` depois. A interface guarda o `access_token` e o envia em todo pedido protegido como `Authorization: Bearer <token>`:
-
-```
-POST /auth/login
-{ "email": "ana@ufpa.br", "senha": "segredo123" }
-→ 200  { "access_token": "eyJ...", "token_type": "bearer", "expires_in": 3600,
-         "usuario": { "id": "...", "nome": "Ana Souza", "papel": "PARTICIPANTE",
-                      "situacao_conta": "PENDENTE", "ativo": true, ... } }
-```
-
-**3. Painel e menus.** O painel vem do `usuario.papel` (`PARTICIPANTE`, `MENTOR`, `COMITE_TECNICO`, `COMITE_CIENTIFICO`, `ORGANIZADOR` ou `DEV`). Esconder um menu é só conforto: a API recusa com 403 qualquer rota que o perfil não possa usar. O líder técnico não é um papel; ele vem de `membros_equipe.funcao`.
-
-**4. Conta pendente.** Se `usuario.situacao_conta` for `PENDENTE`, mostre "aguardando validação do comprovante" e não abra as outras telas: a conta só consegue `GET /auth/me`, e as demais rotas protegidas respondem 403.
-
-**5. Tela "Cadastrar usuário"** (Organizador e Comitê Científico). Monte a lista de perfis com `GET /admin/usuarios/perfis`, sem copiar a hierarquia no front, e envie o formulário para `POST /admin/usuarios` com o `papel` escolhido e a senha inicial:
-
-```
-GET /admin/usuarios/perfis      → 200  { "perfis": ["COMITE_TECNICO", "MENTOR"] }
-POST /admin/usuarios
-{ "email": "mentor@acaivalley.com", "nome": "Maria Souza", "papel": "MENTOR",
-  "senha": "senhaInicial1", "empresa_parceira": "Açaí Valley", "max_equipes": 2 }
-→ 201  (a conta já nasce ativa)
-```
-
-**Erros.** Todos vêm como `{ "detail": "mensagem" }`, exceto o 422, em que `detail` é uma lista com `loc` (o campo) e `msg`:
-
-| Código | Quando                                                                                   | O que a interface faz                                  |
-|--------|------------------------------------------------------------------------------------------|--------------------------------------------------------|
-| 401    | Sem token, token inválido ou vencido (60 min), conta desativada, ou e-mail/senha errados | Volta para o login                                     |
-| 403    | Perfil sem permissão, ou conta pendente em rota que exige conta ativa                    | Mostra acesso negado                                   |
-| 409    | E-mail já cadastrado, ou nenhum hackathon com inscrições abertas (cadastro público)      | Mostra a mensagem do `detail`                          |
-| 422    | Campo inválido, como senha fraca ou link do comprovante fora do formato                   | Marca o campo indicado em `loc`                        |
-| 429    | Conta bloqueada por 5 senhas erradas seguidas (15 minutos)                               | Mostra "conta bloqueada, tente novamente mais tarde"   |
-
-**Pontos de atenção:**
-- O token não é renovado: depois de `expires_in` segundos o próximo pedido dá 401 e é preciso entrar de novo.
-- No 429 a API manda o tempo restante no cabeçalho `Retry-After`. O navegador só deixa o front ler esse cabeçalho se ele for exposto no CORS, o que ainda não foi configurado; enquanto isso, use a mensagem fixa acima.
-- Para o front rodar em outra origem, defina `CORS_ORIGINS` no `.env` da API (hoje o padrão é `*`).
-- Uma conta nova fica `PENDENTE` até um Organizador ou o Comitê Científico aprovar o comprovante (`POST /admin/comprovantes/{id}/aprovar`). Para testar telas que exigem conta ativa sem esse passo, ative-a no banco: `UPDATE usuarios SET situacao_conta = 'ATIVA' WHERE email = '...'`.
-
-## Convites e termos
-
-Rotas de RF18, RF19 e RF20. Todas exigem token e **conta ativa** (conta pendente recebe 403).
-
-| Rota | Quem acessa | O que faz |
-|------|-------------|-----------|
-| `POST /equipes/{id}/convites` | Líder da equipe (`membros_equipe.funcao = LIDER`) | Convida por `nome` e `email`; o convite nasce `PENDENTE` |
-| `GET /equipes/{id}/convites` | Integrantes da equipe | Lista os convites e o estado de cada um (o líder vê quem recusou) |
-| `POST /convites/{id}/cancelar` | Líder da equipe | Retira um convite `PENDENTE` |
-| `GET /convites/meus` | Qualquer usuário | Convites `PENDENTE` dirigidos ao e-mail de quem está logado (painel) |
-| `POST /convites/{id}/aceitar` | Destinatário do convite | Entra na equipe e aceita os termos vigentes |
-| `POST /convites/{id}/recusar` | Destinatário do convite | Recusa; a vaga volta a ficar livre |
-| `GET /hackathons/{id}/termos/vigentes` | Qualquer usuário | Regulamento e termo de consentimento em vigor, para ler antes de aceitar |
-| `POST /hackathons/{id}/termos/aceites` | Qualquer usuário | Registra o aceite das versões vigentes (usado, por exemplo, pelo líder ao criar a equipe) |
-
-**Regras.**
-- O convite só existe durante as inscrições (`hackathon.status = INSCRICOES`, RN06), para enviar, aceitar e recusar.
-- Integrantes mais convites `PENDENTE` não passam de `hackathon.max_integrantes`. Recusar ou cancelar libera a vaga, e dá para convidar o mesmo e-mail de novo.
-- Só aceita quem ainda não está em outra equipe do mesmo hackathon (RN02); a restrição única do banco garante isso mesmo com pedidos simultâneos.
-- O convite é dirigido ao **e-mail**: o e-mail do convite é comparado, sem diferenciar maiúsculas, com o de quem responde. Para qualquer outra pessoa, o convite responde 404.
-- Aceitar exige enviar em `termos_ids` os ids de **todas** as versões vigentes (regulamento e termo de consentimento, RN05). Faltou um: 422. Algum id que não é vigente (versão nova publicada, ou de outro hackathon): 409. A data, a hora e a versão ficam em `aceites_termos`, ligadas à linha de `termos` aceita; publicar uma versão nova não altera os aceites antigos.
-- Quem entra pelo convite fica com `funcao` vazia em `membros_equipe`; o líder define as funções depois.
-
-**Guia para a interface.** Painel do convidado: `GET /convites/meus`. Ao clicar em aceitar, buscar `GET /hackathons/{hackathon_id}/termos/vigentes` (o `hackathon_id` vem no próprio convite), mostrar `conteudo` ou `url` de cada documento e, quando a pessoa concordar, enviar os ids para `POST /convites/{id}/aceitar` com `{ "termos_ids": ["...", "..."] }`.
-
-Ficou de fora desta etapa: envio do convite por e-mail e aviso ao líder quando alguém recusa (RF19; depende da infraestrutura de e-mail, decisão Q16). Por enquanto o líder consulta `GET /equipes/{id}/convites`.
-
-## Equipes e membros — BE-S4-03
-
-Todas as rotas exigem token e conta ativa; conta pendente recebe 403.
-
-| Rota | Quem acessa | O que faz |
-|------|-------------|-----------|
-| `POST /equipes` | PARTICIPANTE ou DEV | Recebe `hackathon_id` e `nome` opcional; cria equipe em `EM_FORMACAO` e vínculo `LIDER` do próprio usuário na mesma transação; demais perfis recebem 403 |
-| `GET /equipes/minhas` | Usuário autenticado | Lista somente equipes das quais participa, em todas as edições; sem vínculo retorna `[]`, inclusive para DEV |
-| `GET /equipes/{equipe_id}` | Integrante ou DEV | Consulta os dados da equipe |
-| `PATCH /equipes/{equipe_id}` | Líder ou DEV | Altera somente `nome`, enquanto a equipe está em `EM_FORMACAO` e as inscrições estão abertas |
-| `GET /equipes/{equipe_id}/membros` | Integrante ou DEV | Lista vínculos, funções e datas de entrada dos membros da equipe |
-| `PATCH /equipes/{equipe_id}/membros/{usuario_id}` | Líder ou DEV | Altera somente `funcao`, durante `INSCRICOES` e em `EM_FORMACAO` |
-| `DELETE /equipes/{equipe_id}/membros/{usuario_id}` | Líder ou DEV | Remove o vínculo do integrante, durante `INSCRICOES` e em `EM_FORMACAO`; retorna 204 sem corpo |
-
-A criação e a edição seguem o critério de inscrições já usado pelos convites: `hackathon.status = INSCRICOES`. Os campos de datas de inscrições não são avaliados por esses fluxos. Fora das inscrições, a resposta é 409. Edição em outra situação também retorna 409. Equipe ou hackathon inexistente retorna 404; falta de vínculo ou liderança retorna 403.
-
-O cliente não pode escolher outro líder nem enviar situação ou datas; campos extras são rejeitados com 422. No PATCH, `hackathon_id` também é rejeitado. `nome` continua opcional, aceita `null` e tem limite de 255 caracteres; PATCH vazio preserva os dados.
-
-RN02 é garantida na consulta prévia e pela restrição única do banco, inclusive em disputa com aceites de convites. Falhas na criação revertem tanto a equipe quanto o vínculo do líder. Uma pessoa pode participar de edições diferentes.
-
-A equipe pode ser criada com somente o líder, sem exigir o mínimo de integrantes, conclusão da inscrição, homologação ou aceite de termos nesta operação. O aceite continua nos endpoints próprios. Os limites permanecem configurados em `hackathon.min_integrantes` e `hackathon.max_integrantes`, sem novos valores fixos; o fluxo de convites continua usando o máximo configurado. A Q04 ainda precisa de validação.
-
-### Gerenciamento dos membros — segunda etapa
-
-A listagem retorna somente `equipe_id`, `usuario_id`, `hackathon_id`, `funcao` e `entrou_em`, sem dados privados das contas. A consulta continua permitida após o encerramento das inscrições; não integrantes recebem 403, salvo DEV. Toda alteração de membro verifica a liderança na própria equipe e busca o alvo pela chave composta `(equipe_id, usuario_id)`: um vínculo de outra equipe retorna 404.
-
-O PATCH aceita `funcao` como `DESENVOLVEDOR`, `DESIGNER`, `NEGOCIOS`, `OUTRO` ou `null` (sem função). Campos extras são rejeitados com 422. Corpo vazio ou a mesma função preservam os dados. Remover ou rebaixar o líder, ou promover outro membro a `LIDER`, retorna 409, inclusive para DEV. Reenviar `LIDER` ao líder atual é apenas uma operação idempotente. Transferência de liderança aguarda definição de regra.
-
-PATCH e DELETE usam o mesmo bloqueio da linha da equipe que o fluxo de convites, para coordenar alterações simultâneas de composição. Não há inclusão direta de integrantes: a entrada continua pelo aceite do convite (BE-S4-04). Alterar função não muda o total de membros; remover diminui o total e libera vaga, inclusive se o máximo configurado tiver sido reduzido. Nenhum mínimo é exigido durante a formação; a equipe pode ficar somente com o líder. O fluxo de convites continua aplicando `hackathon.max_integrantes`, sem novos limites fixos.
-
-**Histórico e reconvite.** O DELETE remove apenas a linha de `membros_equipe`; convites `ACEITO` e aceites de termos permanecem intactos, com os mesmos estados, datas e versões. O índice parcial `uq_convites_equipe_email_ativo`, definido sobre `(equipe_id, lower(email))` para estados `PENDENTE` e `ACEITO`, continua impedindo um novo convite ao mesmo e-mail na mesma equipe (409), mesmo após a remoção. O convite antigo também não pode ser aceito novamente. Não se deve convertê-lo para `CANCELADO` ou `RECUSADO`, pois isso alteraria o histórico de um aceite real. Permitir retorno à mesma equipe exige uma decisão sobre a regra de reconvite e uma evolução específica do modelo/índice; ficou pendente nesta etapa. A remoção libera a unicidade de participação por hackathon: o usuário pode aceitar um convite de outra equipe da mesma edição, sujeito às regras já existentes.
-
-**Aviso ao removido (RF24).** Não há serviço, fila ou integração de notificações/e-mail implementados no projeto. O aviso permanece pendente de infraestrutura; o endpoint não envia nem simula notificação. A resposta 204 confirma apenas a remoção do vínculo. A Q04 sobre tamanho de equipes também continua pendente.
-
-Exclusão de equipes, transferência de liderança, conclusão da inscrição, homologação e notificações por e-mail não fazem parte desta entrega. Migrations e o fluxo de convites e termos foram preservados nesta etapa.
-
-## Inscrição e homologação
-
-[#inscrição-e-homologação](#inscri%C3%A7%C3%A3o-e-homologa%C3%A7%C3%A3o)
-
-BE-S4-05 (RF21, RF22, RF23, RF25).
-
-| Rota                                              | Quem acessa                                       | O que faz                                                                                                  |
-|---------------------------------------------------|---------------------------------------------------|------------------------------------------------------------------------------------------------------------|
-| `GET /admin/comprovantes`                         | Organizador e Comitê Científico (e DEV)           | Fila de comprovantes (padrão `PENDENTE`, filtros `status`, `hackathon_id`, `limite`, `deslocamento`), com `arquivo_url` e dados de quem enviou |
-| `POST /admin/comprovantes/{id}/aprovar`           | Organizador e Comitê Científico (e DEV)           | Aprova o vínculo, ativa a conta e reavalia a homologação da equipe                                         |
-| `POST /admin/comprovantes/{id}/recusar`           | Organizador e Comitê Científico (e DEV)           | Recusa com `motivo_recusa` obrigatório                                                                     |
-| `GET /comprovantes/meus`                          | Qualquer usuário logado, inclusive conta pendente | Histórico dos próprios comprovantes, com o motivo da recusa                                                |
-| `POST /comprovantes`                              | Qualquer usuário logado, inclusive conta pendente | Reenvia o comprovante (`arquivo_url`) depois de uma recusa; o anterior fica no histórico                   |
-| `GET /equipes/{id}/painel`                        | Integrantes da equipe (e DEV)                     | Situação da equipe, estado de cada integrante (convite, termos, comprovante) e lista do que falta          |
-| `POST /equipes/{id}/inscricao/concluir`           | Líder da equipe (e DEV)                           | Conclui a inscrição, emite o protocolo e devolve a confirmação                                             |
-| `POST /admin/hackathons/{id}/equipes/reavaliar`   | Organizador (e DEV)                               | Refaz a homologação das equipes com inscrição concluída                                                    |
-
-**Ciclo da equipe.** `EM_FORMACAO` → (líder conclui) `AGUARDANDO_HOMOLOGACAO` → (requisitos cumpridos) `HOMOLOGADA`. A homologação volta para `AGUARDANDO_HOMOLOGACAO` sozinha quando um requisito deixa de valer. `NAO_HOMOLOGADA` fica reservada ao encerramento do prazo de homologação (`hackathon.homologacao_fim`), que ainda não tem job.
-
-**Concluir a inscrição** exige, ao mesmo tempo: líder logado, equipe em `EM_FORMACAO`, inscrições abertas (`status = INSCRICOES` e, se o edital define `inscricoes_inicio`/`inscricoes_fim`, o momento atual dentro delas), de `min_integrantes` a `max_integrantes` (3 a 5 por padrão, Q04 em aberto), e cada integrante com convite aceito, conta ativa e as versões vigentes do regulamento e do termo de consentimento aceitas, o líder inclusive. O comprovante **não** é exigido para concluir. Ao concluir, convites sem resposta são cancelados, a composição da equipe fecha (novos convites e aceites dão 409) e um protocolo `INSCRICAO_EQUIPE` é emitido (um por equipe, garantido por índice único). Se o vínculo de todos já estiver aprovado, a equipe sai homologada na mesma chamada.
-
-**Homologação automática** (RF23): além do que vale para concluir, todos os integrantes precisam ter o comprovante mais recente `APROVADO` no hackathon. A reavaliação roda ao concluir, ao aprovar um comprovante e em `POST /admin/hackathons/{id}/equipes/reavaliar`. Quem publicar uma nova versão de termos (ou mudar o tamanho de equipe) deve chamar `reavaliar_hackathon` do `app/services/inscricao.py` ou essa rota, para equipes homologadas que deixaram de cumprir os requisitos voltarem a pendentes. A lógica única fica em `app/services/homologacao.py`: o painel, a conclusão e a homologação usam a mesma avaliação.
-
-**Painel.** `pendencias` lista cada coisa que falta, com `codigo`, `mensagem`, a pessoa responsável (`usuario_id`) e `bloqueia_conclusao`. `pode_concluir` é a flag para a interface mostrar o botão de concluir: só é verdadeira para o líder, com a equipe em formação e nenhum bloqueio. Convites sem resposta ou recusados aparecem na lista de `integrantes` com `integrante = false`.
-
-**Decisões em aberto que o código assume** (ajuste se a equipe decidir diferente):
-
-- **Q25, quem confere o comprovante.** A história de usuário diz Organizador e o comentário do banco diz Comitê Científico; as rotas aceitam os dois. A lista fica em `PERFIS_QUE_VALIDAM_COMPROVANTE`, em `app/security/permissoes.py`.
-- **Quem não tem comprovante.** "Vínculo validado" significa ter comprovante `APROVADO` no hackathon. Participante cadastrado por um gestor (conta ativa, sem comprovante) segura a homologação até enviar um com `POST /comprovantes` e ser aprovado.
-- **Recusa.** Só comprovantes `PENDENTE` são decididos; um comprovante aprovado não é revogado por esta API.
-- **Avisos.** O README já registra que não há infraestrutura de e-mail ou notificações. "O integrante é avisado" (RF21) e "a equipe é avisada" (RF23) ficam atendidos pela consulta: `GET /comprovantes/meus` e `GET /equipes/{id}/painel`.
-- **Prazo.** A conclusão confere também as datas do edital quando existem, ao contrário das demais rotas, que olham só o `status`.
-
-## Envio definitivo da proposta — BE-S4-08
-
-RF26 e RF28. As rotas exigem autenticação e conta ativa:
-
-| Rota | Quem acessa | Resultado |
-|------|-------------|-----------|
-| `POST /equipes/{equipe_id}/proposta/enviar` | Líder técnico ou DEV | Envia o rascunho salvo e emite protocolo na mesma transação; sem corpo |
-| `GET /equipes/{equipe_id}/proposta` | Integrantes ou DEV | Consulta somente a proposta enviada, com seu protocolo; sem envio retorna 404 |
-
-O envio exige equipe `HOMOLOGADA`, tema existente e ativo da mesma edição, `tema_id`,
-`titulo`, `descricao`, pelo menos um ODS entre 1 e 17 e `bases_dados`. Strings vazias ou
-compostas apenas por espaços são rejeitadas com 422. `documento_url` permanece opcional.
-DEV tem dispensa de vínculo e liderança, mas cumpre todas as regras de negócio.
-
-Os dois limites `hackathon.propostas_inicio` e `propostas_fim` precisam estar configurados.
-O momento do envio deve estar no intervalo inclusivo, comparado em UTC, independentemente
-do período de inscrições. Datas sem fuso são interpretadas como UTC. Prazo ausente, futuro
-ou encerrado, equipe não homologada, tema indisponível e reenvio retornam 409.
-
-Ambas as rotas retornam os campos da proposta, `status = ENVIADA`, `enviado_em` e o objeto
-`protocolo` com `id`, `numero`, `tipo`, `equipe_id`, `submissao_id`, `emitido_por` e
-`emitido_em`. As datas persistidas são UTC. A proposta enviada é imutável: não pode ser
-alterada nem consultada pelas rotas específicas de rascunho, que foram preservadas.
-
-O bloqueio segue a ordem equipe → proposta. Envios concorrentes resultam em um sucesso
-e um conflito, com um único protocolo; falha na emissão reverte também o status e a data
-da proposta. A migration `V202610310900__protocolo_unico_proposta.sql` adiciona unicidade
-por proposta aos protocolos do tipo `PROPOSTA`, complementando a unicidade do número.
-
-No painel, `protocolo` continua representando a inscrição e `protocolo_proposta` traz
-separadamente o número e a data da proposta, ou `null` antes do envio.
-
-**Pendências:** envio do protocolo por e-mail depende de integração futura e não é
-executado nem simulado. A obrigatoriedade de anexo depende de regra de negócio explícita;
-esta entrega não exige anexo.
-
-## Distribuição de propostas aos avaliadores — BE-S4-09
-
-RF29 e Q07 (2 a 3 avaliadores por proposta). Todas as rotas exigem token e conta ativa.
-
-| Rota | Quem acessa | O que faz |
-|------|-------------|-----------|
-| `PATCH /admin/hackathons/{id}/avaliacao/configuracao` | Organizador (e DEV) | Define `avaliadores_por_proposta` (2 ou 3) |
-| `POST /admin/hackathons/{id}/avaliacoes/distribuir` | Organizador (e DEV) | Distribui as propostas `ENVIADA` entre os avaliadores |
-| `PUT /admin/propostas/{submissao_id}/avaliadores` | Organizador (e DEV) | Redistribui uma proposta: troca os avaliadores pela lista `avaliador_ids` |
-| `GET /admin/hackathons/{id}/avaliacoes/designacoes` | Organizador (e DEV) | Cada proposta `ENVIADA` com os avaliadores designados (lista vazia se ainda não distribuída) |
-| `GET /avaliador/propostas` | Comitê Científico (e DEV) | Só as propostas designadas a quem está logado |
-| `GET /avaliador/propostas/{submissao_id}` | Comitê Científico (e DEV) | Uma proposta designada a quem está logado; qualquer outra responde 404 |
-
-**Onde fica o vínculo.** A tabela `designacoes_avaliacao` (`submissao_id`, `hackathon_id`, `avaliador_id`, `atribuido_por`, `atribuido_em`) guarda quem pode avaliar o quê, com `unique(submissao_id, avaliador_id)`. A nota continua em `avaliacoes` (BE-S4-10): ela pode conferir a designação antes de gravar a nota.
-
-**Quantidade.** `hackathon.avaliadores_por_proposta` tem `CHECK` entre 2 e 3 e **não tem valor padrão**: fica `NULL` até o Organizador configurar, e distribuir ou redistribuir antes disso responde 409. Alterar a quantidade vale só para as próximas distribuições e **não mexe nas designações nem nas notas já existentes**: uma proposta com mais ou menos avaliadores que o novo valor só muda se for redistribuída ou completada por uma nova distribuição (que nunca remove ninguém).
-
-**Quem é avaliador.** `papel = COMITE_CIENTIFICO`, `ativo = true` e `situacao_conta = ATIVA`. O `DEV` não pode ser avaliador, mas pode usar todas as rotas; nas rotas `/avaliador/*` ele vê só o que foi designado a ele, como os demais. **Limitação:** não existe vínculo avaliador-hackathon no banco, então vale todo avaliador elegível do sistema.
-
-**Distribuição.** Só propostas `ENVIADA` entram; rascunhos ficam de fora. Cada proposta é completada até N avaliadores, sempre com quem tem menos propostas no hackathon (desempate pelo id, então o resultado é determinístico). Rodar de novo só completa o que falta e não altera propostas que já têm N ou mais avaliadores nem propostas que já têm nota. Se faltar avaliador elegível para qualquer proposta, a resposta é 409 e **nada é gravado**. A resposta traz `propostas_distribuidas`, `designacoes_criadas` e `propostas_ja_completas`.
-
-**Redistribuição (manual, por proposta).** O `PUT` recebe exatamente N ids distintos (422 se a quantidade for outra ou houver repetidos) e todos precisam ser elegíveis (409 caso contrário). Quem continua na lista mantém a designação original. Não há modo automático de redistribuição.
-
-**Antes de a avaliação começar.** Distribuir e redistribuir respondem 409 quando `hackathon.status` é `EM_AVALIACAO`, `FINALIZADO` ou `CANCELADO`, ou quando a proposta já tem alguma nota em `avaliacoes`. Redistribuir uma proposta que não está `ENVIADA` também dá 409.
-
-**Concorrência.** As duas operações travam a linha do `hackathon` (`SELECT ... FOR UPDATE`) e conferem a contagem dentro do service, então duas distribuições simultâneas não duplicam designações.
-
-**Isolamento.** `GET /avaliador/propostas` filtra por `usuario.id`. Proposta de outro avaliador ou inexistente responde 404 com a mesma mensagem, sem revelar que existe. A resposta ao avaliador não traz `equipe_id`, para não expor quem escreveu a proposta.
-
-**Erros.** 401 (sem token ou token inválido), 403 (perfil sem permissão ou conta pendente), 404 (hackathon ou proposta inexistente, ou proposta não designada ao avaliador), 409 (quantidade não configurada, avaliação já iniciada, proposta com nota ou não enviada, avaliadores insuficientes ou não elegíveis) e 422 (quantidade fora de 2 a 3, lista de tamanho errado ou com repetidos). Os detalhes de cada rota estão no Swagger.
-## Temas e rubrica — BE-S4-06
-
-RF15, RF16 e RF17. Quem gerencia é o perfil em `PERFIS_QUE_GERENCIAM_EDITAL`
-(`app/security/permissoes.py`, hoje só `ORGANIZADOR`); DEV sempre passa.
-
-### Temas (RF15, RN04)
-
-| Rota | Quem acessa | Resultado |
-|------|-------------|-----------|
-| `POST /hackathons/{hackathon_id}/temas` | Organizador ou DEV | Cadastra; título único na edição (409 se repetido) |
-| `GET /hackathons/{hackathon_id}/temas` | Conta ativa | Só temas ativos; `?incluir_inativos=true` apenas para Organizador/DEV (403 para os demais) |
-| `GET /temas/{tema_id}` | Conta ativa | Tema desativado retorna 404 para quem não gerencia |
-| `PATCH /temas/{tema_id}` | Organizador ou DEV | Edita os campos enviados; `ativo` ativa ou desativa |
-| `DELETE /temas/{tema_id}` | Organizador ou DEV | 204; 409 se houver proposta ligada ao tema, inclusive rascunho |
-
-O tema exige `titulo`, `descricao` e pelo menos um ODS (1 a 17, sem repetição). Tema
-desativado não pode ser escolhido no rascunho nem enviado na proposta (regra já existente
-em `app/services/submissao.py`).
-
-### Rubrica (RF16, RF17, RN09, RN10)
-
-| Rota | Quem acessa | Resultado |
-|------|-------------|-----------|
-| `GET /hackathons/{hackathon_id}/rubrica` | **Público, sem login** | Rubrica publicada com critérios, pesos e escalas; 404 antes da publicação |
-| `GET /hackathons/{hackathon_id}/rubrica/rascunho` | Organizador ou DEV | Estado atual e `pendencias` para publicar |
-| `PUT /hackathons/{hackathon_id}/rubrica` | Organizador ou DEV | Cria a rubrica da edição e substitui a lista de critérios |
-| `POST /hackathons/{hackathon_id}/rubrica/publicar` | Organizador ou DEV | Publica uma única vez |
-
-Exemplo do corpo do `PUT`:
-
-```json
-{"criterios": [
-  {"nome": "Inovação", "descricao": "Originalidade", "peso": "30", "escala_min": 0, "escala_max": 10},
-  {"nome": "Impacto", "descricao": "Benefício social", "peso": "30", "escala_min": 0, "escala_max": 10}
-]}
-```
-
-- Cada critério tem nome (único na rubrica, sem diferenciar maiúsculas e acentos),
-  descrição, peso em % (maior que 0, até 100, 2 casas) e escala com `escala_min < escala_max`.
-- O rascunho pode ficar incompleto. A publicação exige ao menos um critério, **soma dos
-  pesos igual a 100** e todos os critérios de `CRITERIOS_MINIMOS_RN10` (`app/const/rubrica.py`);
-  caso contrário, 422 com o motivo.
-- A publicação precisa ocorrer **antes de `hackathon.inscricoes_inicio`** (UTC); depois, 409.
-  Sem data configurada, é permitida.
-- Publicada, a rubrica não muda (RN09): `PUT` e nova publicação retornam 409. A migration
-  `V202611031000__rubricas.sql` também impede no banco, por trigger, alterar a rubrica
-  publicada ou incluir, alterar e remover critérios dela. Excluir a rubrica inteira (com os
-  critérios em cascata) continua possível, para remoção de uma edição.
-- `PUT` e publicação travam a linha do hackathon, então chamadas simultâneas são serializadas.
-
-**Pendências:** a lista oficial dos critérios mínimos da RN10 não estava documentada; os
-nomes em `CRITERIOS_MINIMOS_RN10` (Inovação, Impacto, Viabilidade técnica, Aderência ao tema)
-são provisórios. As regras de temas ainda dependem das validações Q02 (Fase 0 dentro ou fora
-do sistema) e Q03 (quantidade de temas e participação).
-
-## Criando as rotas de uma entidade (ex.: `equipe`)
-
-Ao criar uma nova entidade, siga a separação usada por `equipe`:
-
-1. **Controller** — consultas e persistência sem commit, como `app/controllers/equipe.py`; `atualizar_instancia` (em `app/utils/generic_db_operations.py`) copia somente os campos enviados no schema.
-2. **Service** — regras, autorização e transação, como `app/services/equipe.py`, usando as exceções de negócio e `app/exceptions/db.py` para erros de integridade.
-3. **View** — contrato HTTP e documentação Swagger, como `app/views/equipe.py`, recebendo `EquipeCreate`/`EquipeUpdate` e devolvendo `EquipeResponse`.
-4. Registrar o router em `app/views/__init__.py` e a tag em `app/__init__.py`.
-
-Para uma tabela nova: migration → model em `app/models/` (e importar em `models/__init__.py`) → schemas → passos acima.
-
-## Migrations (Flyway)
-
-- Nome: `V<AAAAMMDDHHMM>__descricao.sql` (ex.: `V202610151530__adicionar_coluna_premio.sql`).
-- **Nunca edite uma migration já aplicada**; crie uma nova. Se você subiu o banco antes de uma migration ser alterada, rode `make clean && make up` (apaga os dados locais).
-- O compose roda as migrations ao subir, no banco de desenvolvimento e no de testes. Para aplicar sem reiniciar: `make migrate`.
-
-## Comandos
-
-Cada alvo do `Makefile` é um atalho para o comando `docker compose` da coluna ao lado — use a que preferir.
-
-| Comando         | Equivalente sem `make`                                                              | O que faz                                         |
-|-----------------|-------------------------------------------------------------------------------------|---------------------------------------------------|
-| `make env`      | `cp .env.example .env`                                                              | Cria o `.env` a partir do `.env.example`          |
-| `make up`       | `docker compose up -d --build`                                                      | Sobe os containers (com build)                    |
-| `make down`     | `docker compose down`                                                               | Para os containers                                |
-| `make restart`  | `docker compose down && docker compose up -d --build`                               | Reinicia                                          |
-| `make logs`     | `docker compose logs -f app`                                                        | Acompanha os logs da API                          |
-| `make migrate`  | `docker compose run --rm flyway` e `docker compose run --rm flyway_test`            | Aplica migrations pendentes nos dois bancos       |
-| `make test`     | `docker compose exec app pytest`                                                    | Roda o pytest no banco de testes, dentro do container |
-| `make lint`     | `docker compose exec app ruff check .` e `docker compose exec app ruff format --check .` | Ruff (lint + checagem de formatação)         |
-| `make format`   | `docker compose exec app ruff check --fix .` e `docker compose exec app ruff format .` | Corrige lint e formata o código                |
-| `make shell`    | `docker compose exec app bash`                                                      | Terminal dentro do container da API               |
-| `make db-shell` | `docker compose exec db sh -c 'psql -U $POSTGRES_USER -d $POSTGRES_DB'`              | psql no banco                                     |
-| `make lock`     | `docker run --rm -v "$PWD":/code -w /code python:3.13-slim sh -c 'pip install -q poetry==2.1.3 && poetry lock'` | Atualiza o `poetry.lock` após editar dependências |
-| `make clean`    | `docker compose down -v`                                                            | Para tudo e **apaga os dados do banco**           |
-
-No PowerShell o `&&` não existe: rode cada comando em uma linha separada e troque `$PWD` por `${PWD}`.
-
-Para adicionar uma dependência: edite o `pyproject.toml`, rode `make lock` (ou o equivalente) e depois `make up`.
-
-## CI/CD (GitHub Actions)
-
-- `.github/workflows/ci.yml` — a cada push/PR em `main`/`dev`: sobe Postgres, aplica as migrations, roda ruff e pytest.
-- `.github/workflows/deploy.yml` — deploy manual (workflow_dispatch) em servidor com runner self-hosted. Configure os secrets/variables listados no topo do arquivo. **Nunca coloque senhas direto no workflow.**
+Squad 3 (Backend) do Hackathon UFPA: Danilo Sovano, Esdras Silva, Hiago Silva, Thiago Leonardo e Yasmim Nagat.
