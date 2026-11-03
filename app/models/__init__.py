@@ -21,6 +21,7 @@ from .artefato import Artefato
 from .avaliacao import Avaliacao
 from .comprovante_vinculo import ComprovanteVinculo
 from .convite import Convite
+from .designacao_avaliacao import DesignacaoAvaliacao
 from .equipe import Equipe
 from .hackathon import Hackathon
 from .membro_equipe import MembroEquipe
@@ -36,6 +37,7 @@ __all__ = [
     "Avaliacao",
     "ComprovanteVinculo",
     "Convite",
+    "DesignacaoAvaliacao",
     "Equipe",
     "Hackathon",
     "MembroEquipe",

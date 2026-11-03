@@ -27,4 +27,8 @@ tags = [
         "name": "Propostas",
         "description": "Rascunhos e envio definitivo com protocolo (RF26, RF27, RF28)",
     },
+    {
+        "name": "Avaliação",
+        "description": "Distribuição de propostas aos avaliadores e consulta (RF29)",
+    },
 ]

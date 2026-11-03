@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -15,3 +17,9 @@ async def get_hackathon_com_inscricoes(db: AsyncSession) -> Hackathon | None:
     )
     hackathons = (await db.exec(consulta)).all()
     return next((hackathon for hackathon in hackathons if inscricoes_abertas(hackathon)), None)
+
+
+async def get_hackathon_para_atualizar(db: AsyncSession, hackathon_id: UUID) -> Hackathon | None:
+    """Trava a linha até o fim da transação: serializa distribuições simultâneas."""
+    consulta = select(Hackathon).where(Hackathon.id == hackathon_id).with_for_update()
+    return (await db.exec(consulta)).first()
