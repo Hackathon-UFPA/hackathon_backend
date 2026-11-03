@@ -21,11 +21,13 @@ from .artefato import Artefato
 from .avaliacao import Avaliacao
 from .comprovante_vinculo import ComprovanteVinculo
 from .convite import Convite
+from .criterio_rubrica import CriterioRubrica
 from .designacao_avaliacao import DesignacaoAvaliacao
 from .equipe import Equipe
 from .hackathon import Hackathon
 from .membro_equipe import MembroEquipe
 from .protocolo import Protocolo
+from .rubrica import Rubrica
 from .submissao import Submissao
 from .tema import Tema
 from .termo import Termo
@@ -37,11 +39,13 @@ __all__ = [
     "Avaliacao",
     "ComprovanteVinculo",
     "Convite",
+    "CriterioRubrica",
     "DesignacaoAvaliacao",
     "Equipe",
     "Hackathon",
     "MembroEquipe",
     "Protocolo",
+    "Rubrica",
     "Submissao",
     "Tema",
     "Termo",

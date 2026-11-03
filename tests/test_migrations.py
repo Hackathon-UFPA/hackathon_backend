@@ -552,3 +552,99 @@ def test_tentativas_de_login_negativas():
 
     with pytest.raises(IntegrityError, match="ck_usuarios_tentativas_login"):
         rodar(fn)
+
+
+# --- Rubrica (V202611031000, RF16, RN09) ---
+
+
+async def nova_rubrica(conn, hackathon_id=None):
+    return await sql(
+        conn,
+        "INSERT INTO rubricas (hackathon_id) VALUES (:h) RETURNING id",
+        h=hackathon_id or await novo_hackathon(conn),
+    )
+
+
+async def novo_criterio(conn, rubrica_id, nome="Inovação", peso=50, escala_min=0, escala_max=10):
+    return await sql(
+        conn,
+        "INSERT INTO criterios_rubrica (rubrica_id, nome, descricao, peso, escala_min,"
+        " escala_max, ordem) VALUES (:r, :n, 'D', :p, :emin, :emax, 1) RETURNING id",
+        r=rubrica_id,
+        n=nome,
+        p=peso,
+        emin=escala_min,
+        emax=escala_max,
+    )
+
+
+def test_migration_de_rubricas_aplicada():
+    async def fn(conn):
+        return await sql(
+            conn, "SELECT success FROM flyway_schema_history WHERE version = '202611031000'"
+        )
+
+    assert rodar(fn) is True
+
+
+def test_duas_rubricas_na_mesma_edicao():
+    async def fn(conn):
+        hackathon_id = await novo_hackathon(conn)
+        await nova_rubrica(conn, hackathon_id)
+        await nova_rubrica(conn, hackathon_id)
+
+    with pytest.raises(IntegrityError, match="uq_rubricas_hackathon"):
+        rodar(fn)
+
+
+@pytest.mark.parametrize(
+    ("campos", "constraint"),
+    [
+        ({"peso": 0}, "ck_criterios_rubrica_peso"),
+        ({"peso": 101}, "ck_criterios_rubrica_peso"),
+        ({"escala_min": 5, "escala_max": 5}, "ck_criterios_rubrica_escala"),
+        ({"escala_min": -1}, "ck_criterios_rubrica_escala"),
+    ],
+)
+def test_criterio_de_rubrica_invalido(campos, constraint):
+    async def fn(conn):
+        await novo_criterio(conn, await nova_rubrica(conn), **campos)
+
+    with pytest.raises(IntegrityError, match=constraint):
+        rodar(fn)
+
+
+def test_criterio_repetido_na_rubrica():
+    async def fn(conn):
+        rubrica_id = await nova_rubrica(conn)
+        await novo_criterio(conn, rubrica_id)
+        await novo_criterio(conn, rubrica_id)
+
+    with pytest.raises(IntegrityError, match="uq_criterios_rubrica_nome"):
+        rodar(fn)
+
+
+def test_rascunho_de_rubrica_pode_ser_alterado():
+    async def fn(conn):
+        rubrica_id = await nova_rubrica(conn)
+        await novo_criterio(conn, rubrica_id)
+        await sql(
+            conn, "UPDATE criterios_rubrica SET peso = 100 WHERE rubrica_id = :r", r=rubrica_id
+        )
+        await sql(conn, "UPDATE rubricas SET publicada_em = now() WHERE id = :r", r=rubrica_id)
+        return await sql(
+            conn, "SELECT peso FROM criterios_rubrica WHERE rubrica_id = :r", r=rubrica_id
+        )
+
+    assert rodar(fn) == 100
+
+
+def test_criterio_de_rubrica_publicada_nao_muda():
+    async def fn(conn):
+        rubrica_id = await nova_rubrica(conn)
+        await novo_criterio(conn, rubrica_id)
+        await sql(conn, "UPDATE rubricas SET publicada_em = now() WHERE id = :r", r=rubrica_id)
+        await sql(conn, "UPDATE criterios_rubrica SET peso = 1 WHERE rubrica_id = :r", r=rubrica_id)
+
+    with pytest.raises(IntegrityError, match="rubrica_publicada_imutavel"):
+        rodar(fn)

@@ -18,9 +18,9 @@ from app.controllers.submissao import (
     atualizar_submissao,
     criar_submissao,
     get_submissao_da_equipe,
-    get_tema_by_id,
     salvar_envio,
 )
+from app.controllers.tema import get_tema_by_id
 from app.exceptions.convite import (
     apenas_lider_da_equipe,
     equipe_nao_encontrada,
