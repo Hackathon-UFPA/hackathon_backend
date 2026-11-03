@@ -17,5 +17,5 @@ class DesignacaoAvaliacao(SQLModel, table=True):
     avaliador_id: UUID = Field(foreign_key="usuarios.id", nullable=False)
     atribuido_por: UUID | None = Field(default=None, foreign_key="usuarios.id")
     atribuido_em: datetime | None = Field(
-        default=None, sa_column_kwargs={"server_default": AGORA_UTC}
+        default=None, nullable=False, sa_column_kwargs={"server_default": AGORA_UTC}
     )
