@@ -41,6 +41,7 @@ from app.exceptions.db import erro_de_integridade_sql
 from app.exceptions.equipe import equipe_nao_editavel
 from app.models import Convite, Equipe, Hackathon, MembroEquipe, Usuario
 from app.schemas.convite import ConviteEnvio, ConviteRecebidoResponse
+from app.services.somente_leitura import exigir_equipe_editavel
 from app.services.termo import validar_termos_aceitos
 from app.validations.inscricao import inscricoes_abertas
 
@@ -88,6 +89,7 @@ async def enviar_convite(
     registrado e aparece no painel de quem tem conta com aquele e-mail."""
     equipe, hackathon = await _equipe_e_hackathon(db, equipe_id, para_atualizar=True)
     await _exigir_lider(db, equipe.id, lider)
+    await exigir_equipe_editavel(db, equipe.id)
     _exigir_inscricoes_abertas(hackathon)
     _exigir_equipe_em_formacao(equipe)
 
@@ -162,6 +164,7 @@ async def aceitar_convite(
     convite = await _convite_pendente_do_destinatario(db, usuario, convite_id)
     # Trava a equipe para que aceites simultâneos não passem do máximo de integrantes
     equipe, hackathon = await _equipe_e_hackathon(db, convite.equipe_id, para_atualizar=True)
+    await exigir_equipe_editavel(db, equipe.id)
     _exigir_inscricoes_abertas(hackathon)
     _exigir_equipe_em_formacao(equipe)
 
@@ -196,6 +199,7 @@ async def recusar_convite(db: AsyncSession, usuario: Usuario, convite_id: UUID) 
     """Recusar libera a vaga (índice único só considera convites pendentes e aceitos)."""
     convite = await _convite_pendente_do_destinatario(db, usuario, convite_id)
     _, hackathon = await _equipe_e_hackathon(db, convite.equipe_id)
+    await exigir_equipe_editavel(db, convite.equipe_id)
     _exigir_inscricoes_abertas(hackathon)
 
     convite.status = StatusConvite.RECUSADO
@@ -213,6 +217,7 @@ async def cancelar_convite(db: AsyncSession, lider: Usuario, convite_id: UUID) -
     if convite is None:
         convite_nao_encontrado()
     await _exigir_lider(db, convite.equipe_id, lider)
+    await exigir_equipe_editavel(db, convite.equipe_id)
     if convite.status != StatusConvite.PENDENTE:
         convite_ja_respondido()
 

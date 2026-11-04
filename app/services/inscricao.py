@@ -35,6 +35,7 @@ from app.schemas.inscricao import (
 )
 from app.services.equipe import consultar
 from app.services.homologacao import avaliar, reavaliar_homologacao
+from app.services.somente_leitura import exigir_equipe_editavel
 from app.validations.inscricao import inscricoes_abertas
 
 
@@ -149,6 +150,7 @@ async def concluir(
     equipe, hackathon = await _equipe_e_hackathon(db, equipe_id, para_atualizar=True)
     if not await _eh_lider(db, usuario, equipe.id):
         apenas_lider_da_equipe()
+    await exigir_equipe_editavel(db, equipe.id)
     if equipe.situacao != SituacaoEquipe.EM_FORMACAO:
         inscricao_ja_concluida()
     if not inscricoes_abertas(hackathon):
