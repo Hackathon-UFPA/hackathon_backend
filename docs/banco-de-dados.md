@@ -53,6 +53,7 @@ erDiagram
 | `designacoes_avaliacao` | Proposta designada a um avaliador (RF29); `unique(submissao_id, avaliador_id)`. A nota continua em `avaliacoes` |
 | `homologacoes_resultado` | Homologação do resultado da avaliação (RF31): quem, quando e totais; uma por hackathon, sem `UPDATE` (trigger) |
 | `resultados_proposta` | Retrato de cada proposta na homologação: equipe, tema, título, média, classificação, recomendações e `aprovada`; sem `UPDATE` (trigger) |
+| `notificacoes_resultado` | Aviso do resultado a cada integrante (RF33): `canal`, `status_envio` (`PENDENTE`, `ENVIADO`, `FALHA` com `erro`), `aprovada` e `mensagem`; única por `(homologacao_id, usuario_id, canal)` |
 
 As constraints do banco garantem as regras que dependem de uma única tabela (ex.: proposta enviada exige tema, comprovante recusado exige motivo). Regras que dependem de contagem, prazo ou perfil (3 a 5 integrantes, homologação automática, bloqueio após o prazo) ficam nos services.
 
@@ -79,6 +80,8 @@ Definidos como `ENUM` nativo no Postgres (migration) e espelhados em [`app/const
 | `tipo_protocolo`     | `INSCRICAO_EQUIPE`, `PROPOSTA`                                                                  |
 | `status_avaliacao`    | `RASCUNHO`, `ENVIADA` |
 | `recomendacao_avaliacao` | `APROVACAO`, `REPROVACAO` |
+| `canal_notificacao` | `PLATAFORMA`, `EMAIL` (reservado, depende da Q16) |
+| `status_envio_notificacao` | `PENDENTE`, `ENVIADO`, `FALHA` |
 
 Colunas preenchidas pelo banco (datas de envio/aceite, número do protocolo) usam `server_default` no model (`AGORA_UTC` em `app/db/defaults.py`), para o ORM não mandar `NULL` no insert.
 
