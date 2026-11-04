@@ -74,6 +74,7 @@ services:
     volumes:
       - ./app:/code/app
       - ./tests:/code/tests
+      - ./migrations:/code/migrations:ro
     ports:
       - "${APP_PORT:-8000}:8000"
     depends_on:
