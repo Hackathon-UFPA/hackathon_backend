@@ -28,6 +28,7 @@ from .hackathon import Hackathon
 from .membro_equipe import MembroEquipe
 from .nota_criterio_avaliacao import NotaCriterioAvaliacao
 from .protocolo import Protocolo
+from .resultado import HomologacaoResultado, ResultadoProposta
 from .rubrica import Rubrica
 from .submissao import Submissao
 from .tema import Tema
@@ -44,9 +45,11 @@ __all__ = [
     "DesignacaoAvaliacao",
     "Equipe",
     "Hackathon",
+    "HomologacaoResultado",
     "MembroEquipe",
     "NotaCriterioAvaliacao",
     "Protocolo",
+    "ResultadoProposta",
     "Rubrica",
     "Submissao",
     "Tema",

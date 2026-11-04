@@ -30,6 +30,7 @@ from app.schemas.avaliacao import (
     AvaliacaoResponse,
     NotaCriterio,
 )
+from app.services.resultado import exigir_resultado_aberto
 
 
 def calcular_nota(criterios: list[CriterioRubrica], notas: list[NotaCriterio]) -> Decimal:
@@ -119,6 +120,8 @@ async def salvar(
         # Mesma ordem da BE-S4-09: hackathon -> proposta -> avaliação/notas.
         # O lock do hackathon também protege a criação quando ainda não existe avaliação.
         await get_hackathon_para_atualizar(db, proposta.hackathon_id)
+        # Resultado homologado (RF31) bloqueia novas avaliações e edições de rascunho.
+        await exigir_resultado_aberto(db, proposta.hackathon_id)
         proposta = await get_submissao_by_id(db, submissao_id, para_atualizar=True)
         # Revalida após esperar: uma redistribuição pode ter removido o acesso.
         if (

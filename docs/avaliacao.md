@@ -66,7 +66,7 @@ nota_final = soma(nota_normalizada × peso / 100)
 
 Usa `Decimal` com precisão intermediária de 50 dígitos, pesos percentuais e arredondamento `ROUND_HALF_UP` somente no total, para duas casas decimais. Por exemplo, nota 7,35 na escala 0–10 com peso 60% e nota 4 na escala 1–5 com peso 40% resultam em **7,41**. O cliente deve enviar decimais como strings para preservar a precisão.
 
-**Hipótese pendente:** a normalização da nota final para 0–10 e a convenção de arredondamento precisam ser validadas com o Squad 1; não há decisão oficial registrada neste repositório. A média entre avaliadores, consenso, homologação pelo organizador e publicação dos resultados dependem da Q07 e pertencem à BE-S4-11. Até lá, notas, recomendações e pareceres não aparecem no painel nem na consulta de proposta da equipe.
+**Hipótese pendente:** a normalização da nota final para 0–10 e a convenção de arredondamento precisam ser validadas com o Squad 1; não há decisão oficial registrada neste repositório. A média entre avaliadores, a homologação pelo Organizador e a divulgação das aprovadas estão em [Resultado](resultado.md) (BE-S4-11). Notas, recomendações e pareceres continuam fora do painel e da consulta de proposta da equipe; depois da homologação, as avaliações ficam bloqueadas (409).
 
 ### Persistência e concorrência
 

@@ -1,7 +1,7 @@
 Hackathon Backend
 =================
 
-API do sistema de gestão de hackathons da UFPA, construída com **FastAPI**. Cuida do cadastro e login, das equipes e convites, da inscrição e homologação, das propostas, dos temas e rubricas, da distribuição de propostas e do registro da avaliação científica.
+API do sistema de gestão de hackathons da UFPA, construída com **FastAPI**. Cuida do cadastro e login, das equipes e convites, da inscrição e homologação, das propostas, dos temas e rubricas, da distribuição de propostas, do registro da avaliação científica e da homologação e divulgação do resultado.
 
 ## Stack
 
@@ -22,6 +22,7 @@ API do sistema de gestão de hackathons da UFPA, construída com **FastAPI**. Cu
 - [Propostas](docs/propostas.md): envio definitivo e protocolo
 - [Temas e rubrica](docs/temas-e-rubrica.md)
 - [Avaliação](docs/avaliacao.md): distribuição e registro da avaliação científica pela rubrica
+- [Resultado](docs/resultado.md): homologação do resultado e propostas aprovadas públicas
 - [Banco de dados](docs/banco-de-dados.md): tabelas, enums e migrations
 - [Guia de desenvolvimento](docs/desenvolvimento.md): como criar rotas, comandos e CI/CD
 
@@ -40,6 +41,7 @@ Com a API no ar, a documentação interativa das rotas fica em `http://localhost
 | Temas e rubrica de avaliação            | RF15 a RF17        | Concluído |
 | Distribuição de propostas aos avaliadores | RF29             | Concluído |
 | Avaliação científica pela rubrica       | RF30, BE-S4-10     | Concluído |
+| Homologação do resultado e aprovadas    | RF31, RF32, BE-S4-11 | Concluído |
 | Envio de e-mails e notificações         | —                  | Pendente  |
 
 ## Requisitos
