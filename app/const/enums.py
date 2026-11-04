@@ -87,6 +87,17 @@ class RecomendacaoAvaliacao(StrEnum):
     REPROVACAO = "REPROVACAO"
 
 
+class CanalNotificacao(StrEnum):
+    PLATAFORMA = "PLATAFORMA"
+    EMAIL = "EMAIL"  # reservado: depende da decisão Q16 e da infraestrutura de e-mail
+
+
+class StatusEnvioNotificacao(StrEnum):
+    PENDENTE = "PENDENTE"
+    ENVIADO = "ENVIADO"
+    FALHA = "FALHA"
+
+
 class SituacaoConta(StrEnum):
     PENDENTE = "PENDENTE"
     ATIVA = "ATIVA"

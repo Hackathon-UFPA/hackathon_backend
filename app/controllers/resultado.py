@@ -96,3 +96,39 @@ def adicionar_homologacao(
 ) -> None:
     db.add(homologacao)
     db.add_all(resultados)
+
+
+async def equipe_reprovada(db: AsyncSession, equipe_id: UUID) -> bool:
+    """RF34: a equipe tem proposta com resultado homologado e `aprovada = false`."""
+    consulta = (
+        select(ResultadoProposta.id)
+        .where(
+            ResultadoProposta.equipe_id == equipe_id,
+            col(ResultadoProposta.aprovada).is_(False),
+        )
+        .limit(1)
+    )
+    return (await db.exec(consulta)).first() is not None
+
+
+async def get_resultado_da_equipe(
+    db: AsyncSession, homologacao_id: UUID, equipe_id: UUID
+) -> ResultadoProposta | None:
+    consulta = select(ResultadoProposta).where(
+        ResultadoProposta.homologacao_id == homologacao_id,
+        ResultadoProposta.equipe_id == equipe_id,
+    )
+    return (await db.exec(consulta)).first()
+
+
+async def listar_pareceres(db: AsyncSession, submissao_id: UUID) -> list[Avaliacao]:
+    """Avaliações ENVIADA da proposta, em ordem estável que não revela o avaliador."""
+    consulta = (
+        select(Avaliacao)
+        .where(
+            Avaliacao.submissao_id == submissao_id,
+            Avaliacao.status == StatusAvaliacao.ENVIADA,
+        )
+        .order_by(col(Avaliacao.id))
+    )
+    return list((await db.exec(consulta)).all())
