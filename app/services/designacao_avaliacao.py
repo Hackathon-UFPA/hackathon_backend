@@ -39,6 +39,7 @@ from app.schemas.designacao_avaliacao import (
     DistribuicaoResponse,
     PropostaDesignadaAdminResponse,
 )
+from app.services.resultado import exigir_resultado_aberto
 
 # Depois destes status a avaliação já começou ou o evento acabou (RF29).
 STATUS_SEM_DISTRIBUICAO = {
@@ -52,6 +53,8 @@ async def _hackathon_travado(db: AsyncSession, hackathon_id: UUID) -> Hackathon:
     hackathon = await get_hackathon_para_atualizar(db, hackathon_id)
     if hackathon is None:
         hackathon_nao_encontrado()
+    # Depois da homologação (RF31) a configuração e as designações ficam bloqueadas.
+    await exigir_resultado_aberto(db, hackathon.id)
     return hackathon
 
 

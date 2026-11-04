@@ -39,4 +39,8 @@ tags = [
         "name": "Avaliação",
         "description": "Distribuição e avaliação científica de propostas pela rubrica (RF29, RF30)",
     },
+    {
+        "name": "Resultado",
+        "description": "Homologação do resultado e divulgação das propostas aprovadas (RF31, RF32)",
+    },
 ]
