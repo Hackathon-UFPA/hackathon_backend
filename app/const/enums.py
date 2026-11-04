@@ -77,6 +77,16 @@ class TipoProtocolo(StrEnum):
     PROPOSTA = "PROPOSTA"
 
 
+class StatusAvaliacao(StrEnum):
+    RASCUNHO = "RASCUNHO"
+    ENVIADA = "ENVIADA"
+
+
+class RecomendacaoAvaliacao(StrEnum):
+    APROVACAO = "APROVACAO"
+    REPROVACAO = "REPROVACAO"
+
+
 class SituacaoConta(StrEnum):
     PENDENTE = "PENDENTE"
     ATIVA = "ATIVA"

@@ -6,6 +6,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.const.enums import PapelUsuario
 from app.db.db import get_session
 from app.models import Usuario
+from app.schemas.avaliacao import AvaliacaoEnviar, AvaliacaoRascunho, AvaliacaoResponse
 from app.schemas.designacao_avaliacao import (
     ConfiguracaoAvaliacaoResponse,
     ConfiguracaoAvaliacaoUpdate,
@@ -15,6 +16,8 @@ from app.schemas.designacao_avaliacao import (
     RedistribuicaoCreate,
 )
 from app.security.dependencias import exigir_papeis
+from app.services.avaliacao import consultar as consultar_avaliacao
+from app.services.avaliacao import salvar as salvar_avaliacao
 from app.services.designacao_avaliacao import (
     configurar,
     consultar_minha_proposta,
@@ -70,7 +73,7 @@ async def configurar_avaliacao(
         "todo elegível do sistema. Rodar de novo só completa as propostas incompletas e não "
         "altera as demais. Se faltar avaliador elegível para alguma proposta, responde 409 e "
         "não grava nada. Bloqueado com o hackathon EM_AVALIACAO, FINALIZADO ou CANCELADO; "
-        "propostas que já têm nota são ignoradas."
+        "propostas que já têm avaliação iniciada (inclusive rascunho) são ignoradas."
     ),
     responses=respostas_de_erro(
         {
@@ -101,7 +104,8 @@ async def distribuir_propostas(
         "`avaliador_ids`, que precisa ter exatamente a quantidade configurada, sem repetidos, "
         "todos Comitê Científico com conta ativa (DEV não é avaliador). Quem continua na lista "
         "mantém a designação. Só é possível antes de a avaliação começar: 409 se o hackathon "
-        "estiver EM_AVALIACAO, FINALIZADO ou CANCELADO, se a proposta já tiver nota ou se não "
+        "estiver EM_AVALIACAO, FINALIZADO ou CANCELADO, se a proposta já tiver avaliação "
+        "iniciada (inclusive rascunho) ou se não "
         "estiver ENVIADA."
     ),
     responses=respostas_de_erro(
@@ -110,7 +114,7 @@ async def distribuir_propostas(
             403: ERRO_403,
             404: "Proposta não encontrada",
             409: (
-                "Quantidade não configurada, avaliação já iniciada, proposta com nota ou "
+                "Quantidade não configurada, avaliação já iniciada ou "
                 "não enviada, ou avaliador não elegível"
             ),
             422: "Lista com quantidade diferente da configurada ou com avaliadores repetidos",
@@ -179,3 +183,75 @@ async def minha_proposta(
     avaliador: Usuario = Depends(AVALIADOR),
 ):
     return await consultar_minha_proposta(db, avaliador, submissao_id)
+
+
+ERROS_AVALIACAO = {
+    401: ERRO_401,
+    403: ERRO_403,
+    404: "Proposta não designada a você ou avaliação ainda inexistente",
+    409: "Avaliação enviada, proposta não enviada ou rubrica publicada indisponível",
+    422: "Critérios, notas, parecer ou recomendação inválidos",
+}
+
+
+@router_avaliador.get(
+    "/{submissao_id}/avaliacao",
+    response_model=AvaliacaoResponse,
+    summary="Consultar minha avaliação científica",
+    description=(
+        "RF30. Comitê Científico e DEV, sempre com designação. Retorna somente a avaliação "
+        "do usuário autenticado, inclusive rascunho. Sem avaliação salva, retorna 404. "
+        "Notas e pareceres não são publicados para participantes."
+    ),
+    responses=respostas_de_erro({k: v for k, v in ERROS_AVALIACAO.items() if k <= 404}),
+)
+async def minha_avaliacao(
+    submissao_id: UUID,
+    db: AsyncSession = Depends(get_session),
+    avaliador: Usuario = Depends(AVALIADOR),
+):
+    return await consultar_avaliacao(db, avaliador, submissao_id)
+
+
+@router_avaliador.put(
+    "/{submissao_id}/avaliacao/rascunho",
+    response_model=AvaliacaoResponse,
+    summary="Criar ou substituir meu rascunho de avaliação",
+    description=(
+        "RF30/RN12. Aceita campos opcionais e notas incompletas; o corpo substitui todo o "
+        "rascunho (campos omitidos são limpos). Exige proposta ENVIADA e rubrica publicada "
+        "da mesma edição. Valida escala e pertencimento de cada critério. Nota final é "
+        "calculada somente no envio. Avaliação enviada é imutável (409)."
+    ),
+    responses=respostas_de_erro(ERROS_AVALIACAO),
+)
+async def salvar_rascunho_avaliacao(
+    submissao_id: UUID,
+    dados: AvaliacaoRascunho,
+    db: AsyncSession = Depends(get_session),
+    avaliador: Usuario = Depends(AVALIADOR),
+):
+    return await salvar_avaliacao(db, avaliador, submissao_id, dados)
+
+
+@router_avaliador.post(
+    "/{submissao_id}/avaliacao/enviar",
+    response_model=AvaliacaoResponse,
+    summary="Enviar minha avaliação científica definitiva",
+    description=(
+        "RF30/RN11/RN12. Sem corpo, envia o rascunho salvo; com corpo, usa o conteúdo "
+        "informado integralmente. Exige todas as notas, parecer não vazio e recomendação "
+        "APROVACAO ou REPROVACAO. Calcula a soma ponderada das notas normalizadas de 0 a 10 "
+        "com Decimal e arredondamento HALF_UP em duas casas. Escala provisória a validar "
+        "com Squad 1. Registra data/hora UTC, impede edição e reenvio (409). Não publica "
+        "resultados nem calcula média entre avaliadores (BE-S4-11)."
+    ),
+    responses=respostas_de_erro(ERROS_AVALIACAO),
+)
+async def enviar_avaliacao(
+    submissao_id: UUID,
+    dados: AvaliacaoEnviar | None = None,
+    db: AsyncSession = Depends(get_session),
+    avaliador: Usuario = Depends(AVALIADOR),
+):
+    return await salvar_avaliacao(db, avaliador, submissao_id, dados, definitivo=True)

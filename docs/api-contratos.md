@@ -76,7 +76,7 @@ Cada rota lista no Swagger os códigos que ela pode devolver.
 | Comprovantes, inscrição e homologação | [inscricao-e-homologacao.md](inscricao-e-homologacao.md) |
 | Rascunho e envio da proposta    | [propostas.md](propostas.md)                                |
 | Temas e rubrica                 | [temas-e-rubrica.md](temas-e-rubrica.md)                    |
-| Distribuição aos avaliadores    | [avaliacao.md](avaliacao.md)                                |
+| Distribuição e avaliação científica | [avaliacao.md](avaliacao.md)                             |
 
 ---
 

@@ -37,6 +37,6 @@ tags = [
     },
     {
         "name": "Avaliação",
-        "description": "Distribuição de propostas aos avaliadores e consulta (RF29)",
+        "description": "Distribuição e avaliação científica de propostas pela rubrica (RF29, RF30)",
     },
 ]

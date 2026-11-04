@@ -17,7 +17,7 @@ from app.controllers.designacao_avaliacao import (
     listar_submissoes_designadas,
     listar_usuarios_por_id,
     remover_designacao,
-    submissoes_com_nota,
+    submissoes_com_avaliacao,
 )
 from app.controllers.hackathon import get_hackathon_para_atualizar
 from app.exceptions.avaliacao import (
@@ -85,7 +85,7 @@ async def distribuir(
     db: AsyncSession, organizador: Usuario, hackathon_id: UUID
 ) -> DistribuicaoResponse:
     """Completa até N avaliadores cada proposta ENVIADA, sempre com quem tem menos propostas.
-    Propostas que já têm N ou mais (ou alguma nota) não são alteradas. Se faltar avaliador
+    Propostas que já têm N ou mais (ou avaliação iniciada) não são alteradas. Se faltar avaliador
     elegível para qualquer proposta, nada é gravado."""
     try:
         hackathon = await _hackathon_travado(db, hackathon_id)
@@ -93,7 +93,7 @@ async def distribuir(
 
         propostas = await listar_enviadas_do_hackathon(db, hackathon.id)
         ids = [proposta.id for proposta in propostas]
-        com_nota = await submissoes_com_nota(db, ids)
+        com_avaliacao = await submissoes_com_avaliacao(db, ids)
         existentes: dict[UUID, set[UUID]] = {proposta_id: set() for proposta_id in ids}
         for designacao in await listar_designacoes_do_hackathon(db, hackathon.id):
             existentes.setdefault(designacao.submissao_id, set()).add(designacao.avaliador_id)
@@ -107,7 +107,7 @@ async def distribuir(
         for proposta in propostas:
             ja_designados = existentes[proposta.id]
             faltam = n - len(ja_designados)
-            if faltam <= 0 or proposta.id in com_nota:
+            if faltam <= 0 or proposta.id in com_avaliacao:
                 completas += 1
                 continue
             candidatos = sorted(
@@ -163,7 +163,7 @@ async def redistribuir(
         n = _exigir_distribuicao_aberta(hackathon)
         if proposta.status != StatusProposta.ENVIADA:
             proposta_nao_enviada()
-        if await submissoes_com_nota(db, [proposta.id]):
+        if await submissoes_com_avaliacao(db, [proposta.id]):
             proposta_com_nota()
         if len(set(avaliador_ids)) != len(avaliador_ids) or len(avaliador_ids) != n:
             quantidade_de_avaliadores_invalida(n)

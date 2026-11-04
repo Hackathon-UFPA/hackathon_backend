@@ -20,6 +20,9 @@ erDiagram
     temas ||--o{ submissoes : escolhido
     hackathon ||--o| rubricas : avalia_com
     rubricas ||--o{ criterios_rubrica : tem
+    rubricas ||--o{ avaliacoes : utilizada
+    avaliacoes ||--o{ notas_criterio_avaliacao : registra
+    criterios_rubrica ||--o{ notas_criterio_avaliacao : pontuado
     equipes ||--o{ convites : envia
     hackathon ||--o{ termos : publica
     termos ||--o{ aceites_termos : recebe
@@ -45,7 +48,8 @@ erDiagram
 | `submissoes`           | Proposta da equipe (uma por equipe): rascunho até ser enviada com tema, ODS e bases de dados    |
 | `protocolos`           | Comprovante da conclusão da inscrição e do envio da proposta (`numero` gerado pelo banco)       |
 | `artefatos`            | Entregáveis da equipe (`url` externa: GitHub, Cloudinary...)                                  |
-| `avaliacoes`           | Nota e comentários de um avaliador sobre uma submissão                                        |
+| `avaliacoes`           | Avaliação única por proposta/avaliador, rubrica, estado, parecer, recomendação e nota ponderada final |
+| `notas_criterio_avaliacao` | Nota Decimal por critério; `unique(avaliacao_id, criterio_id)` |
 | `designacoes_avaliacao` | Proposta designada a um avaliador (RF29); `unique(submissao_id, avaliador_id)`. A nota continua em `avaliacoes` |
 
 As constraints do banco garantem as regras que dependem de uma única tabela (ex.: proposta enviada exige tema, comprovante recusado exige motivo). Regras que dependem de contagem, prazo ou perfil (3 a 5 integrantes, homologação automática, bloqueio após o prazo) ficam nos services.
@@ -71,6 +75,8 @@ Definidos como `ENUM` nativo no Postgres (migration) e espelhados em [`app/const
 | `situacao_conta`     | `ATIVA` (padrão), `PENDENTE` (participante até o comprovante ser aprovado)                      |
 | `status_proposta`    | `RASCUNHO` (padrão), `ENVIADA`                                                                  |
 | `tipo_protocolo`     | `INSCRICAO_EQUIPE`, `PROPOSTA`                                                                  |
+| `status_avaliacao`    | `RASCUNHO`, `ENVIADA` |
+| `recomendacao_avaliacao` | `APROVACAO`, `REPROVACAO` |
 
 Colunas preenchidas pelo banco (datas de envio/aceite, número do protocolo) usam `server_default` no model (`AGORA_UTC` em `app/db/defaults.py`), para o ORM não mandar `NULL` no insert.
 

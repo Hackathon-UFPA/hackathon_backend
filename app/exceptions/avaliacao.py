@@ -25,14 +25,14 @@ def avaliacao_ja_iniciada():
 def proposta_com_nota():
     raise HTTPException(
         status_code=status.HTTP_409_CONFLICT,
-        detail="A proposta já tem nota registrada e não pode ser redistribuída.",
+        detail="A proposta já tem avaliação iniciada e não pode ser redistribuída.",
     )
 
 
 def proposta_nao_enviada():
     raise HTTPException(
         status_code=status.HTTP_409_CONFLICT,
-        detail="Somente propostas ENVIADA podem ser distribuídas.",
+        detail="Somente propostas ENVIADA podem ser distribuídas ou avaliadas.",
     )
 
 
@@ -61,3 +61,21 @@ def quantidade_de_avaliadores_invalida(esperada: int):
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         detail=f"Informe exatamente {esperada} avaliadores distintos para a proposta.",
     )
+
+
+def avaliacao_nao_encontrada():
+    raise HTTPException(status_code=404, detail="Avaliação não encontrada.")
+
+
+def avaliacao_enviada():
+    raise HTTPException(status_code=409, detail="A avaliação já foi enviada e é imutável.")
+
+
+def rubrica_indisponivel():
+    raise HTTPException(
+        status_code=409, detail="A proposta exige rubrica publicada da mesma edição."
+    )
+
+
+def avaliacao_invalida(motivo: str):
+    raise HTTPException(status_code=422, detail=motivo)

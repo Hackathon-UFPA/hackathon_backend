@@ -14,7 +14,7 @@ async def get_submissao_by_id(
 ) -> Submissao | None:
     consulta = select(Submissao).where(Submissao.id == submissao_id)
     if para_atualizar:
-        consulta = consulta.with_for_update()
+        consulta = consulta.with_for_update().execution_options(populate_existing=True)
     return (await db.exec(consulta)).first()
 
 
@@ -85,13 +85,11 @@ async def contar_carga_por_avaliador(db: AsyncSession, hackathon_id: UUID) -> di
     return carga
 
 
-async def submissoes_com_nota(db: AsyncSession, submissao_ids: list[UUID]) -> set[UUID]:
-    """Propostas que já têm ao menos uma nota registrada: a avaliação delas começou."""
+async def submissoes_com_avaliacao(db: AsyncSession, submissao_ids: list[UUID]) -> set[UUID]:
+    """Qualquer avaliação, inclusive rascunho sem nota final, impede redistribuição."""
     if not submissao_ids:
         return set()
-    consulta = select(Avaliacao.submissao_id).where(
-        col(Avaliacao.submissao_id).in_(submissao_ids), col(Avaliacao.nota).is_not(None)
-    )
+    consulta = select(Avaliacao.submissao_id).where(col(Avaliacao.submissao_id).in_(submissao_ids))
     return set((await db.exec(consulta)).all())
 
 
@@ -124,7 +122,7 @@ async def listar_submissoes_designadas(db: AsyncSession, avaliador_id: UUID) -> 
 
 
 async def get_submissao_designada(
-    db: AsyncSession, submissao_id: UUID, avaliador_id: UUID
+    db: AsyncSession, submissao_id: UUID, avaliador_id: UUID, *, somente_enviada: bool = True
 ) -> Submissao | None:
     consulta = (
         select(Submissao)
@@ -132,7 +130,8 @@ async def get_submissao_designada(
         .where(
             Submissao.id == submissao_id,
             DesignacaoAvaliacao.avaliador_id == avaliador_id,
-            Submissao.status == StatusProposta.ENVIADA,
         )
     )
+    if somente_enviada:
+        consulta = consulta.where(Submissao.status == StatusProposta.ENVIADA)
     return (await db.exec(consulta)).first()
