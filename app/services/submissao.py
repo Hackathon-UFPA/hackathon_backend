@@ -49,6 +49,7 @@ from app.schemas.submissao import (
     SubmissaoUpdate,
 )
 from app.services.equipe import consultar
+from app.services.somente_leitura import exigir_equipe_editavel
 from app.validations.submissao import campos_obrigatorios_pendentes, propostas_abertas
 
 
@@ -61,6 +62,7 @@ async def _equipe_para_escrita(db: AsyncSession, usuario: Usuario, equipe_id: UU
         membro = await get_membro(db, equipe.id, usuario.id)
         if membro is None or membro.funcao != FuncaoMembro.LIDER:
             apenas_lider_da_equipe()
+    await exigir_equipe_editavel(db, equipe.id)
     if equipe.situacao == SituacaoEquipe.NAO_HOMOLOGADA:
         equipe_somente_leitura()
     return equipe

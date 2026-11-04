@@ -10,13 +10,20 @@ from app.schemas.resultado import (
     HomologacaoCreate,
     PropostasAprovadasResponse,
     ResultadoAvaliacaoResponse,
+    ResultadoEquipeResponse,
 )
-from app.security.dependencias import exigir_papeis
-from app.services.resultado import consultar_resultado, homologar, listar_propostas_aprovadas
+from app.security.dependencias import exigir_papeis, usuario_ativo
+from app.services.resultado import (
+    consultar_resultado,
+    consultar_resultado_da_equipe,
+    homologar,
+    listar_propostas_aprovadas,
+)
 from app.utils.openapi import respostas_de_erro
 
 router_admin = APIRouter(prefix="/admin/hackathons/{hackathon_id}/resultado", tags=["Resultado"])
 router_publico = APIRouter(prefix="/hackathons/{hackathon_id}", tags=["Resultado"])
+router_equipe = APIRouter(prefix="/equipes/{equipe_id}/resultado", tags=["Resultado"])
 
 ERRO_401 = "Sem token, ou token inválido, vencido ou de conta desativada"
 ERRO_403 = "Conta pendente, ou quem pede não tem permissão para esta rota"
@@ -56,7 +63,9 @@ async def resultado_da_avaliacao(
         "avaliadores e todos com avaliação enviada). Grava quem homologou, quando e um "
         "retrato das notas e da classificação. Depois disso o resultado fica bloqueado: "
         "homologar de novo, avaliar, distribuir, redistribuir ou reconfigurar a quantidade "
-        "de avaliadores respondem 409. A lista de aprovadas passa a ser pública."
+        "de avaliadores respondem 409. A lista de aprovadas passa a ser pública. Na mesma "
+        "transação cria a notificação de cada integrante das equipes com proposta (RF33); se "
+        "não for possível notificar, a homologação não é gravada."
     ),
     responses=respostas_de_erro(
         {
@@ -91,3 +100,31 @@ async def homologar_resultado(
 )
 async def propostas_aprovadas(hackathon_id: UUID, db: AsyncSession = Depends(get_session)):
     return await listar_propostas_aprovadas(db, hackathon_id)
+
+
+@router_equipe.get(
+    "",
+    response_model=ResultadoEquipeResponse,
+    summary="Consultar o resultado da própria equipe",
+    description=(
+        "RF33 e RF34. Integrantes da equipe (e DEV). Antes da homologação responde 200 com "
+        "`divulgado = false` e nenhum dado de avaliação. Depois, informa se a proposta foi "
+        "aprovada e traz os pareceres dos avaliadores (texto e recomendação) sem identificar "
+        "quem os escreveu. Não traz nota média nem classificação. `somente_leitura = true` "
+        "indica equipe não aprovada, cujas rotas de escrita respondem 409. Esta consulta "
+        "continua permitida. Depende de confirmação do grupo (veja docs/avaliacao.md)."
+    ),
+    responses=respostas_de_erro(
+        {
+            401: ERRO_401,
+            403: "Conta pendente ou quem pede não é integrante da equipe",
+            404: "Equipe não encontrada, ou sem proposta com resultado homologado",
+        }
+    ),
+)
+async def resultado_da_equipe(
+    equipe_id: UUID,
+    db: AsyncSession = Depends(get_session),
+    usuario: Usuario = Depends(usuario_ativo),
+):
+    return await consultar_resultado_da_equipe(db, usuario, equipe_id)

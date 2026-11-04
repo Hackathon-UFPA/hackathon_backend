@@ -24,6 +24,7 @@ from app.exceptions.db import erro_de_integridade_sql
 from app.exceptions.equipe import consulta_apenas_por_integrante, equipe_nao_editavel
 from app.models import Equipe, MembroEquipe, Usuario
 from app.schemas.equipe import EquipeCreate, EquipeUpdate
+from app.services.somente_leitura import exigir_equipe_editavel
 from app.validations.inscricao import inscricoes_abertas
 
 
@@ -87,6 +88,7 @@ async def editar(
         membro = await get_membro(db, equipe.id, usuario.id)
         if membro is None or membro.funcao != FuncaoMembro.LIDER:
             apenas_lider_da_equipe()
+    await exigir_equipe_editavel(db, equipe.id)
     hackathon = await get_hackathon_by_id(db, equipe.hackathon_id)
     if hackathon is None:
         hackathon_nao_encontrado()

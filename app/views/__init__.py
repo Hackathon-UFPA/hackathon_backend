@@ -9,7 +9,9 @@ from app.views.equipe import router as equipes
 from app.views.health import router as health
 from app.views.inscricao import router as inscricao
 from app.views.membro_equipe import router as membros_equipe
+from app.views.notificacoes import router as notificacoes
 from app.views.resultado import router_admin as resultado_admin
+from app.views.resultado import router_equipe as resultado_equipe
 from app.views.resultado import router_publico as resultado_publico
 from app.views.rubrica import router as rubrica
 from app.views.submissao import router as submissoes
@@ -39,3 +41,5 @@ router.include_router(avaliacao_admin)
 router.include_router(avaliacao_avaliador)
 router.include_router(resultado_admin)
 router.include_router(resultado_publico)
+router.include_router(resultado_equipe)
+router.include_router(notificacoes)

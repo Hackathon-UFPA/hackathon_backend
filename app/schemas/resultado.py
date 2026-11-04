@@ -4,6 +4,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.const.enums import RecomendacaoAvaliacao
 from app.const.resultado import CodigoPendenciaResultado
 
 
@@ -78,3 +79,30 @@ class PropostasAprovadasResponse(BaseModel):
     divulgado: bool = Field(description="Falso enquanto o resultado não for homologado")
     divulgado_em: datetime | None = None
     propostas: list[PropostaAprovadaResponse]
+
+
+class ParecerResponse(BaseModel):
+    """Parecer de um avaliador, sem identificar quem escreveu (RF33)."""
+
+    parecer: str | None = None
+    recomendacao: RecomendacaoAvaliacao | None = None
+
+
+class ResultadoEquipeResponse(BaseModel):
+    """O resultado visto pela própria equipe (RF33, RF34). Sem nota média nem classificação."""
+
+    equipe_id: UUID
+    hackathon_id: UUID
+    divulgado: bool = Field(
+        description="Falso enquanto o resultado do hackathon não for homologado"
+    )
+    divulgado_em: datetime | None = None
+    submissao_id: UUID | None = None
+    titulo: str | None = None
+    aprovada: bool | None = Field(
+        default=None, description="Decisão da homologação; null antes da homologação"
+    )
+    somente_leitura: bool = Field(
+        description="Verdadeiro quando a equipe não foi aprovada: edição e envio bloqueados"
+    )
+    pareceres: list[ParecerResponse]

@@ -22,6 +22,7 @@ from app.exceptions.equipe import equipe_nao_editavel, lider_protegido, membro_n
 from app.models import MembroEquipe, Usuario
 from app.schemas.membro_equipe import MembroEquipeUpdate
 from app.services.equipe import consultar
+from app.services.somente_leitura import exigir_equipe_editavel
 from app.validations.inscricao import inscricoes_abertas
 
 
@@ -41,6 +42,7 @@ async def _membro_para_alteracao(
         solicitante = await get_membro(db, equipe.id, usuario.id)
         if solicitante is None or solicitante.funcao != FuncaoMembro.LIDER:
             apenas_lider_da_equipe()
+    await exigir_equipe_editavel(db, equipe.id)
     hackathon = await get_hackathon_by_id(db, equipe.hackathon_id)
     if hackathon is None:
         hackathon_nao_encontrado()

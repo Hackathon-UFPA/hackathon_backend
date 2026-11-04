@@ -60,6 +60,10 @@ Não existe rota para desfazer a homologação.
 
 `GET /hackathons/{id}/propostas-aprovadas` não exige token. Antes da homologação responde 200 com `divulgado = false` e lista vazia: nenhum dado de avaliação aparece. Depois, lista só as aprovadas, com `equipe`, `tema` e `titulo`, em ordem alfabética pela equipe, sem notas nem classificação. Hackathon inexistente responde 404.
 
+## Notificação e somente leitura (BE-S4-12)
+
+A homologação também cria, na mesma transação, a notificação de cada integrante das equipes com proposta no resultado, e as equipes reprovadas passam a modo somente leitura. Veja [Notificações e somente leitura](notificacoes-e-somente-leitura.md).
+
 ---
 
 [← Voltar ao README](../README.md)

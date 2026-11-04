@@ -21,6 +21,7 @@ from app.controllers.resultado import (
     adicionar_homologacao,
     get_homologacao,
     get_nome_usuario,
+    get_resultado_da_equipe,
     listar_aprovadas,
     listar_designacoes_com_avaliacao,
     listar_propostas_com_equipe_e_tema,
@@ -31,6 +32,7 @@ from app.exceptions.db import erro_de_integridade_sql
 from app.exceptions.resultado import (
     aprovadas_invalidas,
     avaliacoes_nao_concluidas,
+    resultado_da_equipe_nao_encontrado,
     resultado_ja_homologado,
 )
 from app.models import Hackathon, HomologacaoResultado, ResultadoProposta, Usuario
@@ -39,8 +41,11 @@ from app.schemas.resultado import (
     PropostaAprovadaResponse,
     PropostasAprovadasResponse,
     ResultadoAvaliacaoResponse,
+    ResultadoEquipeResponse,
     ResultadoPropostaResponse,
 )
+from app.services.equipe import consultar
+from app.services.notificacao import criar_notificacoes_do_resultado, pareceres_da_proposta
 
 
 def media_das_notas(notas: list[Decimal]) -> Decimal | None:
@@ -268,28 +273,27 @@ async def homologar(
             total_propostas=len(propostas),
             total_aprovadas=len(aprovadas_ids),
         )
-        adicionar_homologacao(
-            db,
-            homologacao,
-            [
-                ResultadoProposta(
-                    homologacao_id=homologacao.id,
-                    hackathon_id=hackathon.id,
-                    submissao_id=p.submissao_id,
-                    equipe_id=p.equipe_id,
-                    equipe_nome=p.equipe_nome,
-                    tema_titulo=p.tema_titulo,
-                    titulo=p.titulo,
-                    nota_media=p.nota_media,
-                    classificacao=p.classificacao,
-                    avaliacoes=len(p.notas),
-                    recomendacoes_aprovacao=p.aprovacao,
-                    recomendacoes_reprovacao=p.reprovacao,
-                    aprovada=p.submissao_id in aprovadas_ids,
-                )
-                for p in propostas
-            ],
-        )
+        resultados = [
+            ResultadoProposta(
+                homologacao_id=homologacao.id,
+                hackathon_id=hackathon.id,
+                submissao_id=p.submissao_id,
+                equipe_id=p.equipe_id,
+                equipe_nome=p.equipe_nome,
+                tema_titulo=p.tema_titulo,
+                titulo=p.titulo,
+                nota_media=p.nota_media,
+                classificacao=p.classificacao,
+                avaliacoes=len(p.notas),
+                recomendacoes_aprovacao=p.aprovacao,
+                recomendacoes_reprovacao=p.reprovacao,
+                aprovada=p.submissao_id in aprovadas_ids,
+            )
+            for p in propostas
+        ]
+        adicionar_homologacao(db, homologacao, resultados)
+        # RF33: na mesma transação. Se não der para notificar, a homologação não vale.
+        await criar_notificacoes_do_resultado(db, resultados)
         await db.flush()
         await db.refresh(homologacao)
         resposta = await _resposta_homologada(db, hackathon, homologacao)
@@ -335,4 +339,35 @@ async def listar_propostas_aprovadas(
             )
             for r in await listar_aprovadas(db, homologacao.id)
         ],
+    )
+
+
+async def consultar_resultado_da_equipe(
+    db: AsyncSession, usuario: Usuario, equipe_id: UUID
+) -> ResultadoEquipeResponse:
+    """RF33, RF34: a equipe vê se a proposta foi aprovada e os pareceres, sem identificar os
+    avaliadores e sem nota média nem classificação. Só integrantes (e DEV)."""
+    equipe = await consultar(db, usuario, equipe_id)
+    homologacao = await get_homologacao(db, equipe.hackathon_id)
+    if homologacao is None:
+        return ResultadoEquipeResponse(
+            equipe_id=equipe.id,
+            hackathon_id=equipe.hackathon_id,
+            divulgado=False,
+            somente_leitura=False,
+            pareceres=[],
+        )
+    resultado = await get_resultado_da_equipe(db, homologacao.id, equipe.id)
+    if resultado is None:
+        resultado_da_equipe_nao_encontrado()
+    return ResultadoEquipeResponse(
+        equipe_id=equipe.id,
+        hackathon_id=equipe.hackathon_id,
+        divulgado=True,
+        divulgado_em=homologacao.homologado_em,
+        submissao_id=resultado.submissao_id,
+        titulo=resultado.titulo,
+        aprovada=resultado.aprovada,
+        somente_leitura=not resultado.aprovada,
+        pareceres=await pareceres_da_proposta(db, resultado.submissao_id),
     )

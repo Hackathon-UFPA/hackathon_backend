@@ -66,7 +66,9 @@ nota_final = soma(nota_normalizada × peso / 100)
 
 Usa `Decimal` com precisão intermediária de 50 dígitos, pesos percentuais e arredondamento `ROUND_HALF_UP` somente no total, para duas casas decimais. Por exemplo, nota 7,35 na escala 0–10 com peso 60% e nota 4 na escala 1–5 com peso 40% resultam em **7,41**. O cliente deve enviar decimais como strings para preservar a precisão.
 
-**Hipótese pendente:** a normalização da nota final para 0–10 e a convenção de arredondamento precisam ser validadas com o Squad 1; não há decisão oficial registrada neste repositório. A média entre avaliadores, a homologação pelo Organizador e a divulgação das aprovadas estão em [Resultado](resultado.md) (BE-S4-11). Notas, recomendações e pareceres continuam fora do painel e da consulta de proposta da equipe; depois da homologação, as avaliações ficam bloqueadas (409).
+**Hipótese pendente:** a normalização da nota final para 0–10 e a convenção de arredondamento precisam ser validadas com o Squad 1; não há decisão oficial registrada neste repositório. A média entre avaliadores, a homologação pelo Organizador e a divulgação das aprovadas estão em [Resultado](resultado.md) (BE-S4-11). Notas e recomendações continuam fora do painel e da consulta de proposta da equipe; depois da homologação, as avaliações ficam bloqueadas (409).
+
+**Exceção para os pareceres (BE-S4-12), a confirmar com o grupo.** Antes, nenhum parecer era publicado para participantes. Agora, **só para a própria equipe e só depois da homologação**, o texto do parecer e a recomendação de cada avaliador `ENVIADA` aparecem em `GET /equipes/{id}/resultado` e em `GET /me/notificacoes`, **sem identificar o avaliador**. Nota média, classificação e notas por critério seguem fora do alcance dos participantes. Outras equipes e qualquer pessoa antes da homologação não veem nada. Esta mudança depende de confirmação do grupo.
 
 ### Persistência e concorrência
 
