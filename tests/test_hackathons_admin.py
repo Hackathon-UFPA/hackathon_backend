@@ -208,3 +208,37 @@ def test_nao_exclui_hackathon_com_dados_ligados(client, hackathons):
 
 def test_exclusao_de_hackathon_inexistente(client, hackathons):
     assert hackathons.excluir(client, uuid4()).status_code == 404
+
+
+def test_qualquer_conta_ativa_lista_hackathons(client, hackathons):
+    antigo = hackathons.cadastrado(client, nome="Edição antiga", data_inicio=None, data_fim=None)
+    recente = hackathons.cadastrado(
+        client, nome="Edição recente", data_inicio="2199-01-01T00:00:00Z", data_fim=None
+    )
+    participante = hackathons.usuario_no_banco()
+
+    resposta = client.get("/hackathons", headers=com_token(participante["id"]))
+
+    assert resposta.status_code == 200, resposta.text
+    ids = [h["id"] for h in resposta.json()]
+    assert recente["id"] in ids and antigo["id"] in ids
+    # Mais recente primeiro; sem data de início vai para o fim
+    assert ids.index(recente["id"]) < ids.index(antigo["id"])
+
+
+def test_consulta_hackathon_por_id(client, hackathons):
+    hackathon = hackathons.cadastrado(client)
+    participante = hackathons.usuario_no_banco()
+
+    resposta = client.get(f"/hackathons/{hackathon['id']}", headers=com_token(participante["id"]))
+
+    assert resposta.status_code == 200, resposta.text
+    assert resposta.json()["nome"] == HACKATHON["nome"]
+    resposta = client.get(f"/hackathons/{uuid4()}", headers=com_token(participante["id"]))
+    assert resposta.status_code == 404
+
+
+def test_listagem_exige_conta_ativa(client, hackathons):
+    assert client.get("/hackathons").status_code == 401
+    pendente = hackathons.usuario_no_banco(situacao_conta="PENDENTE")
+    assert client.get("/hackathons", headers=com_token(pendente["id"])).status_code == 403

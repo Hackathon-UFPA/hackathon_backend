@@ -4,9 +4,11 @@ from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.controllers.equipe import get_hackathon_by_id
 from app.controllers.hackathon import (
     excluir_hackathon,
     get_hackathon_para_atualizar,
+    listar_hackathons,
     salvar_hackathon,
 )
 from app.exceptions.convite import hackathon_nao_encontrado
@@ -123,3 +125,14 @@ async def excluir(db: AsyncSession, hackathon_id: UUID) -> None:
     except Exception:
         await db.rollback()
         raise
+
+
+async def listar(db: AsyncSession) -> list[Hackathon]:
+    return await listar_hackathons(db)
+
+
+async def consultar(db: AsyncSession, hackathon_id: UUID) -> Hackathon:
+    hackathon = await get_hackathon_by_id(db, hackathon_id)
+    if hackathon is None:
+        hackathon_nao_encontrado()
+    return hackathon

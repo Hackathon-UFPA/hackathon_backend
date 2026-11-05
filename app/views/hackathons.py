@@ -6,12 +6,13 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.db.db import get_session
 from app.models import Usuario
 from app.schemas.hackathon import HackathonCreate, HackathonResponse, HackathonUpdate
-from app.security.dependencias import exigir_papeis
+from app.security.dependencias import exigir_papeis, usuario_ativo
 from app.security.permissoes import PERFIS_QUE_GERENCIAM_EDITAL
 from app.services import hackathon as service
 from app.utils.openapi import respostas_de_erro
 
 router = APIRouter(prefix="/admin/hackathons", tags=["Hackathons"])
+router_publico = APIRouter(prefix="/hackathons", tags=["Hackathons"])
 
 gerencia_edital = exigir_papeis(*PERFIS_QUE_GERENCIAM_EDITAL)
 
@@ -89,3 +90,35 @@ async def excluir_hackathon(
     _: Usuario = Depends(gerencia_edital),
 ):
     await service.excluir(db, hackathon_id)
+
+
+@router_publico.get(
+    "",
+    response_model=list[HackathonResponse],
+    summary="Listar hackathons",
+    description=(
+        "Qualquer conta ativa. Todas as edições, das mais recentes (`data_inicio`) para as "
+        "mais antigas; edições sem data de início aparecem no fim."
+    ),
+    responses=respostas_de_erro({401: ERRO_401, 403: ERRO_403}),
+)
+async def listar_hackathons(
+    db: AsyncSession = Depends(get_session),
+    _: Usuario = Depends(usuario_ativo),
+):
+    return await service.listar(db)
+
+
+@router_publico.get(
+    "/{hackathon_id}",
+    response_model=HackathonResponse,
+    summary="Consultar hackathon",
+    description="Qualquer conta ativa. Dados e prazos de uma edição.",
+    responses=respostas_de_erro({401: ERRO_401, 403: ERRO_403, 404: "Hackathon não encontrado"}),
+)
+async def obter_hackathon(
+    hackathon_id: UUID,
+    db: AsyncSession = Depends(get_session),
+    _: Usuario = Depends(usuario_ativo),
+):
+    return await service.consultar(db, hackathon_id)

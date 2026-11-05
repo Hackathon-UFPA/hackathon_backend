@@ -5,7 +5,7 @@ tags = [
     {"name": "Usuários", "description": "Cadastro de usuários de outros perfis (RF07, RF08)"},
     {
         "name": "Hackathons",
-        "description": "Cadastro, edição e exclusão das edições do hackathon",
+        "description": "Consulta, cadastro, edição e exclusão das edições do hackathon",
     },
     {
         "name": "Equipes",

@@ -34,3 +34,9 @@ async def salvar_hackathon(db: AsyncSession, hackathon: Hackathon) -> Hackathon:
 async def excluir_hackathon(db: AsyncSession, hackathon: Hackathon) -> None:
     await db.delete(hackathon)
     await db.flush()
+
+
+async def listar_hackathons(db: AsyncSession) -> list[Hackathon]:
+    """Mais recentes primeiro; edição sem data de início vai para o fim."""
+    consulta = select(Hackathon).order_by(Hackathon.data_inicio.desc().nulls_last(), Hackathon.nome)
+    return list((await db.exec(consulta)).all())
