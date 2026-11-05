@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.const.enums import StatusHackathon
 
@@ -29,6 +29,9 @@ class HackathonCreate(BaseModel):
 
 
 class HackathonUpdate(BaseModel):
+    """Altera apenas os campos enviados. As datas e o tamanho da equipe são validados junto
+    com os valores já gravados."""
+
     nome: str | None = Field(default=None, max_length=255)
     tema: str | None = Field(default=None, max_length=255)
     data_inicio: datetime | None = None
@@ -42,6 +45,13 @@ class HackathonUpdate(BaseModel):
     propostas_inicio: datetime | None = None
     propostas_fim: datetime | None = None
     avaliadores_por_proposta: int | None = Field(default=None, ge=2, le=3)
+
+    @field_validator("status", "min_integrantes", "max_integrantes", mode="before")
+    @classmethod
+    def obrigatorio_nao_aceita_null(cls, valor):
+        if valor is None:
+            raise ValueError("este campo não pode ser nulo")
+        return valor
 
 
 class HackathonResponse(HackathonCreate):

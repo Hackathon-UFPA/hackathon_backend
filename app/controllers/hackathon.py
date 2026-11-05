@@ -23,3 +23,14 @@ async def get_hackathon_para_atualizar(db: AsyncSession, hackathon_id: UUID) -> 
     """Trava a linha até o fim da transação: serializa distribuições simultâneas."""
     consulta = select(Hackathon).where(Hackathon.id == hackathon_id).with_for_update()
     return (await db.exec(consulta)).first()
+
+
+async def salvar_hackathon(db: AsyncSession, hackathon: Hackathon) -> Hackathon:
+    db.add(hackathon)
+    await db.flush()
+    return hackathon
+
+
+async def excluir_hackathon(db: AsyncSession, hackathon: Hackathon) -> None:
+    await db.delete(hackathon)
+    await db.flush()
