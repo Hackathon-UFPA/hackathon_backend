@@ -4,6 +4,10 @@ tags = [
     {"name": "Autenticação", "description": "Cadastro de participante e login (RF01, RF02)"},
     {"name": "Usuários", "description": "Cadastro de usuários de outros perfis (RF07, RF08)"},
     {
+        "name": "Hackathons",
+        "description": "Consulta, cadastro, edição e exclusão das edições do hackathon",
+    },
+    {
         "name": "Equipes",
         "description": "Criação, consulta e edição de equipes e membros (RF18, RF24)",
     },
