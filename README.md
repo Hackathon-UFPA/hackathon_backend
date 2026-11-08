@@ -26,6 +26,7 @@ API do sistema de gestão de hackathons da UFPA, construída com **FastAPI**. Cu
 - [Notificações e somente leitura](docs/notificacoes-e-somente-leitura.md): aviso do resultado às equipes e bloqueio de escrita das não aprovadas
 - [Banco de dados](docs/banco-de-dados.md): tabelas, enums e migrations
 - [Guia de desenvolvimento](docs/desenvolvimento.md): como criar rotas, comandos e CI/CD
+- [Mapa dos testes](docs/testes.md): cenários existentes, novos testes unitários e como executá-los
 
 Com a API no ar, a documentação interativa das rotas fica em `http://localhost:8000/docs`.
 
