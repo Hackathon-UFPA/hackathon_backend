@@ -47,4 +47,8 @@ tags = [
         "name": "Resultado",
         "description": "Homologação do resultado e divulgação das propostas aprovadas (RF31, RF32)",
     },
+    {
+        "name": "E-mails",
+        "description": "Fila de e-mails transacionais e reenvio dos que falharam (RNF28)",
+    },
 ]

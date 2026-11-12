@@ -28,3 +28,6 @@ PERFIS_QUE_VALIDAM_COMPROVANTE = (PapelUsuario.ORGANIZADOR, PapelUsuario.COMITE_
 
 # Quem cadastra temas e monta/publica a rubrica (RF15, RF16, RF17). DEV passa sempre.
 PERFIS_QUE_GERENCIAM_EDITAL = (PapelUsuario.ORGANIZADOR,)
+
+# Quem acompanha a fila de e-mails e pede o reenvio dos que falharam (RNF28). DEV passa sempre.
+PERFIS_QUE_ACOMPANHAM_EMAILS = (PapelUsuario.ORGANIZADOR,)
