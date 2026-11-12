@@ -77,6 +77,7 @@ Cada rota lista no Swagger os códigos que ela pode devolver.
 | Rascunho e envio da proposta    | [propostas.md](propostas.md)                                |
 | Temas e rubrica                 | [temas-e-rubrica.md](temas-e-rubrica.md)                    |
 | Distribuição e avaliação científica | [avaliacao.md](avaliacao.md)                             |
+| E-mails transacionais e fila de envio | [emails.md](emails.md)                                |
 
 ---
 

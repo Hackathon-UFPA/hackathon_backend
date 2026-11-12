@@ -25,7 +25,7 @@ Rotas de RF18, RF19 e RF20. Todas exigem token e **conta ativa** (conta pendente
 
 **Guia para a interface.** Painel do convidado: `GET /convites/meus`. Ao clicar em aceitar, buscar `GET /hackathons/{hackathon_id}/termos/vigentes` (o `hackathon_id` vem no próprio convite), mostrar `conteudo` ou `url` de cada documento e, quando a pessoa concordar, enviar os ids para `POST /convites/{id}/aceitar` com `{ "termos_ids": ["...", "..."] }`.
 
-Ficou de fora desta etapa: envio do convite por e-mail e aviso ao líder quando alguém recusa (RF19; depende da infraestrutura de e-mail, decisão Q16). Por enquanto o líder consulta `GET /equipes/{id}/convites`.
+**E-mail do convite.** Ao convidar, o aviso `CONVITE_EQUIPE` entra na fila de e-mails na mesma transação do convite e o worker o envia depois (veja [E-mails](emails.md)). Um convite recusado pelas regras (equipe cheia, fora do prazo, sem permissão) não gera e-mail. Ficou de fora: o aviso ao líder quando alguém recusa (RF19). Por enquanto o líder consulta `GET /equipes/{id}/convites`.
 
 ---
 

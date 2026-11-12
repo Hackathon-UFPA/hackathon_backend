@@ -33,6 +33,7 @@ from app.schemas.inscricao import (
     ProtocoloResponse,
     ReavaliacaoResponse,
 )
+from app.services.email_eventos import avisar_inscricao_concluida
 from app.services.equipe import consultar
 from app.services.homologacao import avaliar, reavaliar_homologacao
 from app.services.somente_leitura import exigir_equipe_editavel
@@ -174,6 +175,7 @@ async def concluir(
             ),
         )
         await reavaliar_homologacao(db, equipe, hackathon)
+        await avisar_inscricao_concluida(db, equipe, protocolo)
         await db.commit()
     except IntegrityError as error:
         await db.rollback()

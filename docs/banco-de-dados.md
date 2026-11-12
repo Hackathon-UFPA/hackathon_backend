@@ -54,6 +54,7 @@ erDiagram
 | `homologacoes_resultado` | Homologação do resultado da avaliação (RF31): quem, quando e totais; uma por hackathon, sem `UPDATE` (trigger) |
 | `resultados_proposta` | Retrato de cada proposta na homologação: equipe, tema, título, média, classificação, recomendações e `aprovada`; sem `UPDATE` (trigger) |
 | `notificacoes_resultado` | Aviso do resultado a cada integrante (RF33): `canal`, `status_envio` (`PENDENTE`, `ENVIADO`, `FALHA` com `erro`), `aprovada` e `mensagem`; única por `(homologacao_id, usuario_id, canal)` |
+| `emails_outbox` | Fila de e-mails transacionais (RNF28), gravada na transação da ação de origem: `tipo`, destinatário, `assunto`, corpo (apagado depois do envio), `status`, `tentativas`, `proxima_tentativa_em`, `reservado_ate`, `ultimo_erro` e `chave_idempotencia` única |
 
 As constraints do banco garantem as regras que dependem de uma única tabela (ex.: proposta enviada exige tema, comprovante recusado exige motivo). Regras que dependem de contagem, prazo ou perfil (3 a 5 integrantes, homologação automática, bloqueio após o prazo) ficam nos services.
 
@@ -80,8 +81,10 @@ Definidos como `ENUM` nativo no Postgres (migration) e espelhados em [`app/const
 | `tipo_protocolo`     | `INSCRICAO_EQUIPE`, `PROPOSTA`                                                                  |
 | `status_avaliacao`    | `RASCUNHO`, `ENVIADA` |
 | `recomendacao_avaliacao` | `APROVACAO`, `REPROVACAO` |
-| `canal_notificacao` | `PLATAFORMA`, `EMAIL` (reservado, depende da Q16) |
+| `canal_notificacao` | `PLATAFORMA`, `EMAIL` (reservado e sem uso: o e-mail é rastreado em `emails_outbox`) |
 | `status_envio_notificacao` | `PENDENTE`, `ENVIADO`, `FALHA` |
+| `tipo_email` | `CONFIRMACAO_EMAIL`, `RECUPERACAO_SENHA`, `DEFINICAO_SENHA`, `CONVITE_EQUIPE`, `INSCRICAO_CONCLUIDA`, `EQUIPE_HOMOLOGADA`, `PROTOCOLO_PROPOSTA`, `RESULTADO_PROPOSTA` |
+| `status_email` | `PENDENTE`, `ENVIANDO`, `ENVIADO`, `FALHA` |
 
 Colunas preenchidas pelo banco (datas de envio/aceite, número do protocolo) usam `server_default` no model (`AGORA_UTC` em `app/db/defaults.py`), para o ORM não mandar `NULL` no insert.
 

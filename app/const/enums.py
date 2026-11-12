@@ -103,6 +103,26 @@ class SituacaoConta(StrEnum):
     ATIVA = "ATIVA"
 
 
+class TipoEmail(StrEnum):
+    """Cada tipo tem um template em `app/templates/emails/` (RNF28, RF60)."""
+
+    CONFIRMACAO_EMAIL = "CONFIRMACAO_EMAIL"
+    RECUPERACAO_SENHA = "RECUPERACAO_SENHA"
+    DEFINICAO_SENHA = "DEFINICAO_SENHA"
+    CONVITE_EQUIPE = "CONVITE_EQUIPE"
+    INSCRICAO_CONCLUIDA = "INSCRICAO_CONCLUIDA"
+    EQUIPE_HOMOLOGADA = "EQUIPE_HOMOLOGADA"
+    PROTOCOLO_PROPOSTA = "PROTOCOLO_PROPOSTA"
+    RESULTADO_PROPOSTA = "RESULTADO_PROPOSTA"
+
+
+class StatusEmail(StrEnum):
+    PENDENTE = "PENDENTE"  # na fila: ainda não tentou, ou aguardando a próxima tentativa
+    ENVIANDO = "ENVIANDO"  # reservado por um worker
+    ENVIADO = "ENVIADO"  # o provedor aceitou a mensagem
+    FALHA = "FALHA"  # erro permanente ou tentativas esgotadas; só sai daqui com reenvio manual
+
+
 def pg_enum(enum_cls: type[Enum], nome: str):
     """Mapeia um Enum Python para o tipo ENUM nativo do Postgres (criado pelo Flyway)."""
     return SAEnum(

@@ -1,0 +1,8 @@
+{% extends "_base.html" %}
+{% set titulo = "Convite para participar de uma equipe" %}
+{% set texto_botao = "Ver convite" %}
+{% block conteudo %}
+<p style="margin:0 0 12px 0;line-height:1.5;">Olá, {{ nome }}.</p>
+<p style="margin:0 0 12px 0;line-height:1.5;">{{ lider_nome or 'O líder da equipe' }} convidou você para participar {{ 'da equipe ' ~ equipe_nome if equipe_nome else 'de uma equipe' }} no Hackathon UFPA.</p>
+<p style="margin:0 0 12px 0;line-height:1.5;">Entre na plataforma para confirmar ou recusar a participação.</p>
+{% endblock %}

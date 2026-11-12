@@ -1,0 +1,8 @@
+{% extends "_base.html" %}
+{% set titulo = "Seu acesso ao Hackathon UFPA" %}
+{% set texto_botao = "Definir senha" %}
+{% block conteudo %}
+<p style="margin:0 0 12px 0;line-height:1.5;">Olá, {{ nome }}.</p>
+<p style="margin:0 0 12px 0;line-height:1.5;">Você foi cadastrado(a) no Hackathon UFPA com o perfil {{ perfil }}. Para acessar a plataforma, defina a sua senha pelo endereço abaixo.</p>
+{% endblock %}
+{% block rodape %} Se você não esperava este acesso, ignore esta mensagem.{% endblock %}

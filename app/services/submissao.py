@@ -48,6 +48,7 @@ from app.schemas.submissao import (
     SubmissaoResponse,
     SubmissaoUpdate,
 )
+from app.services.email_eventos import avisar_protocolo_proposta
 from app.services.equipe import consultar
 from app.services.somente_leitura import exigir_equipe_editavel
 from app.validations.submissao import campos_obrigatorios_pendentes, propostas_abertas
@@ -185,6 +186,7 @@ async def enviar(db: AsyncSession, usuario: Usuario, equipe_id: UUID) -> Submiss
                 emitido_em=proposta.enviado_em,
             ),
         )
+        await avisar_protocolo_proposta(db, equipe, proposta, protocolo)
         resposta = _resposta_enviada(proposta, protocolo)
         await db.commit()
     except IntegrityError as error:

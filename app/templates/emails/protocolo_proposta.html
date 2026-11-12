@@ -1,0 +1,8 @@
+{% extends "_base.html" %}
+{% set titulo = "Proposta enviada" %}
+{% set texto_botao = "Ver proposta" %}
+{% block conteudo %}
+<p style="margin:0 0 12px 0;line-height:1.5;">Olá, {{ nome }}.</p>
+<p style="margin:0 0 12px 0;line-height:1.5;">A proposta {{ 'da equipe ' ~ equipe_nome if equipe_nome else 'da sua equipe' }} foi enviada em {{ enviado_em | data_hora_brasilia }} (horário de Brasília).</p>
+<p style="margin:0 0 12px 0;line-height:1.5;">Protocolo da submissão: {{ protocolo_numero }}. Guarde o número como comprovante.</p>
+{% endblock %}

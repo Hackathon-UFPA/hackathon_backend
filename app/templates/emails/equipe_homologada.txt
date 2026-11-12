@@ -1,0 +1,12 @@
+Equipe homologada
+
+Olá, {{ nome }}.
+
+{{ 'A equipe ' ~ equipe_nome if equipe_nome else 'A sua equipe' }} foi homologada no Hackathon UFPA.
+
+A equipe já pode enviar a proposta dentro do prazo do edital.
+
+{% if link %}Acessar a plataforma: {{ link }}
+
+{% endif %}--
+Mensagem automática do Hackathon UFPA. Não responda este e-mail.

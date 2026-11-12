@@ -44,6 +44,7 @@ from app.schemas.resultado import (
     ResultadoEquipeResponse,
     ResultadoPropostaResponse,
 )
+from app.services.email_eventos import avisar_resultado
 from app.services.equipe import consultar
 from app.services.notificacao import criar_notificacoes_do_resultado, pareceres_da_proposta
 
@@ -294,6 +295,7 @@ async def homologar(
         adicionar_homologacao(db, homologacao, resultados)
         # RF33: na mesma transação. Se não der para notificar, a homologação não vale.
         await criar_notificacoes_do_resultado(db, resultados)
+        await avisar_resultado(db, resultados)
         await db.flush()
         await db.refresh(homologacao)
         resposta = await _resposta_homologada(db, hackathon, homologacao)

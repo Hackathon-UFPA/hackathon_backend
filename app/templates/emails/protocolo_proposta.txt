@@ -1,0 +1,12 @@
+Proposta enviada
+
+Olá, {{ nome }}.
+
+A proposta {{ 'da equipe ' ~ equipe_nome if equipe_nome else 'da sua equipe' }} foi enviada em {{ enviado_em | data_hora_brasilia }} (horário de Brasília).
+
+Protocolo da submissão: {{ protocolo_numero }}. Guarde o número como comprovante.
+
+{% if link %}Ver proposta: {{ link }}
+
+{% endif %}--
+Mensagem automática do Hackathon UFPA. Não responda este e-mail.

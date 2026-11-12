@@ -63,7 +63,7 @@ Respostas: sem token, token inválido, vencido ou de conta desativada dão **401
 docker compose exec app python -m app.scripts.criar_usuario --email organizador@ufpa.br --nome "Nome Completo" --papel ORGANIZADOR
 ```
 
-Ficou de fora desta etapa: confirmação do e-mail, envio de acesso por e-mail, recuperação de senha, login com Google/GitHub, encerrar sessão e a aprovação do comprovante pelo Comitê Científico.
+Ficou de fora desta etapa: confirmação do e-mail, envio de acesso por e-mail, recuperação de senha (os templates e a fila de e-mails já existem, veja [E-mails](emails.md); falta o fluxo de token, tarefa BE-S5-07), login com Google/GitHub, encerrar sessão e a aprovação do comprovante pelo Comitê Científico.
 
 ## Diagramas da autenticação
 

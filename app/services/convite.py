@@ -41,6 +41,7 @@ from app.exceptions.db import erro_de_integridade_sql
 from app.exceptions.equipe import equipe_nao_editavel
 from app.models import Convite, Equipe, Hackathon, MembroEquipe, Usuario
 from app.schemas.convite import ConviteEnvio, ConviteRecebidoResponse
+from app.services.email_eventos import avisar_convite
 from app.services.somente_leitura import exigir_equipe_editavel
 from app.services.termo import validar_termos_aceitos
 from app.validations.inscricao import inscricoes_abertas
@@ -85,8 +86,8 @@ async def enviar_convite(
     db: AsyncSession, lider: Usuario, equipe_id: UUID, dados: ConviteEnvio
 ) -> Convite:
     """O líder convida por nome e e-mail (RF18). O total de integrantes mais convites pendentes
-    não passa do máximo do hackathon. O envio do e-mail ainda não existe: o convite fica
-    registrado e aparece no painel de quem tem conta com aquele e-mail."""
+    não passa do máximo do hackathon. O convite aparece no painel de quem tem conta com aquele
+    e-mail, e o aviso por e-mail entra na fila (app.services.email_eventos)."""
     equipe, hackathon = await _equipe_e_hackathon(db, equipe_id, para_atualizar=True)
     await _exigir_lider(db, equipe.id, lider)
     await exigir_equipe_editavel(db, equipe.id)
@@ -112,6 +113,8 @@ async def enviar_convite(
             convidado_por=lider.id,
         ),
     )
+    # RF18: o aviso entra na fila junto com o convite; o envio acontece depois, no worker
+    await avisar_convite(db, convite, equipe, lider)
     await db.commit()
     await db.refresh(convite)
     return convite
