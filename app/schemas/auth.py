@@ -1,6 +1,15 @@
 from typing import Annotated
+from uuid import UUID
 
-from pydantic import AfterValidator, BaseModel, EmailStr, Field, HttpUrl, StringConstraints
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    EmailStr,
+    Field,
+    HttpUrl,
+    StringConstraints,
+    model_validator,
+)
 
 from app.const.enums import PapelUsuario
 from app.schemas.usuario import UsuarioCreate, UsuarioResponse
@@ -68,12 +77,38 @@ class TokenResponse(BaseModel):
     usuario: UsuarioResponse = Field(description="Dados de quem entrou, com o papel e a situação")
 
 
-# Cadastro de outros perfis por quem tem permissão (RF07, RF08): o criador define a senha inicial
+# RF07/RF08: senha inicial para demais perfis; mentor define a própria senha por convite (RN33).
 class UsuarioAdminCreate(UsuarioCreate):
-    senha: SenhaNova = Field(
-        description=f"Senha inicial definida por quem cadastra. {DESCRICAO_DA_SENHA}",
+    hackathon_id: UUID | None = Field(
+        default=None, description="Obrigatório somente para MENTOR: edição do convite RN33"
+    )
+    senha: SenhaNova | None = Field(
+        default=None,
+        description=(
+            f"Obrigatória para demais perfis; não enviar para MENTOR (RN33). {DESCRICAO_DA_SENHA}"
+        ),
         examples=["segredo123"],
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def validar_campos_do_mentor(cls, dados):
+        if isinstance(dados, dict) and dados.get("papel") == PapelUsuario.MENTOR:
+            from app.schemas.mentor import MentorCreate
+
+            MentorCreate.model_validate(
+                {campo: dados.get(campo) for campo in MentorCreate.model_fields}
+            )
+        return dados
+
+    @model_validator(mode="after")
+    def validar_senha_por_perfil(self):
+        if self.papel == PapelUsuario.MENTOR:
+            if self.senha is not None:
+                raise ValueError("O próprio mentor define a senha pelo convite (RN33)")
+        elif self.senha is None:
+            raise ValueError("Senha inicial obrigatória para este perfil")
+        return self
 
 
 class PerfisCadastraveisResponse(BaseModel):

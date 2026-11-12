@@ -36,6 +36,7 @@ class EmailOutbox(SQLModel, table=True):
     ultimo_erro: str | None = Field(default=None, sa_type=Text)
     provedor_mensagem_id: str | None = Field(default=None, sa_type=Text)
     enviado_em: datetime | None = Field(default=None)
+    cancelado_em: datetime | None = Field(default=None)
     criado_em: datetime | None = Field(
         default=None, nullable=False, sa_column_kwargs={"server_default": AGORA_UTC}
     )

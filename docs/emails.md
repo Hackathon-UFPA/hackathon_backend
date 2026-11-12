@@ -33,14 +33,15 @@ ação do sistema (convite, inscrição, protocolo...)
 | Equipe passa a homologada                     | `EQUIPE_HOMOLOGADA`   | Todos os integrantes                     | RF23, RF60          |
 | Proposta enviada                              | `PROTOCOLO_PROPOSTA`  | O líder da equipe, com o protocolo       | RF28                |
 | Resultado homologado                          | `RESULTADO_PROPOSTA`  | Todos os integrantes, aprovada ou não    | RF33, RF60          |
+| Cadastro ou renovação de convite de mentor     | `DEFINICAO_SENHA`     | O mentor, com link temporário de uso único | RF37, RN33, BE-S5-10 |
 
-Os tipos abaixo têm template pronto, mas **ainda não têm gatilho**, porque dependem de fluxos que pertencem a outras tarefas da Sprint 5 (o token de confirmação e de redefinição de senha, e o cadastro de mentores e comitês). Quem implementar esses fluxos só precisa chamar `enfileirar` (veja mais abaixo):
+Os templates de confirmação e recuperação abaixo ainda dependem dos respectivos fluxos de conta. `DEFINICAO_SENHA` já é usado pelo cadastro e convite de [mentores](mentores.md); seu uso para comitês segue pendente. Novos fluxos podem chamar `enfileirar` (veja mais abaixo):
 
 | Tipo                | Uso previsto                                                    | Requisitos      | Tarefa      |
 |---------------------|-----------------------------------------------------------------|-----------------|-------------|
 | `CONFIRMACAO_EMAIL` | Confirmação do e-mail informado no cadastro                     | RF01            | BE-S5-07    |
 | `RECUPERACAO_SENHA` | Link temporário para redefinir a senha                          | RF04            | BE-S5-07    |
-| `DEFINICAO_SENHA`   | Acesso de mentores e membros dos comitês (definir a senha)      | RF08, RF37      | BE-S5-10    |
+| `DEFINICAO_SENHA`   | Acesso de mentores (RN33); comitês ainda sem gatilho            | RF08, RF37      | [BE-S5-10](mentores.md) |
 
 Mensagens de chat nunca geram e-mail (RN32): não existe tipo nem gatilho para elas.
 
@@ -51,6 +52,8 @@ Só o **aviso e o link** para a plataforma (RNF28). Nunca vão parecer, nota, se
 Os templates ficam em `app/templates/emails/`: um par `<tipo>.txt` e `<tipo>.html` para cada `TipoEmail`, mais o layout `_base.html`. O assunto de cada tipo fica em `app/services/email_template.py`, junto com a lista de valores que cada template exige. Faltar um valor é erro de quem chama, nunca um e-mail pela metade.
 
 ## Estados e tentativas
+
+Convites de mentor revogados usam `FALHA` com `cancelado_em` preenchido. Essas mensagens têm seus corpos eliminados e não podem ser reenviadas por `/admin/emails`: o gestor emite outro convite com a edição explícita. A reserva já confirmada é revalidada pelo worker antes da entrega. Mensagens já enviadas permanecem intactas. Detalhes e limites de concorrência em [Mentores](mentores.md).
 
 | Status      | Significado                                                                                  |
 |-------------|----------------------------------------------------------------------------------------------|

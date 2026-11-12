@@ -24,9 +24,13 @@ Authorization: Bearer <access_token>
 | `GET /health`                         | Verifica a API e o banco                    |
 | `POST /auth/cadastro`                 | Cadastro do participante                    |
 | `POST /auth/login`                    | Login, devolve o token e os dados do usuário |
+| `POST /mentores/convite/consultar`    | Consulta o convite e termos com token no corpo |
+| `POST /mentores/ativacao`            | Mentor conclui perfil, senha e aceites (RN33) |
 | `GET /hackathons/{id}/rubrica`        | Rubrica publicada                           |
 
 O fluxo completo (cadastro, login, conta pendente, perfis) está em [Autenticação e permissões](autenticacao.md).
+
+O cadastro e gerenciamento em `/admin/mentores`, os contratos de onboarding e a separação entre ativação do mentor e pendência acadêmica estão em [Mentores](mentores.md).
 
 ## Formato dos erros
 

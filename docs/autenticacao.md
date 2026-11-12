@@ -63,7 +63,7 @@ Respostas: sem token, token inválido, vencido ou de conta desativada dão **401
 docker compose exec app python -m app.scripts.criar_usuario --email organizador@ufpa.br --nome "Nome Completo" --papel ORGANIZADOR
 ```
 
-Ficou de fora desta etapa: confirmação do e-mail, envio de acesso por e-mail, recuperação de senha (os templates e a fila de e-mails já existem, veja [E-mails](emails.md); falta o fluxo de token, tarefa BE-S5-07), login com Google/GitHub, encerrar sessão e a aprovação do comprovante pelo Comitê Científico.
+O acesso de mentores por convite temporário está implementado em [Mentores](mentores.md) (RN33, BE-S5-10), com o template e a fila do PR #15. Confirmação de e-mail dos demais perfis, recuperação de senha e login social seguem em tarefas próprias.
 
 ## Diagramas da autenticação
 
@@ -103,14 +103,15 @@ POST /auth/login
 
 **4. Conta pendente.** Se `usuario.situacao_conta` for `PENDENTE`, mostre "aguardando validação do comprovante" e não abra as outras telas: a conta só consegue `GET /auth/me`, e as demais rotas protegidas respondem 403.
 
-**5. Tela "Cadastrar usuário"** (Organizador e Comitê Científico). Monte a lista de perfis com `GET /admin/usuarios/perfis`, sem copiar a hierarquia no front, e envie o formulário para `POST /admin/usuarios` com o `papel` escolhido e a senha inicial:
+**5. Tela "Cadastrar usuário"** (Organizador e Comitê Científico). Monte a lista de perfis com `GET /admin/usuarios/perfis`, sem copiar a hierarquia no front. Os demais perfis exigem senha inicial; para mentor, envie os cinco campos do cadastro, sem senha. A conta de mentor nasce inativa e o destinatário recebe um convite para concluir o próprio perfil e aceitar os termos:
 
 ```
 GET /admin/usuarios/perfis      → 200  { "perfis": ["COMITE_TECNICO", "MENTOR"] }
 POST /admin/usuarios
 { "email": "mentor@acaivalley.com", "nome": "Maria Souza", "papel": "MENTOR",
-  "senha": "senhaInicial1", "empresa_parceira": "Açaí Valley", "max_equipes": 2 }
-→ 201  (a conta já nasce ativa)
+  "empresa_parceira": "Açaí Valley", "area_atuacao": "Dados", "max_equipes": 2,
+  "hackathon_id": "UUID_DA_EDICAO_DO_CONVITE" }
+→ 201  (ativo=false; convite RN33 enfileirado)
 ```
 
 **Erros.** Todos vêm como `{ "detail": "mensagem" }`, exceto o 422, em que `detail` é uma lista com `loc` (o campo) e `msg`:
@@ -127,7 +128,7 @@ POST /admin/usuarios
 - O token não é renovado: depois de `expires_in` segundos o próximo pedido dá 401 e é preciso entrar de novo.
 - No 429 a API manda o tempo restante no cabeçalho `Retry-After`. O navegador só deixa o front ler esse cabeçalho se ele for exposto no CORS, o que ainda não foi configurado; enquanto isso, use a mensagem fixa acima.
 - Para o front rodar em outra origem, defina `CORS_ORIGINS` no `.env` da API (hoje o padrão é `*`).
-- Uma conta nova fica `PENDENTE` até um Organizador ou o Comitê Científico aprovar o comprovante (`POST /admin/comprovantes/{id}/aprovar`). Para testar telas que exigem conta ativa sem esse passo, ative-a no banco: `UPDATE usuarios SET situacao_conta = 'ATIVA' WHERE email = '...'`.
+- A conta de participante do cadastro público fica `PENDENTE` até um Organizador ou o Comitê Científico aprovar o comprovante (`POST /admin/comprovantes/{id}/aprovar`). Mentor não exige comprovante: fica `ativo=false` até concluir o fluxo de [convite e ativação](mentores.md). Alterar somente `situacao_conta` não conclui a RN33.
 
 ---
 

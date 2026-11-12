@@ -41,9 +41,11 @@ async def listar_perfis_cadastraveis(quem_cadastra: Usuario = Depends(gestor_de_
     status_code=status.HTTP_201_CREATED,
     summary="Cadastrar usuário de outro perfil",
     description=(
-        "Cria um usuário com a conta já **ativa** (RF07, RF08). Quem cadastra escolhe o `papel`, "
-        "dentro da lista de `GET /admin/usuarios/perfis`, e define a senha inicial. Não pede "
-        "comprovante de vínculo: isso vale só para o cadastro público de participante."
+        "Cria usuários conforme RF07/RF08. Mentores exigem nome, e-mail, empresa, área e "
+        "capacidade, além de hackathon_id para vincular o convite à edição, e seguem RN33: "
+        "cadastro inativo, convite por e-mail e senha definida pelo "
+        "próprio mentor. Para os demais perfis, exige senha inicial e cria a conta ativa. "
+        "Não pede comprovante de vínculo."
     ),
     responses=respostas_de_erro(
         {
@@ -51,6 +53,7 @@ async def listar_perfis_cadastraveis(quem_cadastra: Usuario = Depends(gestor_de_
             403: "Perfil sem permissão para esta rota, conta pendente, ou `papel` que quem "
             "cadastra não pode criar",
             409: "E-mail já cadastrado",
+            404: "Edição informada para o convite de mentor não encontrada",
         }
     ),
 )

@@ -2,7 +2,10 @@ Seu acesso ao Hackathon UFPA
 
 Olá, {{ nome }}.
 
-Você foi cadastrado(a) no Hackathon UFPA com o perfil {{ perfil }}. Para acessar a plataforma, defina a sua senha pelo endereço abaixo.
+Você foi cadastrado(a) no Hackathon UFPA com o perfil {{ perfil }}. Para acessar a plataforma, defina a sua senha, caso necessário, pelo endereço abaixo.
+
+{% if perfil == "Mentor" %}Complete também seu perfil e aceite o regulamento e o termo de consentimento para ativar sua conta. O link é temporário e de uso único. Se expirar, solicite um novo convite ao Comitê Científico.
+{% endif %}
 
 {% if link %}Definir senha: {{ link }}
 

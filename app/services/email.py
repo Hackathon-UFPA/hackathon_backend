@@ -28,7 +28,7 @@ from app.controllers.email_outbox import (
     listar_emails,
     recolocar_na_fila,
 )
-from app.exceptions.email import email_nao_encontrado, reenvio_nao_permitido
+from app.exceptions.email import email_cancelado, email_nao_encontrado, reenvio_nao_permitido
 from app.models import EmailOutbox
 from app.services.email_template import renderizar
 
@@ -82,10 +82,19 @@ async def enfileirar(
                     "max_tentativas": settings.EMAIL_MAX_TENTATIVAS,
                 },
             )
-    except Exception:
-        logger.exception(
-            "Não foi possível enfileirar o e-mail %s para o usuário %s", tipo, usuario_id
-        )
+    except Exception as falha:
+        if (chave or "").startswith("convite-mentor:"):
+            # Exceções SQL/template podem conter parâmetros com o link secreto do convite.
+            logger.error(
+                "Não foi possível enfileirar o e-mail %s para o usuário %s (%s)",
+                tipo,
+                usuario_id,
+                type(falha).__name__,
+            )
+        else:
+            logger.exception(
+                "Não foi possível enfileirar o e-mail %s para o usuário %s", tipo, usuario_id
+            )
         return False
     return email_id is not None
 
@@ -122,6 +131,8 @@ async def reenviar(db: AsyncSession, email_id: UUID) -> EmailOutbox:
     email = await get_email(db, email_id, para_atualizar=True)
     if email is None:
         email_nao_encontrado()
+    if email.cancelado_em is not None:
+        email_cancelado()
     if email.status != StatusEmail.FALHA:
         reenvio_nao_permitido(email.status)
     await recolocar_na_fila(db, email)

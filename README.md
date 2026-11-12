@@ -25,6 +25,7 @@ API do sistema de gestão de hackathons da UFPA, construída com **FastAPI**. Cu
 - [Resultado](docs/resultado.md): homologação do resultado e propostas aprovadas públicas
 - [Notificações e somente leitura](docs/notificacoes-e-somente-leitura.md): aviso do resultado às equipes e bloqueio de escrita das não aprovadas
 - [E-mails](docs/emails.md): fila de envio, provedor SMTP, templates em português e acompanhamento
+- [Mentores](docs/mentores.md): cadastro, convite seguro, ativação com perfil e termos, desativação (BE-S5-10)
 - [Banco de dados](docs/banco-de-dados.md): tabelas, enums e migrations
 - [Guia de desenvolvimento](docs/desenvolvimento.md): como criar rotas, comandos e CI/CD
 

@@ -84,6 +84,7 @@ def hackathon_aberto():
     )[0]["id"]
     yield id_
     executar_sql("DELETE FROM comprovantes_vinculo WHERE hackathon_id = :id", id=id_)
+    executar_sql("DELETE FROM convites_mentor WHERE hackathon_id = :id", id=id_)
     executar_sql("DELETE FROM hackathon WHERE id = :id", id=id_)
 
 

@@ -13,8 +13,10 @@ import logging
 from dataclasses import dataclass
 
 from app.const.config import settings
+from app.const.enums import StatusEmail
 from app.controllers.email_outbox import (
     esgotar_reservas_vencidas,
+    get_email,
     registrar_envio,
     registrar_falha,
     registrar_nova_tentativa,
@@ -62,42 +64,61 @@ async def processar_lote(provedor: ProvedorEmail | None = None) -> ResumoLote:
 
     resumo = ResumoLote()
     for email in lote:
-        mensagem = MensagemEmail(
-            destinatario=email["destinatario_email"],
-            destinatario_nome=email["destinatario_nome"],
-            assunto=email["assunto"],
-            texto=email["corpo_texto"],
-            html=email["corpo_html"],
-        )
-        mensagem_id = None
-        erro = None
-        definitivo = False
-        try:
-            mensagem_id = await provedor.enviar(mensagem)
-        except ErroEnvioPermanente as falha:
-            erro, definitivo = str(falha), True
-        except ErroEnvioTemporario as falha:
-            erro = str(falha)
-            definitivo = email["tentativas"] >= email["max_tentativas"]
-        except Exception as falha:
-            # Falha que o provedor não classificou: trata como temporária
-            erro = f"{type(falha).__name__}: {falha}"[:500]
-            definitivo = email["tentativas"] >= email["max_tentativas"]
-            logger.exception("Erro inesperado ao enviar o e-mail %s", email["id"])
-
         async with async_session() as db:
-            if erro is None:
-                await registrar_envio(db, email["id"], mensagem_id)
-                resumo.enviados += 1
-            elif definitivo:
-                await registrar_falha(db, email["id"], erro)
-                resumo.falhas += 1
-                logger.error("E-mail %s não enviado: %s", email["id"], erro)
-            else:
-                await registrar_nova_tentativa(
-                    db, email["id"], erro, espera_em_segundos(email["tentativas"])
-                )
-                resumo.reagendados += 1
-                logger.warning("E-mail %s falhou, nova tentativa agendada: %s", email["id"], erro)
+            if (email.get("chave_idempotencia") or "").startswith("convite-mentor:"):
+                # A reserva já foi confirmada. Revalidar sob a mesma trava do cancelamento,
+                # mantida até o resultado do provedor, impede usar uma cópia antiga do lote.
+                atual = await get_email(db, email["id"], para_atualizar=True)
+                if (
+                    atual is None
+                    or atual.cancelado_em is not None
+                    or atual.status != StatusEmail.ENVIANDO
+                    or atual.tentativas != email["tentativas"]
+                ):
+                    continue
+            await _entregar(db, email, provedor, resumo)
             await db.commit()
     return resumo
+
+
+async def _entregar(db, email: dict, provedor: ProvedorEmail, resumo: ResumoLote):
+    mensagem = MensagemEmail(
+        destinatario=email["destinatario_email"],
+        destinatario_nome=email["destinatario_nome"],
+        assunto=email["assunto"],
+        texto=email["corpo_texto"],
+        html=email["corpo_html"],
+    )
+    mensagem_id = None
+    erro = None
+    definitivo = False
+    try:
+        mensagem_id = await provedor.enviar(mensagem)
+    except ErroEnvioPermanente as falha:
+        erro, definitivo = str(falha), True
+    except ErroEnvioTemporario as falha:
+        erro = str(falha)
+        definitivo = email["tentativas"] >= email["max_tentativas"]
+    except Exception as falha:
+        # Falha que o provedor não classificou: trata como temporária
+        erro = f"{type(falha).__name__}: {falha}"[:500]
+        definitivo = email["tentativas"] >= email["max_tentativas"]
+        if not (email.get("chave_idempotencia") or "").startswith("convite-mentor:"):
+            logger.exception("Erro inesperado ao enviar o e-mail %s", email["id"])
+
+    if (email.get("chave_idempotencia") or "").startswith("convite-mentor:") and erro:
+        # Nem um provedor inesperado pode persistir/logar o corpo secreto de um convite.
+        erro = "Falha no envio do convite de mentor."
+    if erro is None:
+        await registrar_envio(db, email["id"], mensagem_id)
+        resumo.enviados += 1
+    elif definitivo:
+        await registrar_falha(db, email["id"], erro)
+        resumo.falhas += 1
+        logger.error("E-mail %s não enviado: %s", email["id"], erro)
+    else:
+        await registrar_nova_tentativa(
+            db, email["id"], erro, espera_em_segundos(email["tentativas"])
+        )
+        resumo.reagendados += 1
+        logger.warning("E-mail %s falhou, nova tentativa agendada: %s", email["id"], erro)

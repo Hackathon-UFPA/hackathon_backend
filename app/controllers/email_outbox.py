@@ -93,14 +93,16 @@ async def reservar_emails(db: AsyncSession, *, limite: int, reserva_segundos: in
                 atualizado_em = (now() AT TIME ZONE 'utc')
             WHERE id IN (
                 SELECT id FROM emails_outbox
-                WHERE (status = 'PENDENTE' AND proxima_tentativa_em <= (now() AT TIME ZONE 'utc'))
-                   OR (status = 'ENVIANDO' AND reservado_ate <= (now() AT TIME ZONE 'utc'))
+                WHERE cancelado_em IS NULL AND (
+                    (status = 'PENDENTE' AND proxima_tentativa_em <= (now() AT TIME ZONE 'utc'))
+                    OR (status = 'ENVIANDO' AND reservado_ate <= (now() AT TIME ZONE 'utc'))
+                )
                 ORDER BY proxima_tentativa_em, criado_em, id
                 LIMIT :limite
                 FOR UPDATE SKIP LOCKED
             )
             RETURNING id, tipo, destinatario_email, destinatario_nome, assunto,
-                      corpo_texto, corpo_html, tentativas, max_tentativas
+                      corpo_texto, corpo_html, tentativas, max_tentativas, chave_idempotencia
             """
         ).bindparams(reserva=reserva_segundos, limite=limite)
     )

@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     JWT_EXPIRE_MINUTES: int = Field(default=60, gt=0)
     LOGIN_MAX_TENTATIVAS: int = Field(default=5, gt=0)
     LOGIN_BLOQUEIO_MINUTOS: int = Field(default=15, gt=0)
+    MENTOR_CONVITE_MINUTOS: int = Field(default=1440, gt=0)
 
     # E-mail transacional (RNF28, RF60). As credenciais vêm só do ambiente.
     # `console` só registra no log (desenvolvimento); `smtp` envia de verdade.

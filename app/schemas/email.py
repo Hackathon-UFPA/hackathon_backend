@@ -58,5 +58,9 @@ class EmailResponse(BaseModel):
         default=None, description="Motivo da última falha do provedor, sem dados sensíveis"
     )
     enviado_em: datetime | None = Field(default=None, description="Preenchido quando ENVIADO (UTC)")
+    cancelado_em: datetime | None = Field(
+        default=None,
+        description="Convite revogado: mensagem cancelada, sem possibilidade de reenvio",
+    )
     criado_em: datetime
     atualizado_em: datetime

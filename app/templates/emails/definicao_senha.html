@@ -2,7 +2,8 @@
 {% set titulo = "Seu acesso ao Hackathon UFPA" %}
 {% set texto_botao = "Definir senha" %}
 {% block conteudo %}
+{% if perfil == "Mentor" %}<p>Complete também seu perfil e aceite o regulamento e o termo de consentimento para ativar sua conta. O link é temporário e de uso único. Se expirar, solicite um novo convite ao Comitê Científico.</p>{% endif %}
 <p style="margin:0 0 12px 0;line-height:1.5;">Olá, {{ nome }}.</p>
-<p style="margin:0 0 12px 0;line-height:1.5;">Você foi cadastrado(a) no Hackathon UFPA com o perfil {{ perfil }}. Para acessar a plataforma, defina a sua senha pelo endereço abaixo.</p>
+<p style="margin:0 0 12px 0;line-height:1.5;">Você foi cadastrado(a) no Hackathon UFPA com o perfil {{ perfil }}. Para acessar a plataforma, defina a sua senha, caso necessário, pelo endereço abaixo.</p>
 {% endblock %}
 {% block rodape %} Se você não esperava este acesso, ignore esta mensagem.{% endblock %}

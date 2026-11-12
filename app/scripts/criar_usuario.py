@@ -24,6 +24,8 @@ from app.security.senha import gerar_hash, validar_forca_da_senha
 async def cadastrar(db: AsyncSession, email: str, nome: str, papel: PapelUsuario, senha: str):
     """Cria o usuário com a conta ativa. Levanta ValueError se a senha for fraca e
     HTTPException se o e-mail já existir."""
+    if papel == PapelUsuario.MENTOR:
+        raise ValueError("Cadastre mentores pela API administrativa para cumprir a RN33")
     usuario = await criar_usuario(
         db,
         Usuario(
