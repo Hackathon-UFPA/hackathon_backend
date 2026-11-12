@@ -26,7 +26,14 @@ async def cadastrar_usuario_por_perfil(
             db,
             MentorCreate.model_validate(
                 dados.model_dump(
-                    include={"nome", "email", "empresa_parceira", "area_atuacao", "max_equipes"}
+                    include={
+                        "nome",
+                        "email",
+                        "empresa_parceira",
+                        "area_atuacao",
+                        "max_equipes",
+                        "hackathon_id",
+                    }
                 )
             ),
         )
@@ -34,7 +41,7 @@ async def cadastrar_usuario_por_perfil(
     usuario = await criar_usuario(
         db,
         Usuario(
-            **dados.model_dump(exclude={"senha", "email"}),
+            **dados.model_dump(exclude={"senha", "email", "hackathon_id"}),
             email=dados.email.lower(),
             senha_hash=await asyncio.to_thread(gerar_hash, dados.senha),
         ),

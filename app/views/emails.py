@@ -82,14 +82,16 @@ async def consultar_email(
         "RNF28. Devolve à fila um e-mail em `FALHA` (erro permanente do provedor ou "
         "tentativas esgotadas), com as tentativas zeradas; o worker o envia na próxima rodada. "
         "E-mails `PENDENTE` ou `ENVIANDO` já estão na fila e os `ENVIADO` já foram entregues, "
-        "então reenviá-los duplicaria o aviso: respondem 409. Restrito a Organizador (e DEV)."
+        "então reenviá-los duplicaria o aviso: respondem 409. Mensagens de convite revogadas "
+        "(cancelado_em preenchido) também retornam 409; emita um novo convite. "
+        "Restrito a Organizador (e DEV)."
     ),
     responses=respostas_de_erro(
         {
             401: ERRO_401,
             403: ERRO_403,
             404: "E-mail não encontrado",
-            409: "O e-mail não está em FALHA (já foi enviado ou ainda está na fila)",
+            409: "E-mail fora de FALHA ou mensagem cancelada por revogação de convite",
         }
     ),
 )

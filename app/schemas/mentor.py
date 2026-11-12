@@ -4,6 +4,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints, model_validator
 
+from app.const.enums import StatusEmail
 from app.schemas.auth import SenhaNova
 from app.schemas.termo import TermoResponse
 from app.schemas.usuario import UsuarioResponse
@@ -23,6 +24,7 @@ class MentorPerfil(BaseModel):
 class MentorCreate(MentorPerfil):
     email: EmailStr
     max_equipes: CapacidadeMentor
+    hackathon_id: UUID = Field(description="Edição vinculada ao primeiro convite do mentor")
 
 
 class MentorUpdate(BaseModel):
@@ -33,6 +35,9 @@ class MentorUpdate(BaseModel):
     empresa_parceira: TextoMentor | None = None
     area_atuacao: TextoMentor | None = None
     max_equipes: CapacidadeMentor | None = None
+    hackathon_id: UUID | None = Field(
+        default=None, description="Obrigatório ao alterar e-mail: edição do novo convite"
+    )
 
     @model_validator(mode="after")
     def recusar_nulos(self):
@@ -50,13 +55,36 @@ class ConviteMentorRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     token: str = Field(min_length=43, max_length=128, repr=False)
-    hackathon_id: UUID
+    hackathon_id: UUID = Field(
+        description="Edição recebida no link; deve coincidir com a edição persistida no convite"
+    )
 
 
 class ConviteMentorResponse(BaseModel):
     mentor: MentorResponse
     termos: list[TermoResponse]
     senha_necessaria: bool
+    hackathon_id: UUID
+
+
+class ConviteMentorCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    hackathon_id: UUID = Field(description="Edição deste convite, inclusive para mentor já ativo")
+
+
+class ConviteMentorAdminResponse(BaseModel):
+    id: UUID
+    hackathon_id: UUID | None
+    criado_em: datetime
+    expira_em: datetime
+    encerrado_em: datetime | None
+    email_enfileirado: bool
+    status_email: StatusEmail | None
+    cancelado_em: datetime | None
+    pendencia_administrativa: bool = Field(
+        description="Convite aberto sem e-mail enfileirado, com falha de entrega ou expirado"
+    )
 
 
 class MentorAtivacao(MentorPerfil, ConviteMentorRequest):

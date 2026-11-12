@@ -53,6 +53,8 @@ Os templates ficam em `app/templates/emails/`: um par `<tipo>.txt` e `<tipo>.htm
 
 ## Estados e tentativas
 
+Convites de mentor revogados usam `FALHA` com `cancelado_em` preenchido. Essas mensagens têm seus corpos eliminados e não podem ser reenviadas por `/admin/emails`: o gestor emite outro convite com a edição explícita. A reserva já confirmada é revalidada pelo worker antes da entrega. Mensagens já enviadas permanecem intactas. Detalhes e limites de concorrência em [Mentores](mentores.md).
+
 | Status      | Significado                                                                                  |
 |-------------|----------------------------------------------------------------------------------------------|
 | `PENDENTE`  | Na fila: ainda não tentou, ou espera a hora da próxima tentativa (`proxima_tentativa_em`)    |

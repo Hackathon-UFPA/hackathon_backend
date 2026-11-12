@@ -15,7 +15,12 @@ from app.controllers.usuario import criar_usuario, get_usuario_by_email
 from app.exceptions.auth import email_ja_cadastrado
 from app.exceptions.mentor import convite_invalido, mentor_inelegivel, mentor_nao_encontrado
 from app.models import ConviteMentor, Usuario
-from app.schemas.mentor import MentorAtivacao, MentorCreate, MentorUpdate
+from app.schemas.mentor import (
+    ConviteMentorAdminResponse,
+    MentorAtivacao,
+    MentorCreate,
+    MentorUpdate,
+)
 from app.security.senha import gerar_hash
 from app.services.email import enfileirar, link_front
 from app.services.termo import termos_vigentes_do_hackathon, validar_termos_aceitos
@@ -32,17 +37,19 @@ async def consultar(db: AsyncSession, mentor_id: UUID, *, bloquear: bool = False
     return mentor
 
 
-async def convidar(db: AsyncSession, mentor: Usuario) -> None:
+async def convidar(db: AsyncSession, mentor: Usuario, hackathon_id: UUID) -> None:
+    await termos_vigentes_do_hackathon(db, hackathon_id)
     agora = agora_utc()
-    await controller.invalidar_convites(db, mentor.id, agora)
+    await controller.invalidar_convites(db, mentor.id, agora, hackathon_id)
     token = secrets.token_urlsafe(32)
     convite = ConviteMentor(
         usuario_id=mentor.id,
+        hackathon_id=hackathon_id,
         token_hash=hashlib.sha256(token.encode()).hexdigest(),
         expira_em=agora + timedelta(minutes=settings.MENTOR_CONVITE_MINUTOS),
     )
     await controller.salvar_convite(db, convite)
-    await enfileirar(
+    convite.email_enfileirado = await enfileirar(
         db,
         TipoEmail.DEFINICAO_SENHA,
         destinatario_email=mentor.email,
@@ -51,31 +58,33 @@ async def convidar(db: AsyncSession, mentor: Usuario) -> None:
         contexto={
             "nome": mentor.nome,
             "perfil": "Mentor",
-            "link": link_front(f"/mentores/ativacao#token={token}"),
+            "link": link_front(f"/mentores/ativacao#token={token}&hackathon_id={hackathon_id}"),
         },
         chave=f"convite-mentor:{convite.id}",
     )
+    db.add(convite)
 
 
 async def cadastrar(db: AsyncSession, dados: MentorCreate) -> Usuario:
+    await termos_vigentes_do_hackathon(db, dados.hackathon_id)
     mentor = await criar_usuario(
         db,
         Usuario(
-            **dados.model_dump(exclude={"email"}),
+            **dados.model_dump(exclude={"email", "hackathon_id"}),
             email=dados.email.lower(),
             papel=PapelUsuario.MENTOR,
             ativo=False,
             criado_em=agora_utc(),
         ),
     )
-    await convidar(db, mentor)
+    await convidar(db, mentor, dados.hackathon_id)
     await db.commit()
     return mentor
 
 
 async def editar(db: AsyncSession, mentor_id: UUID, dados: MentorUpdate) -> Usuario:
     mentor = await consultar(db, mentor_id, bloquear=True)
-    valores = dados.model_dump(exclude_unset=True)
+    valores = dados.model_dump(exclude_unset=True, exclude={"hackathon_id"})
     mudou_email = False
     if "email" in valores:
         email = valores["email"].lower()
@@ -83,6 +92,10 @@ async def editar(db: AsyncSession, mentor_id: UUID, dados: MentorUpdate) -> Usua
         if existente is not None and existente.id != mentor.id:
             email_ja_cadastrado()
         if email != mentor.email.lower():
+            if dados.hackathon_id is None:
+                raise HTTPException(422, "Informe a edição do novo convite ao alterar o e-mail.")
+            await termos_vigentes_do_hackathon(db, dados.hackathon_id)
+            await controller.invalidar_convites(db, mentor.id, agora_utc())
             # Um novo endereço precisa comprovar sua posse pelo convite.
             mentor.ativo = False
             mentor.mentor_perfil_concluido_em = None
@@ -98,38 +111,41 @@ async def editar(db: AsyncSession, mentor_id: UUID, dados: MentorUpdate) -> Usua
     # Reutiliza o tratamento de colisões do índice case insensitive, inclusive em corrida.
     await criar_usuario(db, mentor)
     if mudou_email:
-        await convidar(db, mentor)
+        await convidar(db, mentor, dados.hackathon_id)
     await db.commit()
     return mentor
 
 
-async def reenviar_convite(db: AsyncSession, mentor_id: UUID) -> Usuario:
+async def reenviar_convite(db: AsyncSession, mentor_id: UUID, hackathon_id: UUID) -> Usuario:
     mentor = await consultar(db, mentor_id, bloquear=True)
-    if mentor.ativo:
-        raise HTTPException(409, "Mentor já está ativo.")
-    await convidar(db, mentor)
+    await convidar(db, mentor, hackathon_id)
     await db.commit()
     return mentor
 
 
-async def validar_convite(db: AsyncSession, token: str) -> tuple[Usuario, ConviteMentor]:
+async def validar_convite(
+    db: AsyncSession, token: str, hackathon_id: UUID
+) -> tuple[Usuario, ConviteMentor]:
     convite = await controller.get_convite(db, hashlib.sha256(token.encode()).hexdigest())
     if convite is None:
         convite_invalido()
     # A mesma trava serializa ativação, reenvio, edição e desativação.
     mentor = await consultar(db, convite.usuario_id, bloquear=True)
     await db.refresh(convite)
-    if convite.utilizado_em is not None or convite.expira_em <= agora_utc():
+    if (
+        convite.utilizado_em is not None
+        or convite.expira_em <= agora_utc()
+        or convite.hackathon_id is None
+    ):
         convite_invalido()
-    if mentor.ativo:
-        convite_invalido()
+    if convite.hackathon_id != hackathon_id:
+        raise HTTPException(409, "A edição informada não corresponde à edição do convite.")
     return mentor, convite
 
 
 async def ativar_por_convite(db: AsyncSession, dados: MentorAtivacao) -> Usuario:
-    mentor, convite = await validar_convite(db, dados.token)
-    await termos_vigentes_do_hackathon(db, dados.hackathon_id)
-    ids = await validar_termos_aceitos(db, dados.hackathon_id, dados.termos_ids)
+    mentor, convite = await validar_convite(db, dados.token, dados.hackathon_id)
+    ids = await validar_termos_aceitos(db, convite.hackathon_id, dados.termos_ids)
     if dados.senha is not None:
         mentor.senha_hash = await asyncio.to_thread(gerar_hash, dados.senha)
     elif mentor.senha_hash is None:
@@ -194,3 +210,32 @@ async def desativar(db: AsyncSession, mentor_id: UUID) -> Usuario:
     db.add(mentor)
     await db.commit()
     return mentor
+
+
+async def listar_convites(
+    db: AsyncSession, mentor_id: UUID, limite: int, deslocamento: int
+) -> list[ConviteMentorAdminResponse]:
+    await consultar(db, mentor_id)
+    pares = await controller.listar_convites(db, mentor_id, limite, deslocamento)
+    return [
+        ConviteMentorAdminResponse(
+            id=convite.id,
+            hackathon_id=convite.hackathon_id,
+            criado_em=convite.criado_em,
+            expira_em=convite.expira_em,
+            encerrado_em=convite.utilizado_em,
+            email_enfileirado=convite.email_enfileirado,
+            status_email=email.status if email else None,
+            cancelado_em=email.cancelado_em if email else None,
+            pendencia_administrativa=(
+                convite.utilizado_em is None
+                and (
+                    not convite.email_enfileirado
+                    or email is None
+                    or email.status == "FALHA"
+                    or convite.expira_em <= agora_utc()
+                )
+            ),
+        )
+        for convite, email in pares
+    ]

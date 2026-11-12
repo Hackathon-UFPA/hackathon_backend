@@ -137,16 +137,18 @@ def test_token_de_conta_desativada_deixa_de_valer(client, sql, usuario_no_banco)
     assert client.get("/auth/me", headers=com_token(usuario["id"])).status_code == 401
 
 
-def test_troca_de_perfil_vale_no_pedido_seguinte(client, sql, usuario_no_banco, novo_email):
+def test_troca_de_perfil_vale_no_pedido_seguinte(
+    client, sql, usuario_no_banco, novo_email, hackathon_aberto
+):
     usuario = usuario_no_banco(papel="ORGANIZADOR")
-    corpo = dados_de_usuario(novo_email(), "MENTOR")
+    corpo = dados_de_usuario(novo_email(), "MENTOR", hackathon_id=str(hackathon_aberto))
     assert (
         client.post("/admin/usuarios", json=corpo, headers=com_token(usuario["id"])).status_code
         == 201
     )
 
     sql("UPDATE usuarios SET papel = 'PARTICIPANTE' WHERE id = :id", id=usuario["id"])
-    corpo = dados_de_usuario(novo_email(), "MENTOR")
+    corpo = dados_de_usuario(novo_email(), "MENTOR", hackathon_id=str(hackathon_aberto))
 
     assert (
         client.post("/admin/usuarios", json=corpo, headers=com_token(usuario["id"])).status_code
@@ -157,37 +159,47 @@ def test_troca_de_perfil_vale_no_pedido_seguinte(client, sql, usuario_no_banco, 
 # --- Cadastro de usuários por perfil (POST /admin/usuarios) ---
 
 
-def test_cadastro_de_usuario_sem_token(client, novo_email):
-    corpo = dados_de_usuario(novo_email(), "MENTOR")
+def test_cadastro_de_usuario_sem_token(client, novo_email, hackathon_aberto):
+    corpo = dados_de_usuario(novo_email(), "MENTOR", hackathon_id=str(hackathon_aberto))
 
     assert client.post("/admin/usuarios", json=corpo).status_code == 401
 
 
 @pytest.mark.parametrize("papel", PAPEIS_SEM_ACESSO)
-def test_perfil_sem_permissao_nao_cadastra_usuarios(client, usuario_no_banco, novo_email, papel):
+def test_perfil_sem_permissao_nao_cadastra_usuarios(
+    client, usuario_no_banco, novo_email, papel, hackathon_aberto
+):
     usuario = usuario_no_banco(papel=papel)
 
-    resposta = cadastrar_usuario(client, usuario, novo_email(), "MENTOR")
+    resposta = cadastrar_usuario(
+        client, usuario, novo_email(), "MENTOR", hackathon_id=str(hackathon_aberto)
+    )
 
     assert resposta.status_code == 403
 
 
-def test_conta_pendente_nao_cadastra_usuarios(client, usuario_no_banco, novo_email):
+def test_conta_pendente_nao_cadastra_usuarios(
+    client, usuario_no_banco, novo_email, hackathon_aberto
+):
     organizador = usuario_no_banco(papel="ORGANIZADOR", situacao_conta="PENDENTE")
 
-    resposta = cadastrar_usuario(client, organizador, novo_email(), "MENTOR")
+    resposta = cadastrar_usuario(
+        client, organizador, novo_email(), "MENTOR", hackathon_id=str(hackathon_aberto)
+    )
 
     assert resposta.status_code == 403
 
 
 @pytest.mark.parametrize("papel", [p for p in PAPEIS if p != "DEV"])
 def test_organizador_cadastra_qualquer_perfil_de_negocio(
-    client, usuario_no_banco, novo_email, papel
+    client, usuario_no_banco, novo_email, papel, hackathon_aberto
 ):
     organizador = usuario_no_banco(papel="ORGANIZADOR")
     email = novo_email()
 
-    resposta = cadastrar_usuario(client, organizador, email, papel)
+    resposta = cadastrar_usuario(
+        client, organizador, email, papel, hackathon_id=str(hackathon_aberto)
+    )
 
     assert resposta.status_code == 201
     corpo = resposta.json()
@@ -199,48 +211,74 @@ def test_organizador_cadastra_qualquer_perfil_de_negocio(
     assert "senha_hash" not in corpo
 
 
-def test_organizador_nao_cadastra_dev(client, usuario_no_banco, novo_email):
+def test_organizador_nao_cadastra_dev(client, usuario_no_banco, novo_email, hackathon_aberto):
     organizador = usuario_no_banco(papel="ORGANIZADOR")
 
-    assert cadastrar_usuario(client, organizador, novo_email(), "DEV").status_code == 403
+    assert (
+        cadastrar_usuario(
+            client, organizador, novo_email(), "DEV", hackathon_id=str(hackathon_aberto)
+        ).status_code
+        == 403
+    )
 
 
 @pytest.mark.parametrize("papel", ["COMITE_TECNICO", "MENTOR"])
 def test_comite_cientifico_cadastra_comite_tecnico_e_mentor(
-    client, usuario_no_banco, novo_email, papel
+    client, usuario_no_banco, novo_email, papel, hackathon_aberto
 ):
     comite = usuario_no_banco(papel="COMITE_CIENTIFICO")
 
-    assert cadastrar_usuario(client, comite, novo_email(), papel).status_code == 201
+    assert (
+        cadastrar_usuario(
+            client, comite, novo_email(), papel, hackathon_id=str(hackathon_aberto)
+        ).status_code
+        == 201
+    )
 
 
 @pytest.mark.parametrize("papel", ["PARTICIPANTE", "COMITE_CIENTIFICO", "ORGANIZADOR", "DEV"])
 def test_comite_cientifico_nao_cadastra_os_demais_perfis(
-    client, usuario_no_banco, novo_email, papel
+    client, usuario_no_banco, novo_email, papel, hackathon_aberto
 ):
     comite = usuario_no_banco(papel="COMITE_CIENTIFICO")
 
-    assert cadastrar_usuario(client, comite, novo_email(), papel).status_code == 403
+    assert (
+        cadastrar_usuario(
+            client, comite, novo_email(), papel, hackathon_id=str(hackathon_aberto)
+        ).status_code
+        == 403
+    )
 
 
 @pytest.mark.parametrize("papel", PAPEIS)
-def test_dev_acessa_a_rota_e_cadastra_qualquer_perfil(client, usuario_no_banco, novo_email, papel):
+def test_dev_acessa_a_rota_e_cadastra_qualquer_perfil(
+    client, usuario_no_banco, novo_email, papel, hackathon_aberto
+):
     dev = usuario_no_banco(papel="DEV")
 
-    assert cadastrar_usuario(client, dev, novo_email(), papel).status_code == 201
+    assert (
+        cadastrar_usuario(
+            client, dev, novo_email(), papel, hackathon_id=str(hackathon_aberto)
+        ).status_code
+        == 201
+    )
 
 
-def test_usuario_cadastrado_consegue_entrar(client, usuario_no_banco, novo_email):
+def test_usuario_cadastrado_consegue_entrar(client, usuario_no_banco, novo_email, hackathon_aberto):
     organizador = usuario_no_banco(papel="ORGANIZADOR")
     email = novo_email()
-    cadastrar_usuario(client, organizador, email, "COMITE_TECNICO")
+    cadastrar_usuario(
+        client, organizador, email, "COMITE_TECNICO", hackathon_id=str(hackathon_aberto)
+    )
 
     resposta = client.post("/auth/login", json={"email": email, "senha": SENHA})
 
     assert resposta.status_code == 200
 
 
-def test_cadastro_de_mentor_guarda_os_dados_do_perfil(client, usuario_no_banco, novo_email):
+def test_cadastro_de_mentor_guarda_os_dados_do_perfil(
+    client, usuario_no_banco, novo_email, hackathon_aberto
+):
     organizador = usuario_no_banco(papel="ORGANIZADOR")
 
     resposta = cadastrar_usuario(
@@ -251,6 +289,7 @@ def test_cadastro_de_mentor_guarda_os_dados_do_perfil(client, usuario_no_banco, 
         empresa_parceira="Açaí Valley",
         area_atuacao="Ciência de dados",
         max_equipes=2,
+        hackathon_id=str(hackathon_aberto),
     )
 
     corpo = resposta.json()
@@ -259,18 +298,34 @@ def test_cadastro_de_mentor_guarda_os_dados_do_perfil(client, usuario_no_banco, 
     assert corpo["max_equipes"] == 2
 
 
-def test_cadastro_de_usuario_com_email_repetido(client, usuario_no_banco, novo_email):
+def test_cadastro_de_usuario_com_email_repetido(
+    client, usuario_no_banco, novo_email, hackathon_aberto
+):
     organizador = usuario_no_banco(papel="ORGANIZADOR")
     email = novo_email()
-    cadastrar_usuario(client, organizador, email, "MENTOR")
+    cadastrar_usuario(client, organizador, email, "MENTOR", hackathon_id=str(hackathon_aberto))
 
-    assert cadastrar_usuario(client, organizador, email.upper(), "MENTOR").status_code == 409
+    assert (
+        cadastrar_usuario(
+            client, organizador, email.upper(), "MENTOR", hackathon_id=str(hackathon_aberto)
+        ).status_code
+        == 409
+    )
 
 
-def test_cadastro_de_usuario_com_senha_fraca(client, usuario_no_banco, novo_email):
+def test_cadastro_de_usuario_com_senha_fraca(
+    client, usuario_no_banco, novo_email, hackathon_aberto
+):
     organizador = usuario_no_banco(papel="ORGANIZADOR")
 
-    resposta = cadastrar_usuario(client, organizador, novo_email(), "MENTOR", senha="fraca")
+    resposta = cadastrar_usuario(
+        client,
+        organizador,
+        novo_email(),
+        "MENTOR",
+        senha="fraca",
+        hackathon_id=str(hackathon_aberto),
+    )
 
     assert resposta.status_code == 422
 

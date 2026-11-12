@@ -1,4 +1,5 @@
 from typing import Annotated
+from uuid import UUID
 
 from pydantic import (
     AfterValidator,
@@ -78,6 +79,9 @@ class TokenResponse(BaseModel):
 
 # RF07/RF08: senha inicial para demais perfis; mentor define a própria senha por convite (RN33).
 class UsuarioAdminCreate(UsuarioCreate):
+    hackathon_id: UUID | None = Field(
+        default=None, description="Obrigatório somente para MENTOR: edição do convite RN33"
+    )
     senha: SenhaNova | None = Field(
         default=None,
         description=(

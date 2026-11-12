@@ -109,7 +109,8 @@ POST /auth/login
 GET /admin/usuarios/perfis      → 200  { "perfis": ["COMITE_TECNICO", "MENTOR"] }
 POST /admin/usuarios
 { "email": "mentor@acaivalley.com", "nome": "Maria Souza", "papel": "MENTOR",
-  "empresa_parceira": "Açaí Valley", "area_atuacao": "Dados", "max_equipes": 2 }
+  "empresa_parceira": "Açaí Valley", "area_atuacao": "Dados", "max_equipes": 2,
+  "hackathon_id": "UUID_DA_EDICAO_DO_CONVITE" }
 → 201  (ativo=false; convite RN33 enfileirado)
 ```
 
