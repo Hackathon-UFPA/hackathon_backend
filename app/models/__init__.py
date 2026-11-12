@@ -23,6 +23,7 @@ from .comprovante_vinculo import ComprovanteVinculo
 from .convite import Convite
 from .criterio_rubrica import CriterioRubrica
 from .designacao_avaliacao import DesignacaoAvaliacao
+from .email_outbox import EmailOutbox
 from .equipe import Equipe
 from .hackathon import Hackathon
 from .membro_equipe import MembroEquipe
@@ -44,6 +45,7 @@ __all__ = [
     "Convite",
     "CriterioRubrica",
     "DesignacaoAvaliacao",
+    "EmailOutbox",
     "Equipe",
     "Hackathon",
     "HomologacaoResultado",
