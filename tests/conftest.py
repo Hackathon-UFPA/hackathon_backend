@@ -5,12 +5,14 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.const.config import settings
 from app.main import app
 from app.security.senha import gerar_hash
+from app.services import email_envio
 
 SENHA_PADRAO = "segredo123"
 
@@ -123,6 +125,10 @@ def emails_criados():
     if emails:
         minusculos = [email.lower() for email in emails]
         executar_sql(
+            "DELETE FROM emails_outbox WHERE lower(destinatario_email) = ANY(:emails)",
+            emails=minusculos,
+        )
+        executar_sql(
             "DELETE FROM comprovantes_vinculo WHERE usuario_id IN"
             " (SELECT id FROM usuarios WHERE lower(email) = ANY(:emails))",
             emails=minusculos,
@@ -165,3 +171,39 @@ def usuario_no_banco(novo_email):
         return {"id": id_, "email": email, "senha": senha}
 
     return criar
+
+
+@pytest.fixture
+def fila_vazia(sql):
+    """O banco de testes é só dos testes: começa e termina sem nada na fila de e-mails, para o
+    worker processar apenas o que o teste criou."""
+    sql("DELETE FROM emails_outbox")
+    yield
+    sql("DELETE FROM emails_outbox")
+
+
+@pytest.fixture
+def processar(monkeypatch, fila_vazia):
+    """Roda lotes do worker de e-mail com o provedor dado, em uma conexão própria (sem pool preso
+    a um laço de eventos que já terminou). `lote` troca o tamanho do lote e `simultaneos` roda
+    vários workers ao mesmo tempo."""
+
+    def executar(provedor, *, lote: int | None = None, simultaneos: int = 1):
+        if lote is not None:
+            monkeypatch.setattr(settings, "EMAIL_LOTE", lote)
+
+        async def main():
+            engine = create_async_engine(settings.DATABASE_URL, poolclass=NullPool)
+            maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+            monkeypatch.setattr(email_envio, "async_session", maker)
+            try:
+                resumos = await asyncio.gather(
+                    *(email_envio.processar_lote(provedor) for _ in range(simultaneos))
+                )
+            finally:
+                await engine.dispose()
+            return resumos if simultaneos > 1 else resumos[0]
+
+        return asyncio.run(main())
+
+    return executar
