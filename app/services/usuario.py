@@ -2,6 +2,7 @@ import asyncio
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.const.enums import PapelUsuario
 from app.controllers.usuario import criar_usuario
 from app.exceptions.auth import acesso_negado
 from app.models import Usuario
@@ -13,10 +14,22 @@ from app.security.senha import gerar_hash
 async def cadastrar_usuario_por_perfil(
     db: AsyncSession, quem_cadastra: Usuario, dados: UsuarioAdminCreate
 ) -> Usuario:
-    """Cria um usuário de qualquer perfil que `quem_cadastra` tenha direito de cadastrar (RF07,
-    RF08). A conta já nasce ativa: o comprovante de vínculo vale só para o cadastro público."""
+    """RF07/RF08: demais perfis ativos; mentores seguem obrigatoriamente a RN33."""
     if not pode_cadastrar(quem_cadastra.papel, dados.papel):
         acesso_negado()
+
+    if dados.papel == PapelUsuario.MENTOR:
+        from app.schemas.mentor import MentorCreate
+        from app.services.mentor import cadastrar
+
+        return await cadastrar(
+            db,
+            MentorCreate.model_validate(
+                dados.model_dump(
+                    include={"nome", "email", "empresa_parceira", "area_atuacao", "max_equipes"}
+                )
+            ),
+        )
 
     usuario = await criar_usuario(
         db,

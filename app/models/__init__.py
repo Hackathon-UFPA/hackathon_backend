@@ -21,6 +21,7 @@ from .artefato import Artefato
 from .avaliacao import Avaliacao
 from .comprovante_vinculo import ComprovanteVinculo
 from .convite import Convite
+from .convite_mentor import ConviteMentor
 from .criterio_rubrica import CriterioRubrica
 from .designacao_avaliacao import DesignacaoAvaliacao
 from .email_outbox import EmailOutbox
@@ -43,6 +44,7 @@ __all__ = [
     "Avaliacao",
     "ComprovanteVinculo",
     "Convite",
+    "ConviteMentor",
     "CriterioRubrica",
     "DesignacaoAvaliacao",
     "EmailOutbox",

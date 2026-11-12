@@ -1,4 +1,4 @@
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -31,8 +31,11 @@ async def usuario_atual(
 
 
 async def usuario_ativo(usuario: Usuario = Depends(usuario_atual)) -> Usuario:
-    """Padrão das rotas protegidas: conta pendente (comprovante ainda não aprovado) fica de fora."""
-    if usuario.situacao_conta == SituacaoConta.PENDENTE:
+    """Exige RN33 concluída para mentor e comprovante aprovado para participante pendente."""
+    if usuario.papel == PapelUsuario.MENTOR:
+        if not usuario.mentor_ativado_em or not usuario.mentor_perfil_concluido_em:
+            raise HTTPException(403, "Mentor pendente: conclua o perfil e aceite os termos (RN33).")
+    elif usuario.situacao_conta == SituacaoConta.PENDENTE:
         conta_pendente()
     return usuario
 

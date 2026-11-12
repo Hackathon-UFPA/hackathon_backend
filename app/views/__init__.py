@@ -12,6 +12,8 @@ from app.views.hackathons import router_publico as hackathons_publico
 from app.views.health import router as health
 from app.views.inscricao import router as inscricao
 from app.views.membro_equipe import router as membros_equipe
+from app.views.mentores import router as mentores
+from app.views.mentores import router_publico as mentores_publico
 from app.views.notificacoes import router as notificacoes
 from app.views.resultado import router_admin as resultado_admin
 from app.views.resultado import router_equipe as resultado_equipe
@@ -29,6 +31,8 @@ router = APIRouter()
 router.include_router(health)
 router.include_router(auth)
 router.include_router(usuarios)
+router.include_router(mentores)
+router.include_router(mentores_publico)
 router.include_router(hackathons)
 router.include_router(hackathons_publico)
 router.include_router(equipes)

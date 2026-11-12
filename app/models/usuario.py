@@ -22,7 +22,7 @@ class Usuario(SQLModel, table=True):
     senha_hash: str | None = Field(default=None)
     tentativas_login: int = Field(default=0, sa_type=SmallInteger, nullable=False)
     bloqueado_ate: datetime | None = Field(default=None)
-    # PENDENTE até o comprovante de vínculo ser aprovado (RN25)
+    # Participante: PENDENTE até aprovação do comprovante (RN25). Mentor usa marcos RN33.
     situacao_conta: SituacaoConta = Field(
         default=SituacaoConta.ATIVA,
         sa_type=pg_enum(SituacaoConta, "situacao_conta"),
@@ -32,5 +32,7 @@ class Usuario(SQLModel, table=True):
     empresa_parceira: str | None = Field(default=None)
     area_atuacao: str | None = Field(default=None)
     max_equipes: int | None = Field(default=None, sa_type=SmallInteger)
+    mentor_perfil_concluido_em: datetime | None = Field(default=None)
+    mentor_ativado_em: datetime | None = Field(default=None)
     criado_em: datetime | None = Field(default=None)
     atualizado_em: datetime | None = Field(default=None)

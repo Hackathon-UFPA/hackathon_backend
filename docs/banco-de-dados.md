@@ -2,6 +2,8 @@
 
 # Banco de dados
 
+BE-S5-10: `V202611121100__ativacao_mentores.sql` adiciona `usuarios.mentor_perfil_concluido_em`, `usuarios.mentor_ativado_em` e `convites_mentor` (hash de token, validade e consumo). Reutiliza os campos de perfil de mentor e as tabelas de termos existentes. A pendência de ativação é independente da comprovação acadêmica. Detalhes em [Mentores](mentores.md).
+
 ## Modelo de dados
 
 ```mermaid

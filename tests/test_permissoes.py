@@ -26,6 +26,16 @@ def com_token(usuario_id) -> dict:
 
 
 def dados_de_usuario(email: str, papel: str, **extras) -> dict:
+    if papel == "MENTOR":
+        return {
+            "email": email,
+            "papel": papel,
+            "nome": "Fulano de Tal",
+            "empresa_parceira": "Açaí Valley",
+            "area_atuacao": "Dados",
+            "max_equipes": 2,
+            **extras,
+        }
     return {"email": email, "papel": papel, "nome": "Fulano de Tal", "senha": SENHA, **extras}
 
 
@@ -184,6 +194,7 @@ def test_organizador_cadastra_qualquer_perfil_de_negocio(
     assert corpo["email"] == email
     assert corpo["papel"] == papel
     assert corpo["situacao_conta"] == "ATIVA"
+    assert corpo["ativo"] is (papel != "MENTOR")
     assert "senha" not in corpo
     assert "senha_hash" not in corpo
 
@@ -222,7 +233,7 @@ def test_dev_acessa_a_rota_e_cadastra_qualquer_perfil(client, usuario_no_banco, 
 def test_usuario_cadastrado_consegue_entrar(client, usuario_no_banco, novo_email):
     organizador = usuario_no_banco(papel="ORGANIZADOR")
     email = novo_email()
-    cadastrar_usuario(client, organizador, email, "MENTOR")
+    cadastrar_usuario(client, organizador, email, "COMITE_TECNICO")
 
     resposta = client.post("/auth/login", json={"email": email, "senha": SENHA})
 

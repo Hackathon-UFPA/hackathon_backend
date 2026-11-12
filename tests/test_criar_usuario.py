@@ -53,6 +53,11 @@ def test_recusa_senha_fraca(novo_email):
         rodar_cadastro(novo_email(), senha="fraca")
 
 
+def test_script_nao_contorna_ativacao_de_mentor(novo_email):
+    with pytest.raises(ValueError, match="RN33"):
+        rodar_cadastro(novo_email(), papel=PapelUsuario.MENTOR)
+
+
 def test_recusa_email_ja_cadastrado(novo_email):
     email = novo_email()
     rodar_cadastro(email)
