@@ -28,7 +28,7 @@ BE-S4-05 (RF21, RF22, RF23, RF25).
 - **Q25, quem confere o comprovante.** A história de usuário diz Organizador e o comentário do banco diz Comitê Científico; as rotas aceitam os dois. A lista fica em `PERFIS_QUE_VALIDAM_COMPROVANTE`, em `app/security/permissoes.py`.
 - **Quem não tem comprovante.** "Vínculo validado" significa ter comprovante `APROVADO` no hackathon. Participante cadastrado por um gestor (conta ativa, sem comprovante) segura a homologação até enviar um com `POST /comprovantes` e ser aprovado.
 - **Recusa.** Só comprovantes `PENDENTE` são decididos; um comprovante aprovado não é revogado por esta API.
-- **Avisos.** A documentação já registra que não há infraestrutura de e-mail ou notificações. "O integrante é avisado" (RF21) e "a equipe é avisada" (RF23) ficam atendidos pela consulta: `GET /comprovantes/meus` e `GET /equipes/{id}/painel`.
+- **Avisos.** Ao concluir a inscrição, todos os integrantes recebem por e-mail o protocolo (`INSCRICAO_CONCLUIDA`), e quando a equipe passa a homologada recebem `EQUIPE_HOMOLOGADA` (RF22, RF23, RF60; veja [E-mails](emails.md)). O resultado da conferência do comprovante (RF21) ainda não tem e-mail: continua disponível por consulta em `GET /comprovantes/meus` e `GET /equipes/{id}/painel`.
 - **Prazo.** A conclusão confere também as datas do edital quando existem, ao contrário das demais rotas, que olham só o `status`.
 
 ---

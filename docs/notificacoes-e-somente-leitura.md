@@ -12,7 +12,7 @@ RF33 e RF34. Dependem de RF31, RF32 ([Resultado](resultado.md)) e RF06.
 
 ## Notificação (RF33)
 
-**Canal.** A decisão Q16 (e-mail, plataforma ou ambos) **não está registrada**. Por ora só existe o canal `PLATAFORMA`: a notificação fica disponível em `GET /me/notificacoes`. O e-mail é um ponto de extensão (`app/integrations/email.py`, sem implementação e sem chamadas) e está **pendente**. Quando a Q16 for decidida, o envio por e-mail deve gravar uma linha com `canal = EMAIL` e atualizar o `status_envio`.
+**Canal.** A decisão Q16 foi encerrada: o resultado é avisado por **plataforma e e-mail**. Na plataforma, a notificação fica disponível em `GET /me/notificacoes` (canal `PLATAFORMA`). Por e-mail, o aviso `RESULTADO_PROPOSTA` entra na fila de e-mails na mesma transação da homologação (veja [E-mails](emails.md)) e diz apenas se a proposta foi aprovada, com o link para a plataforma, sem parecer nem nota. O status de entrega do e-mail é acompanhado em `GET /admin/emails`, e não em `notificacoes_resultado`: o valor `EMAIL` do enum `canal_notificacao` continua reservado e sem uso.
 
 **Destinatários.** Todos os integrantes (`membros_equipe`) de cada equipe com proposta no resultado, aprovada ou não. Equipes sem proposta enviada não entram no resultado e não são notificadas.
 

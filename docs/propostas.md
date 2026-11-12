@@ -32,8 +32,9 @@ por proposta aos protocolos do tipo `PROPOSTA`, complementando a unicidade do n�
 No painel, `protocolo` continua representando a inscrição e `protocolo_proposta` traz
 separadamente o número e a data da proposta, ou `null` antes do envio.
 
-**Pendências:** envio do protocolo por e-mail depende de integração futura e não é
-executado nem simulado. A obrigatoriedade de anexo depende de regra de negócio explícita;
+**E-mail do protocolo (RF28).** Ao enviar a proposta, o líder recebe o aviso `PROTOCOLO_PROPOSTA` com o número e o horário de Brasília, pela fila de e-mails, na mesma transação do envio (veja [E-mails](emails.md)). Se o envio da proposta falhar, nenhum e-mail é gerado.
+
+**Pendências:** a obrigatoriedade de anexo depende de regra de negócio explícita;
 esta entrega não exige anexo.
 
 ---

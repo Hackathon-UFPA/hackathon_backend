@@ -24,6 +24,7 @@ API do sistema de gestão de hackathons da UFPA, construída com **FastAPI**. Cu
 - [Avaliação](docs/avaliacao.md): distribuição e registro da avaliação científica pela rubrica
 - [Resultado](docs/resultado.md): homologação do resultado e propostas aprovadas públicas
 - [Notificações e somente leitura](docs/notificacoes-e-somente-leitura.md): aviso do resultado às equipes e bloqueio de escrita das não aprovadas
+- [E-mails](docs/emails.md): fila de envio, provedor SMTP, templates em português e acompanhamento
 - [Banco de dados](docs/banco-de-dados.md): tabelas, enums e migrations
 - [Guia de desenvolvimento](docs/desenvolvimento.md): como criar rotas, comandos e CI/CD
 
@@ -44,11 +45,11 @@ Com a API no ar, a documentação interativa das rotas fica em `http://localhost
 | Avaliação científica pela rubrica       | RF30, BE-S4-10     | Concluído |
 | Homologação do resultado e aprovadas    | RF31, RF32, BE-S4-11 | Concluído |
 | Notificação do resultado e somente leitura | RF33, RF34, BE-S4-12 | Concluído (canal plataforma) |
-| Envio de e-mails                        | Q16                | Pendente: canal sem decisão registrada; ponto de extensão em `app/integrations/email.py` |
+| E-mails transacionais (fila, worker e templates) | RNF28, RF60, BE-S5-05 | Concluído (ver [E-mails](docs/emails.md)) |
 
 ### Notificação do resultado e somente leitura (BE-S4-12)
 
-- Canal: só **plataforma** (`GET /me/notificacoes`). A decisão **Q16** (e-mail, plataforma ou ambos) segue sem registro; o e-mail é um ponto de extensão em `app/integrations/email.py` e está **pendente**.
+- Canal na plataforma: `GET /me/notificacoes`. A decisão **Q16** foi encerrada (e-mail e plataforma, com o chat como exceção) e o aviso do resultado também sai por e-mail, pela fila de [E-mails](docs/emails.md) (BE-S5-05).
 - Depois da homologação do resultado, equipe com proposta reprovada fica **somente leitura** no servidor (409 nas rotas de escrita, inclusive para DEV). Equipe sem proposta enviada continua editável (regra a confirmar com o grupo).
 - **Corrida aceita:** uma escrita que passou na checagem antes do commit da homologação vale.
 - Detalhes em [Notificações e somente leitura](docs/notificacoes-e-somente-leitura.md).
