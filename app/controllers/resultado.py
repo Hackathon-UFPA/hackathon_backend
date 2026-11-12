@@ -1,6 +1,8 @@
+from dataclasses import dataclass
+from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import and_
+from sqlalchemy import and_, func
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -10,6 +12,7 @@ from app.models import (
     DesignacaoAvaliacao,
     Equipe,
     HomologacaoResultado,
+    NotaCriterioAvaliacao,
     ResultadoProposta,
     Submissao,
     Tema,
@@ -39,11 +42,29 @@ async def listar_propostas_com_equipe_e_tema(
     return list((await db.exec(consulta)).all())
 
 
+@dataclass(frozen=True)
+class DesignacaoComAvaliacao:
+    """Uma designação do hackathon com a avaliação do avaliador designado, se existir."""
+
+    submissao_id: UUID
+    avaliador_id: UUID
+    status: StatusAvaliacao | None
+    nota: Decimal | None
+    recomendacao: RecomendacaoAvaliacao | None
+    parecer: str | None
+    rubrica_id: UUID | None
+    notas_por_criterio: int
+
+
 async def listar_designacoes_com_avaliacao(
     db: AsyncSession, hackathon_id: UUID
-) -> list[tuple[UUID, UUID, StatusAvaliacao | None, object, RecomendacaoAvaliacao | None]]:
-    """Cada designação do hackathon com a avaliação do avaliador designado, se existir:
-    (submissao_id, avaliador_id, status, nota, recomendacao)."""
+) -> list[DesignacaoComAvaliacao]:
+    notas = (
+        select(func.count())
+        .select_from(NotaCriterioAvaliacao)
+        .where(col(NotaCriterioAvaliacao.avaliacao_id) == col(Avaliacao.id))
+        .scalar_subquery()
+    )
     consulta = (
         select(
             DesignacaoAvaliacao.submissao_id,
@@ -51,6 +72,9 @@ async def listar_designacoes_com_avaliacao(
             Avaliacao.status,
             Avaliacao.nota,
             Avaliacao.recomendacao,
+            Avaliacao.comentarios,
+            Avaliacao.rubrica_id,
+            notas,
         )
         .outerjoin(
             Avaliacao,
@@ -61,7 +85,10 @@ async def listar_designacoes_com_avaliacao(
         )
         .where(DesignacaoAvaliacao.hackathon_id == hackathon_id)
     )
-    return list((await db.exec(consulta)).all())
+    return [
+        DesignacaoComAvaliacao(*linha[:7], notas_por_criterio=linha[7] or 0)
+        for linha in (await db.exec(consulta)).all()
+    ]
 
 
 async def listar_resultados(db: AsyncSession, homologacao_id: UUID) -> list[ResultadoProposta]:

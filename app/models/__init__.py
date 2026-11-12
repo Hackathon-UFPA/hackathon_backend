@@ -39,6 +39,7 @@ from .submissao import Submissao
 from .tema import Tema
 from .termo import Termo
 from .usuario import Usuario
+from .versao_proposta import VersaoProposta
 
 __all__ = [
     "AceiteTermo",
@@ -65,4 +66,5 @@ __all__ = [
     "Tema",
     "Termo",
     "Usuario",
+    "VersaoProposta",
 ]

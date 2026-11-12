@@ -7,7 +7,7 @@ pública e a consulta administrativa leem dali em diante.
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from decimal import ROUND_HALF_UP, Decimal, localcontext
 from uuid import UUID
 
@@ -18,6 +18,7 @@ from app.const.enums import RecomendacaoAvaliacao, StatusAvaliacao
 from app.const.resultado import CodigoPendenciaResultado
 from app.controllers.hackathon import get_hackathon_para_atualizar
 from app.controllers.resultado import (
+    DesignacaoComAvaliacao,
     adicionar_homologacao,
     get_homologacao,
     get_nome_usuario,
@@ -27,6 +28,7 @@ from app.controllers.resultado import (
     listar_propostas_com_equipe_e_tema,
     listar_resultados,
 )
+from app.controllers.rubrica import get_rubrica_do_hackathon, listar_criterios
 from app.exceptions.convite import hackathon_nao_encontrado
 from app.exceptions.db import erro_de_integridade_sql
 from app.exceptions.resultado import (
@@ -47,6 +49,7 @@ from app.schemas.resultado import (
 from app.services.email_eventos import avisar_resultado
 from app.services.equipe import consultar
 from app.services.notificacao import criar_notificacoes_do_resultado, pareceres_da_proposta
+from app.validations.inscricao import como_utc
 
 
 def media_das_notas(notas: list[Decimal]) -> Decimal | None:
@@ -69,6 +72,7 @@ class _Consolidado:
     enviado_em: datetime | None
     designados: int = 0
     notas: list[Decimal] = field(default_factory=list)
+    incompletas: int = 0
     aprovacao: int = 0
     reprovacao: int = 0
     classificacao: int | None = None
@@ -94,8 +98,25 @@ def _classificar(propostas: list[_Consolidado]) -> None:
         proposta.classificacao = posicao
 
 
+def _avaliacao_completa(
+    designacao: DesignacaoComAvaliacao, rubrica_id: UUID | None, total_criterios: int
+) -> bool:
+    """RF30: nota final, recomendação, parecer não vazio e nota em todos os critérios da
+    rubrica publicada da edição. Avaliação legada (migrada como ENVIADA sem rubrica, notas por
+    critério ou recomendação) não passa: precisa ser concluída antes de homologar."""
+    return (
+        designacao.nota is not None
+        and designacao.recomendacao is not None
+        and bool(designacao.parecer and designacao.parecer.strip())
+        and rubrica_id is not None
+        and designacao.rubrica_id == rubrica_id
+        and total_criterios > 0
+        and designacao.notas_por_criterio == total_criterios
+    )
+
+
 async def _consolidar(
-    db: AsyncSession, hackathon: Hackathon
+    db: AsyncSession, hackathon: Hackathon, agora: datetime | None = None
 ) -> tuple[list[_Consolidado], list[PendenciaResultadoResponse]]:
     """Calcula o resultado de cada proposta ENVIADA e lista o que impede homologar."""
     propostas = {
@@ -111,25 +132,41 @@ async def _consolidar(
             db, hackathon.id
         )
     }
-    for submissao_id, _, status, nota, recomendacao in await listar_designacoes_com_avaliacao(
-        db, hackathon.id
-    ):
-        proposta = propostas.get(submissao_id)
+    rubrica = await get_rubrica_do_hackathon(db, hackathon.id)
+    rubrica_id = rubrica.id if rubrica is not None and rubrica.publicada_em is not None else None
+    total_criterios = len(await listar_criterios(db, rubrica_id)) if rubrica_id else 0
+    for designacao in await listar_designacoes_com_avaliacao(db, hackathon.id):
+        proposta = propostas.get(designacao.submissao_id)
         if proposta is None:  # designação de proposta que não está ENVIADA
             continue
         proposta.designados += 1
-        if status == StatusAvaliacao.ENVIADA and nota is not None:
-            proposta.notas.append(Decimal(nota))
-            if recomendacao == RecomendacaoAvaliacao.APROVACAO:
-                proposta.aprovacao += 1
-            elif recomendacao == RecomendacaoAvaliacao.REPROVACAO:
-                proposta.reprovacao += 1
+        if designacao.status != StatusAvaliacao.ENVIADA:
+            continue
+        if not _avaliacao_completa(designacao, rubrica_id, total_criterios):
+            proposta.incompletas += 1
+            continue
+        proposta.notas.append(Decimal(designacao.nota))
+        if designacao.recomendacao == RecomendacaoAvaliacao.APROVACAO:
+            proposta.aprovacao += 1
+        elif designacao.recomendacao == RecomendacaoAvaliacao.REPROVACAO:
+            proposta.reprovacao += 1
 
     lista = list(propostas.values())
     _classificar(lista)
     lista.sort(key=lambda p: (p.classificacao is None, p.classificacao or 0, str(p.submissao_id)))
 
     pendencias: list[PendenciaResultadoResponse] = []
+    fim = hackathon.propostas_fim
+    if fim is None or como_utc(agora or datetime.now(UTC)) <= como_utc(fim):
+        pendencias.append(
+            PendenciaResultadoResponse(
+                codigo=CodigoPendenciaResultado.PRAZO_DE_PROPOSTAS_ABERTO,
+                mensagem=(
+                    "O prazo de envio de propostas não está configurado ou ainda não terminou: "
+                    "homologar agora deixaria de fora propostas enviadas dentro do prazo."
+                ),
+            )
+        )
     n = hackathon.avaliadores_por_proposta
     if n is None:
         pendencias.append(
@@ -158,14 +195,26 @@ async def _consolidar(
                     submissao_id=proposta.submissao_id,
                 )
             )
-        faltam = proposta.designados - len(proposta.notas)
+        if proposta.incompletas:
+            pendencias.append(
+                PendenciaResultadoResponse(
+                    codigo=CodigoPendenciaResultado.AVALIACAO_INCOMPLETA,
+                    mensagem=(
+                        f"A proposta '{nome}' tem {proposta.incompletas} avaliação(ões) enviada(s) "
+                        "sem nota em todos os critérios da rubrica publicada, recomendação ou "
+                        "parecer (inclui avaliações legadas): conclua-as antes de homologar."
+                    ),
+                    submissao_id=proposta.submissao_id,
+                )
+            )
+        faltam = proposta.designados - len(proposta.notas) - proposta.incompletas
         if faltam > 0:
             pendencias.append(
                 PendenciaResultadoResponse(
                     codigo=CodigoPendenciaResultado.AVALIACAO_PENDENTE,
                     mensagem=(
-                        f"A proposta '{nome}' tem {len(proposta.notas)} de "
-                        f"{proposta.designados} avaliações enviadas."
+                        f"A proposta '{nome}' tem {faltam} de {proposta.designados} "
+                        "avaliações ainda não enviadas."
                     ),
                     submissao_id=proposta.submissao_id,
                 )

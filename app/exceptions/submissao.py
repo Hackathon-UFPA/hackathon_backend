@@ -66,3 +66,17 @@ def proposta_enviada_nao_encontrada():
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND, detail="Proposta enviada não encontrada."
     )
+
+
+def proposta_nao_enviada_para_reenvio():
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail="Só uma proposta já enviada pode receber nova versão; envie o rascunho primeiro.",
+    )
+
+
+def reenvio_bloqueado(motivo: str):
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail=f"Não é possível enviar nova versão: {motivo}",
+    )

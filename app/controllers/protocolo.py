@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlmodel import select
+from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.const.enums import TipoProtocolo
@@ -16,7 +16,10 @@ async def criar_protocolo(db: AsyncSession, protocolo: Protocolo) -> Protocolo:
 
 
 async def get_protocolo_da_proposta(db: AsyncSession, equipe_id: UUID) -> Protocolo | None:
-    consulta = select(Protocolo).where(
-        Protocolo.equipe_id == equipe_id, Protocolo.tipo == TipoProtocolo.PROPOSTA
+    """Protocolo do envio mais recente (BE-S5-09: cada versão da proposta tem o seu)."""
+    consulta = (
+        select(Protocolo)
+        .where(Protocolo.equipe_id == equipe_id, Protocolo.tipo == TipoProtocolo.PROPOSTA)
+        .order_by(col(Protocolo.emitido_em).desc(), col(Protocolo.numero).desc())
     )
     return (await db.exec(consulta)).first()

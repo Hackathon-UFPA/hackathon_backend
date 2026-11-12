@@ -25,6 +25,13 @@ async def get_hackathon_para_atualizar(db: AsyncSession, hackathon_id: UUID) -> 
     return (await db.exec(consulta)).first()
 
 
+async def get_hackathon_compartilhado(db: AsyncSession, hackathon_id: UUID) -> Hackathon | None:
+    """FOR SHARE: vários envios de proposta andam juntos, mas esperam (e são esperados por)
+    quem trava a edição com FOR UPDATE, como a distribuição e a homologação do resultado."""
+    consulta = select(Hackathon).where(Hackathon.id == hackathon_id).with_for_update(read=True)
+    return (await db.exec(consulta)).first()
+
+
 async def salvar_hackathon(db: AsyncSession, hackathon: Hackathon) -> Hackathon:
     db.add(hackathon)
     await db.flush()
