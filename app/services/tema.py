@@ -4,7 +4,7 @@ from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.const.enums import PapelUsuario
+from app.const.enums import PapelUsuario, SituacaoConta
 from app.controllers.equipe import get_hackathon_by_id
 from app.controllers.tema import (
     atualizar_tema,
@@ -14,18 +14,23 @@ from app.controllers.tema import (
     listar_temas,
     tema_tem_propostas,
 )
-from app.exceptions.auth import acesso_negado
+from app.exceptions.auth import acesso_negado, conta_pendente, nao_autenticado
 from app.exceptions.convite import hackathon_nao_encontrado
 from app.exceptions.db import erro_de_integridade_sql
 from app.exceptions.submissao import tema_nao_encontrado
 from app.exceptions.tema import tema_com_propostas, titulo_de_tema_repetido
 from app.models import Tema, Usuario
 from app.schemas.tema import TemaCreate, TemaUpdate
-from app.security.permissoes import PERFIS_QUE_GERENCIAM_EDITAL
+from app.security.permissoes import PERFIS_QUE_GERENCIAM_TEMAS_E_RUBRICAS
 
 
-def gerencia_edital(usuario: Usuario) -> bool:
-    return usuario.papel == PapelUsuario.DEV or usuario.papel in PERFIS_QUE_GERENCIAM_EDITAL
+def gerencia_temas(usuario: Usuario | None) -> bool:
+    """Comitê Científico, Organizador (exceção administrativa) ou DEV, com conta ativa."""
+    if usuario is None or usuario.situacao_conta == SituacaoConta.PENDENTE:
+        return False
+    return (
+        usuario.papel == PapelUsuario.DEV or usuario.papel in PERFIS_QUE_GERENCIAM_TEMAS_E_RUBRICAS
+    )
 
 
 def _tratar_integridade(error: IntegrityError):
@@ -56,19 +61,27 @@ async def criar(db: AsyncSession, hackathon_id: UUID, dados: TemaCreate) -> Tema
 
 
 async def listar(
-    db: AsyncSession, usuario: Usuario, hackathon_id: UUID, incluir_inativos: bool
+    db: AsyncSession, usuario: Usuario | None, hackathon_id: UUID, incluir_inativos: bool
 ) -> list[Tema]:
-    """Temas desativados não aparecem para escolha na proposta (RF15)."""
-    if incluir_inativos and not gerencia_edital(usuario):
-        acesso_negado()
+    """Catálogo público dos temas ativos (RF10, RF17). Temas desativados não aparecem para
+    escolha na proposta (RF15) e só quem gerencia pode pedi-los."""
+    if incluir_inativos:
+        if usuario is None:
+            nao_autenticado()
+        if usuario.situacao_conta == SituacaoConta.PENDENTE:
+            conta_pendente()
+        if not gerencia_temas(usuario):
+            acesso_negado()
     if await get_hackathon_by_id(db, hackathon_id) is None:
         hackathon_nao_encontrado()
     return await listar_temas(db, hackathon_id, apenas_ativos=not incluir_inativos)
 
 
-async def consultar(db: AsyncSession, usuario: Usuario, tema_id: UUID) -> Tema:
+async def consultar(db: AsyncSession, usuario: Usuario | None, tema_id: UUID) -> Tema:
+    """Público para temas ativos. Desativado só aparece para quem gerencia; para os demais,
+    inclusive visitantes, é como se não existisse (404)."""
     tema = await get_tema_by_id(db, tema_id)
-    if tema is None or (not tema.ativo and not gerencia_edital(usuario)):
+    if tema is None or (not tema.ativo and not gerencia_temas(usuario)):
         tema_nao_encontrado()
     return tema
 

@@ -3,6 +3,7 @@ from uuid import UUID
 from sqlmodel import delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.const.enums import FaseRubrica
 from app.models import CriterioRubrica, Hackathon, Rubrica
 
 
@@ -13,8 +14,10 @@ async def get_hackathon_para_atualizar(db: AsyncSession, hackathon_id: UUID) -> 
     return (await db.exec(consulta)).first()
 
 
-async def get_rubrica_do_hackathon(db: AsyncSession, hackathon_id: UUID) -> Rubrica | None:
-    consulta = select(Rubrica).where(Rubrica.hackathon_id == hackathon_id)
+async def get_rubrica_do_hackathon(
+    db: AsyncSession, hackathon_id: UUID, fase: FaseRubrica = FaseRubrica.PROPOSTA
+) -> Rubrica | None:
+    consulta = select(Rubrica).where(Rubrica.hackathon_id == hackathon_id, Rubrica.fase == fase)
     return (await db.exec(consulta)).first()
 
 

@@ -4,6 +4,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.const.enums import FaseRubrica
 from app.schemas.tema import TextoObrigatorio, Titulo
 from app.validations.rubrica import normalizar_nome
 
@@ -79,6 +80,7 @@ class CriterioRubricaResponse(BaseModel):
 class RubricaResponse(BaseModel):
     id: UUID
     hackathon_id: UUID
+    fase: FaseRubrica
     publicada: bool
     publicada_em: datetime | None = None
     soma_pesos: Decimal
