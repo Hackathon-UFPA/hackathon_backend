@@ -1,0 +1,8 @@
+{% extends "_base.html" %}
+{% set titulo = "Equipe homologada" %}
+{% set texto_botao = "Acessar a plataforma" %}
+{% block conteudo %}
+<p style="margin:0 0 12px 0;line-height:1.5;">Olá, {{ nome }}.</p>
+<p style="margin:0 0 12px 0;line-height:1.5;">{{ 'A equipe ' ~ equipe_nome if equipe_nome else 'A sua equipe' }} foi homologada no Hackathon UFPA.</p>
+<p style="margin:0 0 12px 0;line-height:1.5;">A equipe já pode enviar a proposta dentro do prazo do edital.</p>
+{% endblock %}

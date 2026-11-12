@@ -1,0 +1,12 @@
+Inscrição da equipe concluída
+
+Olá, {{ nome }}.
+
+A inscrição {{ 'da equipe ' ~ equipe_nome if equipe_nome else 'da sua equipe' }} no Hackathon UFPA foi concluída.
+
+Protocolo da inscrição: {{ protocolo_numero }}. Guarde o número como comprovante.
+
+{% if link %}Acessar a plataforma: {{ link }}
+
+{% endif %}--
+Mensagem automática do Hackathon UFPA. Não responda este e-mail.

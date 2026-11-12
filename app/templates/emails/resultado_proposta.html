@@ -1,0 +1,8 @@
+{% extends "_base.html" %}
+{% set titulo = "Resultado da proposta" %}
+{% set texto_botao = "Ver resultado" %}
+{% block conteudo %}
+<p style="margin:0 0 12px 0;line-height:1.5;">Olá, {{ nome }}.</p>
+<p style="margin:0 0 12px 0;line-height:1.5;">O resultado do hackathon foi homologado. {{ 'A proposta da equipe ' ~ equipe_nome if equipe_nome else 'A proposta da sua equipe' }} {{ 'foi aprovada.' if aprovada else 'não foi aprovada. A equipe continua com acesso à plataforma para consulta.' }}</p>
+<p style="margin:0 0 12px 0;line-height:1.5;">O parecer completo está disponível no painel da equipe, na plataforma.</p>
+{% endblock %}

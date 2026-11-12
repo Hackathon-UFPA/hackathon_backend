@@ -1,0 +1,8 @@
+{% extends "_base.html" %}
+{% set titulo = "Redefinição de senha" %}
+{% set texto_botao = "Redefinir senha" %}
+{% block conteudo %}
+<p style="margin:0 0 12px 0;line-height:1.5;">Olá, {{ nome }}.</p>
+<p style="margin:0 0 12px 0;line-height:1.5;">Recebemos um pedido para redefinir a senha da sua conta no Hackathon UFPA. O endereço abaixo é temporário e vale por {{ validade_minutos }} minutos.</p>
+{% endblock %}
+{% block rodape %} Se você não pediu a redefinição, ignore esta mensagem: a sua senha continua a mesma.{% endblock %}

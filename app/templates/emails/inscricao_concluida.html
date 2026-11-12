@@ -1,0 +1,8 @@
+{% extends "_base.html" %}
+{% set titulo = "Inscrição da equipe concluída" %}
+{% set texto_botao = "Acessar a plataforma" %}
+{% block conteudo %}
+<p style="margin:0 0 12px 0;line-height:1.5;">Olá, {{ nome }}.</p>
+<p style="margin:0 0 12px 0;line-height:1.5;">A inscrição {{ 'da equipe ' ~ equipe_nome if equipe_nome else 'da sua equipe' }} no Hackathon UFPA foi concluída.</p>
+<p style="margin:0 0 12px 0;line-height:1.5;">Protocolo da inscrição: {{ protocolo_numero }}. Guarde o número como comprovante.</p>
+{% endblock %}

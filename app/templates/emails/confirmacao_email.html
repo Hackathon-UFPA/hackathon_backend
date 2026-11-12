@@ -1,0 +1,8 @@
+{% extends "_base.html" %}
+{% set titulo = "Confirme o seu e-mail" %}
+{% set texto_botao = "Confirmar e-mail" %}
+{% block conteudo %}
+<p style="margin:0 0 12px 0;line-height:1.5;">Olá, {{ nome }}.</p>
+<p style="margin:0 0 12px 0;line-height:1.5;">Recebemos um cadastro no Hackathon UFPA com este endereço de e-mail. Para concluir, confirme o e-mail pelo endereço abaixo.</p>
+{% endblock %}
+{% block rodape %} Se você não fez este cadastro, ignore esta mensagem.{% endblock %}

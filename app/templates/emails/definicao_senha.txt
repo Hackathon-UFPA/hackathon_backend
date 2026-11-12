@@ -1,0 +1,10 @@
+Seu acesso ao Hackathon UFPA
+
+Olá, {{ nome }}.
+
+Você foi cadastrado(a) no Hackathon UFPA com o perfil {{ perfil }}. Para acessar a plataforma, defina a sua senha pelo endereço abaixo.
+
+{% if link %}Definir senha: {{ link }}
+
+{% endif %}--
+Mensagem automática do Hackathon UFPA. Não responda este e-mail. Se você não esperava este acesso, ignore esta mensagem.

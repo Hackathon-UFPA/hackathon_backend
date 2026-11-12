@@ -1,0 +1,12 @@
+Convite para participar de uma equipe
+
+Olá, {{ nome }}.
+
+{{ lider_nome or 'O líder da equipe' }} convidou você para participar {{ 'da equipe ' ~ equipe_nome if equipe_nome else 'de uma equipe' }} no Hackathon UFPA.
+
+Entre na plataforma para confirmar ou recusar a participação.
+
+{% if link %}Ver convite: {{ link }}
+
+{% endif %}--
+Mensagem automática do Hackathon UFPA. Não responda este e-mail.

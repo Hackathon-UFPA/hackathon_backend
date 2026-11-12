@@ -1,0 +1,10 @@
+Confirme o seu e-mail
+
+Olá, {{ nome }}.
+
+Recebemos um cadastro no Hackathon UFPA com este endereço de e-mail. Para concluir, confirme o e-mail pelo endereço abaixo.
+
+{% if link %}Confirmar e-mail: {{ link }}
+
+{% endif %}--
+Mensagem automática do Hackathon UFPA. Não responda este e-mail. Se você não fez este cadastro, ignore esta mensagem.
