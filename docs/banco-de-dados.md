@@ -17,6 +17,8 @@ erDiagram
     equipes ||--o{ artefatos : produz
     equipes ||--o{ submissoes : envia
     submissoes ||--o{ avaliacoes : recebe
+    submissoes ||--o{ versoes_proposta : historico
+    protocolos ||--|| versoes_proposta : identifica
     usuarios ||--o{ avaliacoes : avalia
     submissoes ||--o{ designacoes_avaliacao : designada
     usuarios ||--o{ designacoes_avaliacao : avalia_se_designado
@@ -48,6 +50,7 @@ erDiagram
 | `comprovantes_vinculo` | Comprovante de vínculo e a conferência do Comitê Científico; reenvio cria uma linha nova       |
 | `temas`                | Temas do edital, com ODS relacionados e `ativo`                                               |
 | `rubricas`             | Rubrica de avaliação da edição (uma por hackathon); `publicada_em` preenchida a torna imutável |
+| `versoes_proposta`     | Cada envio definitivo da proposta (BE-S5-09): número da versão, conteúdo enviado, quem e quando enviou e o protocolo próprio; imutável |
 | `criterios_rubrica`    | Critérios da rubrica: nome, descrição, peso (%), escala mínima e máxima e ordem de exibição    |
 | `submissoes`           | Proposta da equipe (uma por equipe): rascunho até ser enviada com tema, ODS e bases de dados    |
 | `protocolos`           | Comprovante da conclusão da inscrição e do envio da proposta (`numero` gerado pelo banco)       |
