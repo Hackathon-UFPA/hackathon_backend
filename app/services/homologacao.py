@@ -26,6 +26,7 @@ from app.controllers.convite import listar_convites_da_equipe, listar_usuarios_c
 from app.controllers.membro_equipe import listar_membros_com_usuario
 from app.controllers.termo import listar_aceites_dos_usuarios, listar_termos_vigentes
 from app.models import Convite, Equipe, Hackathon, MembroEquipe, Usuario
+from app.services.email_eventos import avisar_equipe_homologada
 from app.validations.inscricao import como_utc, inscricoes_abertas
 
 
@@ -249,4 +250,6 @@ async def reavaliar_homologacao(
     equipe.atualizado_em = agora
     db.add(equipe)
     await db.flush()
+    if equipe.situacao == SituacaoEquipe.HOMOLOGADA:
+        await avisar_equipe_homologada(db, equipe)
     return equipe.situacao
