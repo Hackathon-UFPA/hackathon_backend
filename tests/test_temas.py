@@ -20,6 +20,7 @@ class CenarioTemas(CenarioSubmissoes):
         super().__init__(*args)
         self.organizador = self.usuario_no_banco(papel="ORGANIZADOR")
         self.dev = self.usuario_no_banco(papel="DEV")
+        self.comite = self.usuario_no_banco(papel="COMITE_CIENTIFICO")
         # O líder da equipe é um participante comum
         self.participante = self.lider
 
@@ -62,8 +63,8 @@ def temas(sql, usuario_no_banco, novo_email):
         cenario.limpar()
 
 
-@pytest.mark.parametrize("perfil", ["organizador", "dev"])
-def test_organizador_e_dev_cadastram_tema(client, temas, perfil):
+@pytest.mark.parametrize("perfil", ["comite", "organizador", "dev"])
+def test_comite_organizador_e_dev_cadastram_tema(client, temas, perfil):
     resposta = temas.cadastrar(client, quem=getattr(temas, perfil))
 
     assert resposta.status_code == 201, resposta.text
@@ -78,7 +79,7 @@ def test_organizador_e_dev_cadastram_tema(client, temas, perfil):
     assert linha["ods"] == [13, 15]
 
 
-@pytest.mark.parametrize("papel", ["PARTICIPANTE", "MENTOR", "COMITE_CIENTIFICO"])
+@pytest.mark.parametrize("papel", ["PARTICIPANTE", "MENTOR", "COMITE_TECNICO"])
 def test_outros_perfis_nao_cadastram_tema(client, temas, papel):
     resposta = temas.cadastrar(client, quem=temas.usuario_no_banco(papel=papel))
     assert resposta.status_code == 403

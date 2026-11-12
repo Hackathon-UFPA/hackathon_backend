@@ -184,7 +184,7 @@ def test_nomes_repetidos_na_rubrica(client, rubrica):
     assert resposta.status_code == 422
 
 
-@pytest.mark.parametrize("papel", ["PARTICIPANTE", "COMITE_TECNICO", "COMITE_CIENTIFICO"])
+@pytest.mark.parametrize("papel", ["PARTICIPANTE", "MENTOR", "COMITE_TECNICO"])
 def test_outros_perfis_nao_editam_rubrica(client, rubrica, papel):
     quem = rubrica.usuario_no_banco(papel=papel)
     assert rubrica.salvar(client, criterios_completos(), quem=quem).status_code == 403
