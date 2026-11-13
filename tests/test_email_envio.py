@@ -5,10 +5,14 @@ O provedor é sempre o falso (`ProvedorMemoria`): nenhum teste envia e-mail de v
 
 import asyncio
 
+from sqlalchemy import text
+
 from app.const.config import settings
+from app.controllers.email_outbox import reservar_emails
 from app.integrations.email import ErroEnvioPermanente, ErroEnvioTemporario, ProvedorMemoria
 from app.services.email_envio import espera_em_segundos
 from tests.helpers_email import inserir_email, linha_do_email
+from tests.test_email_fila import com_sessao
 
 DESTINATARIO = "envio@testes.com"
 
@@ -206,6 +210,30 @@ def test_lote_respeita_o_limite_e_comeca_pelos_mais_antigos(sql, processar):
 
     assert primeiro.total == 2 and segundo.total == 1
     assert [m.assunto for m in provedor.enviadas] == ["a", "b", "c"]
+
+
+def test_reserva_respeita_limite_com_plano_nested_loop(sql, fila_vazia):
+    sql("ANALYZE emails_outbox")
+    ids = [inserir_email(sql, DESTINATARIO, assunto=f"plano-{n}") for n in range(3)]
+
+    async def reservar(db):
+        # O limite precisa valer também quando o otimizador escolhe nested loop,
+        # sem depender da cardinalidade/estatísticas deixadas pelos testes anteriores.
+        await db.exec(text("SET LOCAL enable_hashjoin = off"))
+        await db.exec(text("SET LOCAL enable_mergejoin = off"))
+        await db.exec(text("SET LOCAL enable_material = off"))
+        await db.exec(text("SET LOCAL enable_indexscan = off"))
+        await db.exec(text("SET LOCAL enable_bitmapscan = off"))
+        await db.exec(text("SET LOCAL plan_cache_mode = force_generic_plan"))
+        lote = await reservar_emails(db, limite=2, reserva_segundos=300)
+        await db.commit()
+        return lote
+
+    primeiro = com_sessao(reservar)
+    segundo = com_sessao(reservar)
+    assert [item["id"] for item in primeiro] == ids[:2]
+    assert [item["id"] for item in segundo] == ids[2:]
+    assert all(linha_do_email(sql, id_)["tentativas"] == 1 for id_ in ids)
 
 
 # --- Reserva: worker que caiu no meio do envio ---

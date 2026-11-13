@@ -18,6 +18,7 @@ Exemplo (models/produto.py):
 
 from .aceite_termo import AceiteTermo
 from .artefato import Artefato
+from .atribuicao_mentor import AtribuicaoMentor
 from .avaliacao import Avaliacao
 from .comprovante_vinculo import ComprovanteVinculo
 from .convite import Convite
@@ -26,6 +27,7 @@ from .criterio_rubrica import CriterioRubrica
 from .designacao_avaliacao import DesignacaoAvaliacao
 from .email_outbox import EmailOutbox
 from .equipe import Equipe
+from .evento_mentoria import EventoNotificacaoMentoria
 from .hackathon import Hackathon
 from .membro_equipe import MembroEquipe
 from .nota_criterio_avaliacao import NotaCriterioAvaliacao
@@ -41,6 +43,7 @@ from .usuario import Usuario
 __all__ = [
     "AceiteTermo",
     "Artefato",
+    "AtribuicaoMentor",
     "Avaliacao",
     "ComprovanteVinculo",
     "Convite",
@@ -49,6 +52,7 @@ __all__ = [
     "DesignacaoAvaliacao",
     "EmailOutbox",
     "Equipe",
+    "EventoNotificacaoMentoria",
     "Hackathon",
     "HomologacaoResultado",
     "MembroEquipe",

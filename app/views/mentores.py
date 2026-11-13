@@ -32,7 +32,7 @@ router = APIRouter(
 )
 router_publico = APIRouter(prefix="/mentores", tags=["Mentores"])
 ERROS_MENTOR = respostas_de_erro(
-    {404: "Mentor ou edição não encontrados", 409: "Conflito de cadastro ou RN33"}
+    {404: "Mentor ou edição não encontrados", 409: "Conflito de cadastro, RN33 ou capacidade"}
 )
 
 
@@ -62,7 +62,10 @@ async def consultar(mentor_id: UUID, db: AsyncSession = Depends(get_session)):
 
 @router.patch("/{mentor_id}", response_model=MentorResponse, responses=ERROS_MENTOR)
 async def editar(mentor_id: UUID, dados: MentorUpdate, db: AsyncSession = Depends(get_session)):
-    """Edita o cadastro; alterar e-mail exige nova ativação pelo destinatário."""
+    """Edita o cadastro; alterar e-mail exige nova ativação pelo destinatário.
+
+    Reduzir max_equipes abaixo dos vínculos vigentes, em qualquer edição, retorna 409.
+    """
     return await service.editar(db, mentor_id, dados)
 
 

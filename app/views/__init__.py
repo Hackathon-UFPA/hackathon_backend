@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 
+from app.views.atribuicoes_mentor import router as atribuicoes_mentor
 from app.views.auth import router as auth
 from app.views.avaliacao import router_admin as avaliacao_admin
 from app.views.avaliacao import router_avaliador as avaliacao_avaliador
@@ -30,6 +31,7 @@ router = APIRouter()
 
 router.include_router(health)
 router.include_router(auth)
+router.include_router(atribuicoes_mentor)
 router.include_router(usuarios)
 router.include_router(mentores)
 router.include_router(mentores_publico)

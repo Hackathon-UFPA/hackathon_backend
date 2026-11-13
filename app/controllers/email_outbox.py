@@ -82,16 +82,12 @@ async def reservar_emails(db: AsyncSession, *, limite: int, reserva_segundos: in
 
     Pronto é PENDENTE com a hora da próxima tentativa vencida, ou ENVIANDO com a reserva vencida
     (worker que caiu). `FOR UPDATE SKIP LOCKED` faz dois workers nunca pegarem o mesmo e-mail.
-    Cada reserva conta como uma tentativa."""
+    A seleção é materializada antes do UPDATE: o otimizador não pode reexecutar o LIMIT
+    para cada linha modificada. Cada reserva conta como uma tentativa."""
     resultado = await db.exec(
         text(
             """
-            UPDATE emails_outbox SET
-                status = 'ENVIANDO',
-                tentativas = tentativas + 1,
-                reservado_ate = (now() AT TIME ZONE 'utc') + make_interval(secs => :reserva),
-                atualizado_em = (now() AT TIME ZONE 'utc')
-            WHERE id IN (
+            WITH candidatos AS MATERIALIZED (
                 SELECT id FROM emails_outbox
                 WHERE cancelado_em IS NULL AND (
                     (status = 'PENDENTE' AND proxima_tentativa_em <= (now() AT TIME ZONE 'utc'))
@@ -100,9 +96,23 @@ async def reservar_emails(db: AsyncSession, *, limite: int, reserva_segundos: in
                 ORDER BY proxima_tentativa_em, criado_em, id
                 LIMIT :limite
                 FOR UPDATE SKIP LOCKED
+            ), reservados AS (
+                UPDATE emails_outbox AS email SET
+                    status = 'ENVIANDO',
+                    tentativas = email.tentativas + 1,
+                    reservado_ate = (now() AT TIME ZONE 'utc') + make_interval(secs => :reserva),
+                    atualizado_em = (now() AT TIME ZONE 'utc')
+                FROM candidatos
+                WHERE email.id = candidatos.id
+                RETURNING email.id, email.tipo, email.destinatario_email,
+                          email.destinatario_nome, email.assunto, email.corpo_texto,
+                          email.corpo_html, email.tentativas, email.max_tentativas,
+                          email.chave_idempotencia, email.proxima_tentativa_em, email.criado_em
             )
-            RETURNING id, tipo, destinatario_email, destinatario_nome, assunto,
-                      corpo_texto, corpo_html, tentativas, max_tentativas, chave_idempotencia
+            SELECT id, tipo, destinatario_email, destinatario_nome, assunto,
+                   corpo_texto, corpo_html, tentativas, max_tentativas, chave_idempotencia
+            FROM reservados
+            ORDER BY proxima_tentativa_em, criado_em, id
             """
         ).bindparams(reserva=reserva_segundos, limite=limite)
     )

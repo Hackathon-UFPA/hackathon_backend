@@ -2,6 +2,8 @@
 
 # Banco de dados
 
+BE-S5-11: `V202611121300__atribuicao_mentores.sql` adiciona `atribuicoes_mentor` (histórico e unicidade parcial por equipe), `eventos_notificacao_mentoria` (integração da central), marco auditado de treinamento em `hackathon` e o tipo de e-mail `ATRIBUICAO_MENTOR`. Detalhes em [Atribuição de mentores](atribuicao-mentores.md).
+
 BE-S5-10: `V202611121100__ativacao_mentores.sql` adiciona `usuarios.mentor_perfil_concluido_em`, `usuarios.mentor_ativado_em` e `convites_mentor` (hash de token, validade e consumo). Reutiliza os campos de perfil de mentor e as tabelas de termos existentes. A pendência de ativação é independente da comprovação acadêmica. Detalhes em [Mentores](mentores.md).
 
 ## Modelo de dados

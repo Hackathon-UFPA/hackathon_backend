@@ -15,6 +15,7 @@ from app.services.email_template import (
 LINK = "https://hackathon.example/entrar?x=1&y=2"
 
 VALORES = {
+    "acao": "atribuída",
     "nome": "Maria Souza",
     "link": LINK,
     "validade_minutos": 30,

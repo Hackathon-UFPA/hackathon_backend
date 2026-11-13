@@ -29,3 +29,5 @@ class Hackathon(SQLModel, table=True):
     propostas_fim: datetime | None = Field(default=None)
     # Avaliadores por proposta (RF29, Q07): 2 a 3; NULL até o Organizador configurar
     avaliadores_por_proposta: int | None = Field(default=None, sa_type=SmallInteger)
+    treinamento_concluido_em: datetime | None = Field(default=None)
+    treinamento_concluido_por: UUID | None = Field(default=None, foreign_key="usuarios.id")

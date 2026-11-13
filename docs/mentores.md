@@ -110,16 +110,18 @@ Convites legados sem edição confiável são preservados e revogados pela migra
 
 ## Integração BE-S5-11 e limites
 
+**Atualização BE-S5-11:** a atribuição agora está implementada em [Atribuição de mentores](atribuicao-mentores.md). As responsabilidades listadas abaixo foram incorporadas à transação de atribuição/substituição. Alterar `max_equipes` para menos que a quantidade de vínculos vigentes retorna 409.
+
 `app.services.mentor.validar_elegibilidade(db, mentor_id, hackathon_id)` verifica papel, ativo administrativo, conclusão do perfil, senha, capacidade positiva e aceites vigentes para a edição. Mantém `FOR UPDATE` no mentor até o commit da transação chamadora. Não usa a comprovação acadêmica.
 
-A atribuição ainda não possui tabela no projeto. O BE-S5-11 deve, na **mesma transação**:
+A tabela `atribuicoes_mentor` mantém o histórico; a BE-S5-11 executa, na **mesma transação**:
 
 1. Chamar a verificação de elegibilidade e manter a trava do mentor.
 2. Contar atribuições ativas e rejeitar quando a quantidade atingir `mentor.max_equipes`.
 3. Garantir no banco uma única atribuição ativa por equipe, inclusive em concorrência.
 4. Inserir a atribuição e confirmar a transação.
 
-Não foram implementados atribuição, contagem fictícia de equipes nem frontend. Não há envio SMTP real nos testes: a integração usa o provedor em memória e o worker do PR #15.
+A BE-S5-10 continua responsável pelo cadastro e onboarding; a atribuição é da BE-S5-11. Frontend não está incluído. Não há envio SMTP real nos testes: a integração usa o provedor em memória e o worker do PR #15.
 
 ## Validação local
 

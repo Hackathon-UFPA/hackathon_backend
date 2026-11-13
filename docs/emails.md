@@ -53,6 +53,10 @@ Os templates ficam em `app/templates/emails/`: um par `<tipo>.txt` e `<tipo>.htm
 
 ## Estados e tentativas
 
+A reserva do worker materializa uma única seleção limitada de candidatos (`WITH ... AS MATERIALIZED`) antes do UPDATE, preservando `FOR UPDATE SKIP LOCKED` e a ordem por próxima tentativa, criação e id. Isso impede que planos alternativos do PostgreSQL reexecutem a seleção e excedam o tamanho do lote.
+
+BE-S5-11 adiciona `ATRIBUICAO_MENTOR` para atribuição, substituição e encerramento. Avisa a equipe, o mentor e, na substituição, o anterior. Reutiliza esta fila, com chave de deduplicação por vínculo, evento e usuário. Publicação na central in-app fica pendente em eventos duráveis próprios até a integração da central. Veja [Atribuição de mentores](atribuicao-mentores.md).
+
 Convites de mentor revogados usam `FALHA` com `cancelado_em` preenchido. Essas mensagens têm seus corpos eliminados e não podem ser reenviadas por `/admin/emails`: o gestor emite outro convite com a edição explícita. A reserva já confirmada é revalidada pelo worker antes da entrega. Mensagens já enviadas permanecem intactas. Detalhes e limites de concorrência em [Mentores](mentores.md).
 
 | Status      | Significado                                                                                  |
