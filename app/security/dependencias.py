@@ -30,6 +30,21 @@ async def usuario_atual(
     return usuario
 
 
+# Para rotas públicas que mostram mais coisas a quem tem permissão: sem cabeçalho, segue como
+# visitante; com cabeçalho, o token precisa ser válido (401 se não for), para o cliente não
+# achar que está logado quando não está.
+bearer_opcional = HTTPBearer(auto_error=False)
+
+
+async def usuario_opcional(
+    credenciais: HTTPAuthorizationCredentials | None = Depends(bearer_opcional),
+    db: AsyncSession = Depends(get_session),
+) -> Usuario | None:
+    if credenciais is None:
+        return None
+    return await usuario_atual(credenciais, db)
+
+
 async def usuario_ativo(usuario: Usuario = Depends(usuario_atual)) -> Usuario:
     """Exige RN33 concluída para mentor e comprovante aprovado para participante pendente."""
     if usuario.papel == PapelUsuario.MENTOR:

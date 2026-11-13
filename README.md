@@ -20,7 +20,7 @@ API do sistema de gestão de hackathons da UFPA, construída com **FastAPI**. Cu
 - [Equipes e membros](docs/equipes-e-membros.md)
 - [Inscrição e homologação](docs/inscricao-e-homologacao.md)
 - [Propostas](docs/propostas.md): envio definitivo e protocolo
-- [Temas e rubrica](docs/temas-e-rubrica.md)
+- [Temas e rubrica](docs/temas-e-rubrica.md): catálogo público, Comitê Científico e uma rubrica por fase (BE-S5-08)
 - [Avaliação](docs/avaliacao.md): distribuição e registro da avaliação científica pela rubrica
 - [Resultado](docs/resultado.md): homologação do resultado e propostas aprovadas públicas
 - [Notificações e somente leitura](docs/notificacoes-e-somente-leitura.md): aviso do resultado às equipes e bloqueio de escrita das não aprovadas
@@ -43,6 +43,7 @@ Com a API no ar, a documentação interativa das rotas fica em `http://localhost
 | Comprovantes, inscrição e homologação   | RF21 a RF23, RF25  | Concluído |
 | Rascunho e envio da proposta            | RF26 a RF28        | Concluído |
 | Temas e rubrica de avaliação            | RF15 a RF17        | Concluído |
+| Catálogo público, Comitê Científico e rubrica por fase | RF15 a RF17, RN09, RN10, BE-S5-08 | Concluído (ver [Temas e rubrica](docs/temas-e-rubrica.md)) |
 | Distribuição de propostas aos avaliadores | RF29             | Concluído |
 | Avaliação científica pela rubrica       | RF30, BE-S4-10     | Concluído |
 | Homologação do resultado e aprovadas    | RF31, RF32, BE-S4-11 | Concluído |

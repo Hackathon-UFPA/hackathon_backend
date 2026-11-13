@@ -22,7 +22,7 @@ erDiagram
     usuarios ||--o{ designacoes_avaliacao : avalia_se_designado
     hackathon ||--o{ temas : oferece
     temas ||--o{ submissoes : escolhido
-    hackathon ||--o| rubricas : avalia_com
+    hackathon ||--o{ rubricas : avalia_com
     rubricas ||--o{ criterios_rubrica : tem
     rubricas ||--o{ avaliacoes : utilizada
     avaliacoes ||--o{ notas_criterio_avaliacao : registra
@@ -47,7 +47,7 @@ erDiagram
 | `aceites_termos`       | Aceite de um usuário a uma versão de termo, com data e hora                                    |
 | `comprovantes_vinculo` | Comprovante de vínculo e a conferência do Comitê Científico; reenvio cria uma linha nova       |
 | `temas`                | Temas do edital, com ODS relacionados e `ativo`                                               |
-| `rubricas`             | Rubrica de avaliação da edição (uma por hackathon); `publicada_em` preenchida a torna imutável |
+| `rubricas`             | Rubrica de avaliação da edição, uma por fase (`PROPOSTA` e `PROJETO_FINAL`, `uq_rubricas_hackathon_fase`); `publicada_em` preenchida a torna imutável |
 | `criterios_rubrica`    | Critérios da rubrica: nome, descrição, peso (%), escala mínima e máxima e ordem de exibição    |
 | `submissoes`           | Proposta da equipe (uma por equipe): rascunho até ser enviada com tema, ODS e bases de dados    |
 | `protocolos`           | Comprovante da conclusão da inscrição e do envio da proposta (`numero` gerado pelo banco)       |
@@ -85,6 +85,7 @@ Definidos como `ENUM` nativo no Postgres (migration) e espelhados em [`app/const
 | `tipo_protocolo`     | `INSCRICAO_EQUIPE`, `PROPOSTA`                                                                  |
 | `status_avaliacao`    | `RASCUNHO`, `ENVIADA` |
 | `recomendacao_avaliacao` | `APROVACAO`, `REPROVACAO` |
+| `fase_rubrica` | `PROPOSTA` (padrão; avaliação científica), `PROJETO_FINAL` |
 | `canal_notificacao` | `PLATAFORMA`, `EMAIL` (reservado e sem uso: o e-mail é rastreado em `emails_outbox`) |
 | `status_envio_notificacao` | `PENDENTE`, `ENVIADO`, `FALHA` |
 | `tipo_email` | `CONFIRMACAO_EMAIL`, `RECUPERACAO_SENHA`, `DEFINICAO_SENHA`, `CONVITE_EQUIPE`, `INSCRICAO_CONCLUIDA`, `EQUIPE_HOMOLOGADA`, `PROTOCOLO_PROPOSTA`, `RESULTADO_PROPOSTA` |
