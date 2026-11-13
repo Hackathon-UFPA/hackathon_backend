@@ -26,6 +26,7 @@ API do sistema de gestão de hackathons da UFPA, construída com **FastAPI**. Cu
 - [Notificações e somente leitura](docs/notificacoes-e-somente-leitura.md): aviso do resultado às equipes e bloqueio de escrita das não aprovadas
 - [E-mails](docs/emails.md): fila de envio, provedor SMTP, templates em português e acompanhamento
 - [Mentores](docs/mentores.md): cadastro, convite seguro, ativação com perfil e termos, desativação (BE-S5-10)
+- [Atribuição de mentores](docs/atribuicao-mentores.md): equipes aprovadas, capacidade, histórico e notificações (BE-S5-11)
 - [Banco de dados](docs/banco-de-dados.md): tabelas, enums e migrations
 - [Guia de desenvolvimento](docs/desenvolvimento.md): como criar rotas, comandos e CI/CD
 
@@ -47,6 +48,7 @@ Com a API no ar, a documentação interativa das rotas fica em `http://localhost
 | Homologação do resultado e aprovadas    | RF31, RF32, BE-S4-11 | Concluído |
 | Notificação do resultado e somente leitura | RF33, RF34, BE-S4-12 | Concluído (canal plataforma) |
 | E-mails transacionais (fila, worker e templates) | RNF28, RF60, BE-S5-05 | Concluído (ver [E-mails](docs/emails.md)) |
+| Atribuição de mentores | RF38, RN16, RN24, RN33, BE-S5-11 | Implementado; publicação in-app depende da central |
 
 ### Notificação do resultado e somente leitura (BE-S4-12)
 

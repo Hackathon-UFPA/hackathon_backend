@@ -1,0 +1,10 @@
+Atualização da mentoria no Hackathon UFPA
+
+Olá, {{ nome }}.
+
+A mentoria da equipe {{ equipe_nome }} foi {{ acao }}. Consulte os dados na plataforma.
+
+{% if link %}Acessar a plataforma: {{ link }}
+{% endif %}
+--
+Mensagem automática do Hackathon UFPA. Não responda este e-mail.

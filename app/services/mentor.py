@@ -85,6 +85,11 @@ async def cadastrar(db: AsyncSession, dados: MentorCreate) -> Usuario:
 async def editar(db: AsyncSession, mentor_id: UUID, dados: MentorUpdate) -> Usuario:
     mentor = await consultar(db, mentor_id, bloquear=True)
     valores = dados.model_dump(exclude_unset=True, exclude={"hackathon_id"})
+    if dados.max_equipes is not None:
+        from app.controllers.atribuicao_mentor import contar_vigentes
+
+        if dados.max_equipes < await contar_vigentes(db, mentor.id):
+            raise HTTPException(409, "A capacidade não pode ser inferior às atribuições vigentes.")
     mudou_email = False
     if "email" in valores:
         email = valores["email"].lower()

@@ -19,6 +19,7 @@ DIRETORIO_TEMPLATES = Path(__file__).resolve().parents[1] / "templates" / "email
 BRASILIA = timezone(timedelta(hours=-3))
 
 ASSUNTOS: dict[TipoEmail, str] = {
+    TipoEmail.ATRIBUICAO_MENTOR: "Atualização da mentoria no Hackathon UFPA",
     TipoEmail.CONFIRMACAO_EMAIL: "Confirme o seu e-mail no Hackathon UFPA",
     TipoEmail.RECUPERACAO_SENHA: "Redefinição de senha no Hackathon UFPA",
     TipoEmail.DEFINICAO_SENHA: "Seu acesso ao Hackathon UFPA",
@@ -32,6 +33,7 @@ ASSUNTOS: dict[TipoEmail, str] = {
 # Valores que cada template usa. Faltar um é erro de quem chama, nunca um e-mail pela metade.
 # `link` pode ser None, e o e-mail sai sem o botão.
 CONTEXTO_OBRIGATORIO: dict[TipoEmail, frozenset[str]] = {
+    TipoEmail.ATRIBUICAO_MENTOR: frozenset({"nome", "equipe_nome", "acao", "link"}),
     TipoEmail.CONFIRMACAO_EMAIL: frozenset({"nome", "link"}),
     TipoEmail.RECUPERACAO_SENHA: frozenset({"nome", "link", "validade_minutos"}),
     TipoEmail.DEFINICAO_SENHA: frozenset({"nome", "perfil", "link"}),
