@@ -77,6 +77,13 @@ class TipoProtocolo(StrEnum):
     PROPOSTA = "PROPOSTA"
 
 
+class FaseRubrica(StrEnum):
+    """Cada edição tem uma rubrica por fase, com critérios e pesos independentes (BE-S5-08)."""
+
+    PROPOSTA = "PROPOSTA"  # avaliação científica das propostas
+    PROJETO_FINAL = "PROJETO_FINAL"
+
+
 class StatusAvaliacao(StrEnum):
     RASCUNHO = "RASCUNHO"
     ENVIADA = "ENVIADA"

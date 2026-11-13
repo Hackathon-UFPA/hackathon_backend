@@ -25,6 +25,16 @@ def fora_do_prazo_de_publicacao():
     )
 
 
+def fora_do_prazo_do_projeto_final():
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail=(
+            "A rubrica do projeto final precisa ser publicada antes da homologação do resultado "
+            "das propostas, quando começa o desenvolvimento."
+        ),
+    )
+
+
 def rubrica_incompleta(pendencias: list[str]):
     raise HTTPException(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

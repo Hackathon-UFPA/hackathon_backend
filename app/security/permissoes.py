@@ -26,8 +26,13 @@ def pode_cadastrar(quem_cadastra: PapelUsuario, perfil: PapelUsuario) -> bool:
 # também o Comitê Científico; enquanto isso os dois podem. Ajustar aqui muda todas as rotas.
 PERFIS_QUE_VALIDAM_COMPROVANTE = (PapelUsuario.ORGANIZADOR, PapelUsuario.COMITE_CIENTIFICO)
 
-# Quem cadastra temas e monta/publica a rubrica (RF15, RF16, RF17). DEV passa sempre.
+# Quem cadastra e configura as edições do hackathon (datas, limites). DEV passa sempre.
 PERFIS_QUE_GERENCIAM_EDITAL = (PapelUsuario.ORGANIZADOR,)
+
+# Quem gerencia temas/desafios e monta/publica as rubricas (RF15, RF16, RF17, BE-S5-08).
+# O Comitê Científico é o responsável; o Organizador entra como exceção administrativa.
+# DEV passa sempre.
+PERFIS_QUE_GERENCIAM_TEMAS_E_RUBRICAS = (PapelUsuario.COMITE_CIENTIFICO, PapelUsuario.ORGANIZADOR)
 
 # Quem acompanha a fila de e-mails e pede o reenvio dos que falharam (RNF28). DEV passa sempre.
 PERFIS_QUE_ACOMPANHAM_EMAILS = (PapelUsuario.ORGANIZADOR,)
