@@ -386,17 +386,32 @@ def test_falha_no_protocolo_reverte_envio_e_permite_nova_tentativa(
     assert envio.enviar(client).status_code == 200
 
 
-def test_banco_impede_segundo_protocolo_por_proposta(client, envio):
+def test_banco_impede_repetir_versao_e_alterar_versao_enviada(client, envio):
+    """BE-S5-09: o protocolo agora é único por versão; a versão 1 não se repete nem muda."""
     envio.preparar(client)
     enviado = envio.enviar(client).json()
+    protocolo_extra = envio.sql(
+        "INSERT INTO protocolos (tipo, equipe_id, submissao_id) VALUES ('PROPOSTA', :e, :s)"
+        " RETURNING id",
+        e=envio.equipe_id,
+        s=enviado["id"],
+    )[0]["id"]
 
-    with pytest.raises(IntegrityError, match="uq_protocolos_proposta_submissao"):
+    with pytest.raises(IntegrityError, match="uq_versoes_proposta_numero"):
         envio.sql(
-            "INSERT INTO protocolos (tipo, equipe_id, submissao_id) VALUES ('PROPOSTA', :e, :s)",
-            e=envio.equipe_id,
+            "INSERT INTO versoes_proposta (submissao_id, numero, protocolo_id, enviada_em)"
+            " VALUES (:s, 1, :p, now())",
             s=enviado["id"],
+            p=protocolo_extra,
         )
-    assert len(envio.protocolos()) == 1
+    with pytest.raises(IntegrityError, match="versao_proposta_imutavel"):
+        envio.sql(
+            "UPDATE versoes_proposta SET titulo = 'Outro' WHERE submissao_id = :s", s=enviado["id"]
+        )
+    versoes = envio.sql("SELECT * FROM versoes_proposta WHERE submissao_id = :s", s=enviado["id"])
+    assert [(v["numero"], str(v["protocolo_id"])) for v in versoes] == [
+        (1, enviado["protocolo"]["id"])
+    ]
 
 
 def test_painel_preserva_protocolo_de_inscricao_e_adiciona_o_de_proposta(client, envio):

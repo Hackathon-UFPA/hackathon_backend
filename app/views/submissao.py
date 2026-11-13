@@ -8,11 +8,21 @@ from app.models import Usuario
 from app.schemas.submissao import (
     SubmissaoCreate,
     SubmissaoEnviadaResponse,
+    SubmissaoReenvio,
     SubmissaoResponse,
     SubmissaoUpdate,
+    VersaoPropostaResponse,
 )
 from app.security.dependencias import usuario_ativo
-from app.services.submissao import consultar_enviada, consultar_rascunho, criar, editar, enviar
+from app.services.submissao import (
+    consultar_enviada,
+    consultar_rascunho,
+    consultar_versoes,
+    criar,
+    editar,
+    enviar,
+    reenviar,
+)
 from app.utils.openapi import respostas_de_erro
 
 router = APIRouter(prefix="/equipes/{equipe_id}/proposta/rascunho", tags=["Propostas"])
@@ -95,9 +105,10 @@ async def editar_rascunho(
         "RF26/RF28: somente líder técnico ou DEV com conta ativa. Exige equipe HOMOLOGADA, "
         "rascunho completo, tema ativo da mesma edição e ambos os limites do prazo de propostas "
         "configurados, com o momento atual no intervalo inclusivo em UTC. documento_url é "
-        "opcional. O envio torna a proposta imutável e emite um protocolo PROPOSTA na mesma "
-        "transação. Reenvio retorna 409. A resposta inclui enviado_em, protocolo.numero e "
-        "protocolo.emitido_em. Não envia e-mail."
+        "opcional. O envio grava a versão 1 da proposta e emite um protocolo PROPOSTA na mesma "
+        "transação; chamar esta rota de novo retorna 409. A resposta inclui enviado_em, "
+        "protocolo.numero, protocolo.emitido_em e `versao = 1`. O líder recebe o protocolo por "
+        "e-mail. Para trocar o conteúdo depois do envio, use `POST /reenviar`."
     ),
     responses=respostas_de_erro(
         {
@@ -122,9 +133,10 @@ async def enviar_proposta(
     response_model=SubmissaoEnviadaResponse,
     summary="Consultar proposta enviada e protocolo",
     description=(
-        "Somente integrantes da equipe ou DEV com conta ativa. Retorna conteúdo, status, "
-        "enviado_em e protocolo persistido. Rascunhos não são expostos; sem proposta enviada "
-        "retorna 404. O protocolo também pode ser consultado no campo protocolo_proposta do painel."
+        "Somente integrantes da equipe ou DEV com conta ativa. Retorna o conteúdo da versão "
+        "mais recente, status, enviado_em, `versao` e o protocolo dessa versão. Rascunhos não "
+        "são expostos; sem proposta enviada retorna 404. O protocolo também pode ser "
+        "consultado no campo protocolo_proposta do painel (sempre o da versão mais recente)."
     ),
     responses=respostas_de_erro(
         {401: ERRO_401, 403: ERRO_403, 404: "Equipe ou proposta enviada não encontrada"}
@@ -136,3 +148,61 @@ async def obter_proposta_enviada(
     usuario: Usuario = Depends(usuario_ativo),
 ):
     return await consultar_enviada(db, usuario, equipe_id)
+
+
+@router_proposta.post(
+    "/reenviar",
+    response_model=SubmissaoEnviadaResponse,
+    summary="Enviar nova versão da proposta",
+    description=(
+        "RF27/RN08 (BE-S5-09): somente líder técnico ou DEV com conta ativa. Substitui o "
+        "conteúdo de uma proposta **já enviada** por uma nova versão completa, com as mesmas "
+        "regras do envio (equipe HOMOLOGADA, tema ativo da edição, campos obrigatórios, prazo "
+        "de propostas aberto). Só é aceito enquanto a proposta **não foi distribuída** aos "
+        "avaliadores, **não tem avaliação** e o resultado **não foi homologado**; caso "
+        "contrário, 409. A versão anterior e o protocolo dela ficam no histórico "
+        "(`GET /versoes`); a nova versão recebe protocolo próprio, enviado por e-mail ao líder. "
+        "A versão avaliada é sempre a mais recente."
+    ),
+    responses=respostas_de_erro(
+        {
+            401: ERRO_401,
+            403: ERRO_403,
+            404: ERRO_404,
+            409: (
+                "Proposta não enviada, prazo fechado, equipe não homologada, tema indisponível, "
+                "proposta distribuída ou avaliada, ou resultado homologado"
+            ),
+            422: "Campos obrigatórios da proposta incompletos ou inválidos",
+        }
+    ),
+)
+async def reenviar_proposta(
+    equipe_id: UUID,
+    dados: SubmissaoReenvio,
+    db: AsyncSession = Depends(get_session),
+    usuario: Usuario = Depends(usuario_ativo),
+):
+    return await reenviar(db, usuario, equipe_id, dados)
+
+
+@router_proposta.get(
+    "/versoes",
+    response_model=list[VersaoPropostaResponse],
+    summary="Histórico de versões da proposta",
+    description=(
+        "Somente integrantes da equipe ou DEV com conta ativa (BE-S5-09). Lista cada envio "
+        "definitivo, da versão mais recente para a original (`numero = 1`), com o conteúdo "
+        "enviado e o protocolo daquela versão. As versões são imutáveis. Sem proposta enviada, "
+        "retorna 404."
+    ),
+    responses=respostas_de_erro(
+        {401: ERRO_401, 403: ERRO_403, 404: "Equipe ou proposta enviada não encontrada"}
+    ),
+)
+async def listar_versoes_da_proposta(
+    equipe_id: UUID,
+    db: AsyncSession = Depends(get_session),
+    usuario: Usuario = Depends(usuario_ativo),
+):
+    return await consultar_versoes(db, usuario, equipe_id)

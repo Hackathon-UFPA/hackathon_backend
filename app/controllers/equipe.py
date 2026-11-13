@@ -20,6 +20,13 @@ async def get_equipe_by_id(
     return (await db.exec(consulta)).first()
 
 
+async def get_hackathon_id_da_equipe(db: AsyncSession, equipe_id: UUID) -> UUID | None:
+    """Só o id da edição, sem carregar a equipe: quem trava a edição antes da equipe não deixa
+    um objeto Equipe antigo no identity map da sessão."""
+    consulta = select(Equipe.hackathon_id).where(Equipe.id == equipe_id)
+    return (await db.exec(consulta)).first()
+
+
 async def get_hackathon_by_id(db: AsyncSession, hackathon_id: UUID) -> Hackathon | None:
     return await db.get(Hackathon, hackathon_id)
 

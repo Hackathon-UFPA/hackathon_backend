@@ -12,7 +12,7 @@ RF31 e RF32.
 
 ## Consolidação (RF31)
 
-Entram as propostas `ENVIADA` do hackathon. Para cada uma, contam só as avaliações dos avaliadores **designados** a ela e com `status = ENVIADA`; rascunhos não entram na média.
+Entram **todas** as propostas `ENVIADA` do hackathon, na versão mais recente (veja [Propostas](propostas.md#reenvio-e-versões--be-s5-09)). Para cada uma, contam só as avaliações **completas** dos avaliadores **designados** a ela: `status = ENVIADA`, nota final, recomendação, parecer não vazio e nota em todos os critérios da rubrica publicada da edição. Rascunhos não entram na média, e avaliações enviadas sem tudo isso viram pendência (veja abaixo).
 
 - **Nota média:** média simples das notas finais (`avaliacoes.nota`), com `Decimal` e arredondamento `ROUND_HALF_UP` em duas casas só no fim. Ex.: 8 e 7,35 → 7,68.
 - **Classificação:** maior média primeiro. Empate: mais recomendações `APROVACAO`, depois quem enviou a proposta antes (`enviado_em`), depois o id. Proposta sem nenhuma avaliação enviada fica com `classificacao = null`.
@@ -28,6 +28,8 @@ Entram as propostas `ENVIADA` do hackathon. Para cada uma, contam só as avalia�
 | `SEM_PROPOSTAS` | Nenhuma proposta `ENVIADA` |
 | `AVALIADORES_INSUFICIENTES` | Proposta com menos avaliadores designados que o configurado |
 | `AVALIACAO_PENDENTE` | Algum avaliador designado ainda não enviou a avaliação (inclusive quem só tem rascunho) |
+| `PRAZO_DE_PROPOSTAS_ABERTO` | `hackathon.propostas_fim` não configurado ou ainda não passou (UTC): homologar antes deixaria de fora envios válidos (BE-S5-09) |
+| `AVALIACAO_INCOMPLETA` | Avaliação marcada como `ENVIADA` sem nota em todos os critérios da rubrica publicada, sem recomendação ou sem parecer, ou feita com outra rubrica. Pega as avaliações **legadas** migradas pela BE-S4-10 (nota sem rubrica nem critérios): elas precisam ser concluídas antes de homologar (BE-S5-09) |
 
 Com pendências, `POST .../homologar` responde 409 e não grava nada.
 
@@ -55,6 +57,8 @@ As propostas listadas ficam aprovadas e as demais reprovadas (lista vazia reprov
 Não existe rota para desfazer a homologação.
 
 **Concorrência.** A homologação trava a linha do `hackathon` (`SELECT ... FOR UPDATE`), o mesmo lock usado pela distribuição e pelo registro de avaliações. Uma avaliação enviada ao mesmo tempo ou entra antes da homologação ou recebe 409.
+
+O envio e o reenvio da proposta travam a mesma linha em modo compartilhado (`FOR SHARE`, BE-S5-09): vários envios andam juntos, mas nenhum passa no meio da homologação. Um envio em andamento termina antes de a homologação ler as propostas (e ela o inclui ou acusa a pendência), e um envio que chega depois vê o resultado homologado e recebe 409. Assim nenhum resultado homologado omite uma proposta enviada validamente.
 
 ## Divulgação (RF32)
 

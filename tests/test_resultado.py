@@ -20,22 +20,57 @@ class CenarioResultado(CenarioAvaliacao):
         for proposta in self.propostas:
             for avaliador in self.avaliadores:
                 self.designar(proposta, avaliador)
+        # BE-S5-09: só se homologa depois do fim do prazo de propostas.
+        self.prazo_de_propostas(aberto=False)
+        # Rubrica publicada com um critério de 0 a 10 e peso 100: a nota do critério é a final.
+        self.rubrica_id = sql(
+            "INSERT INTO rubricas (hackathon_id) VALUES (:h) RETURNING id",
+            h=self.hackathon_id,
+        )[0]["id"]
+        self.criterio_id = sql(
+            "INSERT INTO criterios_rubrica"
+            " (rubrica_id, nome, descricao, peso, escala_min, escala_max, ordem)"
+            " VALUES (:r, 'Mérito', 'Mérito da proposta', 100, 0, 10, 1) RETURNING id",
+            r=self.rubrica_id,
+        )[0]["id"]
+        sql("UPDATE rubricas SET publicada_em = now() WHERE id = :r", r=self.rubrica_id)
+
+    def prazo_de_propostas(self, *, aberto: bool):
+        fim = "now() + interval '1 day'" if aberto else "now() - interval '1 hour'"
+        self.sql(
+            "UPDATE hackathon SET propostas_inicio = now() - interval '2 days',"
+            f" propostas_fim = {fim} WHERE id = :h",
+            h=self.hackathon_id,
+        )
 
     @property
     def base(self):
         return f"/admin/hackathons/{self.hackathon_id}/resultado"
 
     def avaliar(self, proposta, avaliador, nota, recomendacao="APROVACAO", status="ENVIADA"):
-        self.sql(
+        """Avaliação completa (RF30): rubrica publicada, nota no critério, parecer e
+        recomendação. Em RASCUNHO fica sem nota final."""
+        avaliacao_id = self.sql(
             "INSERT INTO avaliacoes (submissao_id, avaliador_id, nota, avaliado_em, status,"
-            " recomendacao) VALUES (:s, :a, :n, now(), CAST(:st AS status_avaliacao),"
-            " CAST(:r AS recomendacao_avaliacao))",
+            " recomendacao, rubrica_id, comentarios) VALUES (:s, :a, :n, now(),"
+            " CAST(:st AS status_avaliacao), CAST(:r AS recomendacao_avaliacao), :rub,"
+            " 'Parecer justificado') RETURNING id",
             s=proposta,
             a=avaliador["id"],
             n=None if status == "RASCUNHO" else nota,
             st=status,
             r=recomendacao,
-        )
+            rub=self.rubrica_id,
+        )[0]["id"]
+        if nota is not None:
+            self.sql(
+                "INSERT INTO notas_criterio_avaliacao (avaliacao_id, criterio_id, nota)"
+                " VALUES (:a, :c, :n)",
+                a=avaliacao_id,
+                c=self.criterio_id,
+                n=nota,
+            )
+        return avaliacao_id
 
     def avaliar_tudo(self):
         """Médias: proposta 0 = 9,00; proposta 1 = 7,68 (8 e 7,35); proposta 2 = 5,00."""
@@ -74,6 +109,13 @@ class CenarioResultado(CenarioAvaliacao):
     def limpar(self):
         # resultados_proposta sai em cascata com a homologação
         self.sql("DELETE FROM homologacoes_resultado WHERE hackathon_id = :h", h=self.hackathon_id)
+        # As avaliações saem antes da rubrica que elas usam (as notas vão em cascata).
+        self.sql(
+            "DELETE FROM avaliacoes WHERE submissao_id IN"
+            " (SELECT id FROM submissoes WHERE hackathon_id = :h)",
+            h=self.hackathon_id,
+        )
+        self.sql("DELETE FROM rubricas WHERE hackathon_id = :h", h=self.hackathon_id)
         super().limpar()
 
 
