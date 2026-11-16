@@ -37,6 +37,8 @@ class UsuarioResponse(UsuarioCreate):
     id: UUID
     ativo: bool
     situacao_conta: SituacaoConta
+    # BE-S5-07: NULL enquanto a posse do e-mail não foi confirmada (informativo)
+    email_confirmado_em: datetime | None = None
     criado_em: datetime | None = None
     atualizado_em: datetime | None = None
 

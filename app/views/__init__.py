@@ -16,6 +16,7 @@ from app.views.membro_equipe import router as membros_equipe
 from app.views.mentores import router as mentores
 from app.views.mentores import router_publico as mentores_publico
 from app.views.notificacoes import router as notificacoes
+from app.views.perfil import router as perfil
 from app.views.resultado import router_admin as resultado_admin
 from app.views.resultado import router_equipe as resultado_equipe
 from app.views.resultado import router_publico as resultado_publico
@@ -31,6 +32,7 @@ router = APIRouter()
 
 router.include_router(health)
 router.include_router(auth)
+router.include_router(perfil)
 router.include_router(atribuicoes_mentor)
 router.include_router(usuarios)
 router.include_router(mentores)

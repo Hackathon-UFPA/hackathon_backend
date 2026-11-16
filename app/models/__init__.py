@@ -38,6 +38,7 @@ from .rubrica import Rubrica
 from .submissao import Submissao
 from .tema import Tema
 from .termo import Termo
+from .token_usuario import TokenUsuario
 from .usuario import Usuario
 from .versao_proposta import VersaoProposta
 
@@ -65,6 +66,7 @@ __all__ = [
     "Submissao",
     "Tema",
     "Termo",
+    "TokenUsuario",
     "Usuario",
     "VersaoProposta",
 ]

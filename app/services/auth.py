@@ -13,10 +13,16 @@ from app.controllers.usuario import (
     registrar_falha_de_login,
     zerar_falhas_de_login,
 )
-from app.exceptions.auth import conta_bloqueada, credenciais_invalidas, inscricoes_indisponiveis
+from app.exceptions.auth import (
+    conta_bloqueada,
+    credenciais_invalidas,
+    inscricoes_indisponiveis,
+    senha_atual_incorreta,
+)
 from app.models import ComprovanteVinculo, Usuario
 from app.schemas.auth import CadastroRequest
 from app.security.senha import gastar_tempo_de_verificacao, gerar_hash, senha_confere
+from app.services.confirmacao_email import enviar_confirmacao
 
 
 async def cadastrar_participante(db: AsyncSession, dados: CadastroRequest) -> Usuario:
@@ -47,6 +53,8 @@ async def cadastrar_participante(db: AsyncSession, dados: CadastroRequest) -> Us
             arquivo_url=str(dados.comprovante_url),
         ),
     )
+    # RF01: o e-mail de confirmação sai na mesma transação; falha de envio não derruba o cadastro
+    await enviar_confirmacao(db, usuario, usuario.email)
     await db.commit()
     return usuario
 
@@ -81,3 +89,27 @@ async def autenticar(db: AsyncSession, email: str, senha: str) -> Usuario:
         zerar_falhas_de_login(db, usuario)
         await db.commit()
     return usuario
+
+
+async def conferir_senha_atual(db: AsyncSession, usuario: Usuario, senha: str) -> None:
+    """Exige a senha de quem já está logado antes de uma troca sensível (e-mail ou senha).
+
+    Um token roubado não basta para trocar a senha: e, como no login, as tentativas erradas contam
+    para o bloqueio da conta, então a rota não serve para adivinhar a senha. Sem commit no
+    acerto; no erro, a falha é gravada e confirmada antes da resposta."""
+    agora = datetime.now(UTC)
+    if usuario.bloqueado_ate and usuario.bloqueado_ate > agora:
+        conta_bloqueada(int((usuario.bloqueado_ate - agora).total_seconds()) + 1)
+    if usuario.senha_hash is None or not await asyncio.to_thread(
+        senha_confere, senha, usuario.senha_hash
+    ):
+        await registrar_falha_de_login(
+            db,
+            usuario.id,
+            settings.LOGIN_MAX_TENTATIVAS,
+            timedelta(minutes=settings.LOGIN_BLOQUEIO_MINUTOS),
+        )
+        await db.commit()
+        senha_atual_incorreta()
+    if usuario.tentativas_login or usuario.bloqueado_ate:
+        zerar_falhas_de_login(db, usuario)

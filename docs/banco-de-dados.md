@@ -2,6 +2,8 @@
 
 # Banco de dados
 
+BE-S5-07: `V202611161000__perfil_recuperacao_senha.sql` adiciona `usuarios.email_confirmado_em` (informativo; contas com mentor ativado já nascem confirmadas), `usuarios.versao_sessao` (entra no token de acesso; aumentar encerra as sessões), o tipo `finalidade_token` e a tabela `tokens_usuario`, com o SHA-256 do token de uso único, a finalidade (`REDEFINICAO_SENHA` ou `CONFIRMACAO_EMAIL`), o e-mail a confirmar, a validade e o uso. O valor puro do token nunca é gravado. Detalhes em [Autenticação e permissões](autenticacao.md).
+
 BE-S5-11: `V202611121300__atribuicao_mentores.sql` adiciona `atribuicoes_mentor` (histórico e unicidade parcial por equipe), `eventos_notificacao_mentoria` (integração da central), marco auditado de treinamento em `hackathon` e o tipo de e-mail `ATRIBUICAO_MENTOR`. Detalhes em [Atribuição de mentores](atribuicao-mentores.md).
 
 BE-S5-10: `V202611121100__ativacao_mentores.sql` adiciona `usuarios.mentor_perfil_concluido_em`, `usuarios.mentor_ativado_em` e `convites_mentor` (hash de token, validade e consumo). Reutiliza os campos de perfil de mentor e as tabelas de termos existentes. A pendência de ativação é independente da comprovação acadêmica. Detalhes em [Mentores](mentores.md).
@@ -34,13 +36,15 @@ erDiagram
     termos ||--o{ aceites_termos : recebe
     usuarios ||--o{ aceites_termos : aceita
     usuarios ||--o{ comprovantes_vinculo : envia
+    usuarios ||--o{ tokens_usuario : recebe_link
     equipes ||--o{ protocolos : recebe
     submissoes ||--o{ protocolos : gera
 ```
 
 | Tabela                 | Descrição                                                                                     |
 |------------------------|-----------------------------------------------------------------------------------------------|
-| `usuarios`             | Pessoas do sistema; `email` único, `papel`, `ativo`, instituição, curso e período; dados do mentor (empresa, área, máx. de equipes); `senha_hash` (Argon2), `tentativas_login`, `bloqueado_ate` e `situacao_conta` |
+| `usuarios`             | Pessoas do sistema; `email` único, `papel`, `ativo`, instituição, curso e período; dados do mentor (empresa, área, máx. de equipes); `senha_hash` (Argon2), `tentativas_login`, `bloqueado_ate`, `situacao_conta`, `email_confirmado_em` e `versao_sessao` |
+| `tokens_usuario`       | Token de uso único de redefinição de senha e confirmação de e-mail (BE-S5-07): `finalidade`, `token_hash` (SHA-256, único), `email` (só na confirmação), `expira_em` e `utilizado_em` |
 | `hackathon`            | Edição do evento: datas, `status`, tamanho da equipe (`min/max_integrantes`), prazos da Fase 1 e `avaliadores_por_proposta` (2 a 3, sem padrão) |
 | `equipes`              | Equipes de um hackathon, com a `situacao` (Em formação → Homologada)                           |
 | `membros_equipe`       | Usuário ↔ equipe com a `funcao`; uma equipe por pessoa em cada hackathon e um único `LIDER`     |
@@ -84,6 +88,7 @@ Definidos como `ENUM` nativo no Postgres (migration) e espelhados em [`app/const
 | `tipo_termo`         | `REGULAMENTO`, `TERMO_CONSENTIMENTO`                                                            |
 | `status_comprovante` | `PENDENTE` (padrão), `APROVADO`, `RECUSADO`                                                     |
 | `situacao_conta`     | `ATIVA` (padrão), `PENDENTE` (participante até o comprovante ser aprovado)                      |
+| `finalidade_token`   | `REDEFINICAO_SENHA`, `CONFIRMACAO_EMAIL`                                                        |
 | `status_proposta`    | `RASCUNHO` (padrão), `ENVIADA`                                                                  |
 | `tipo_protocolo`     | `INSCRICAO_EQUIPE`, `PROPOSTA`                                                                  |
 | `status_avaliacao`    | `RASCUNHO`, `ENVIADA` |

@@ -35,13 +35,15 @@ ação do sistema (convite, inscrição, protocolo...)
 | Resultado homologado                          | `RESULTADO_PROPOSTA`  | Todos os integrantes, aprovada ou não    | RF33, RF60          |
 | Cadastro ou renovação de convite de mentor     | `DEFINICAO_SENHA`     | O mentor, com link temporário de uso único | RF37, RN33, BE-S5-10 |
 
-Os templates de confirmação e recuperação abaixo ainda dependem dos respectivos fluxos de conta. `DEFINICAO_SENHA` já é usado pelo cadastro e convite de [mentores](mentores.md); seu uso para comitês segue pendente. Novos fluxos podem chamar `enfileirar` (veja mais abaixo):
+`CONFIRMACAO_EMAIL` e `RECUPERACAO_SENHA` são usados desde a BE-S5-07 (veja [Autenticação](autenticacao.md)). `DEFINICAO_SENHA` já é usado pelo cadastro e convite de [mentores](mentores.md); seu uso para comitês segue pendente. Novos fluxos podem chamar `enfileirar` (veja mais abaixo):
 
-| Tipo                | Uso previsto                                                    | Requisitos      | Tarefa      |
-|---------------------|-----------------------------------------------------------------|-----------------|-------------|
-| `CONFIRMACAO_EMAIL` | Confirmação do e-mail informado no cadastro                     | RF01            | BE-S5-07    |
-| `RECUPERACAO_SENHA` | Link temporário para redefinir a senha                          | RF04            | BE-S5-07    |
-| `DEFINICAO_SENHA`   | Acesso de mentores (RN33); comitês ainda sem gatilho            | RF08, RF37      | [BE-S5-10](mentores.md) |
+| Tipo                | Uso                                                             | Quem recebe                              | Requisitos      | Tarefa      |
+|---------------------|-----------------------------------------------------------------|------------------------------------------|-----------------|-------------|
+| `CONFIRMACAO_EMAIL` | Cadastro público, reenvio (`POST /me/confirmacao-email`) e troca de e-mail (`POST /me/email`), com link de uso único | O endereço a confirmar (no caso da troca, o **novo**) | RF01            | BE-S5-07    |
+| `RECUPERACAO_SENHA` | Link temporário para redefinir a senha (`POST /auth/recuperar-senha`) | O e-mail da conta, só se ela existir e estiver ativa | RF04            | BE-S5-07    |
+| `DEFINICAO_SENHA`   | Acesso de mentores (RN33); comitês ainda sem gatilho            | O mentor                                 | RF08, RF37      | [BE-S5-10](mentores.md) |
+
+Os e-mails de confirmação e de recuperação trazem o token no **fragmento** do link (`#token=...`) e têm chave de idempotência `confirmacao-email:{token_id}` e `recuperacao-senha:{token_id}`. Como o corpo tem um link de acesso, uma falha ao enfileirar registra no log só a classe do erro, nunca os parâmetros, que conteriam o link (`CHAVES_COM_LINK_SECRETO` em `app/services/email.py`).
 
 Mensagens de chat nunca geram e-mail (RN32): não existe tipo nem gatilho para elas.
 
