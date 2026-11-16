@@ -105,6 +105,20 @@ class StatusEnvioNotificacao(StrEnum):
     FALHA = "FALHA"
 
 
+class TipoNotificacao(StrEnum):
+    """Natureza de uma notificação da central in-app (BE-S5-04). CHAT e PRAZO só têm o canal
+    in-app; os produtores deles chegam com BE-S6-06 e BE-S7-06/07."""
+
+    CONVITE = "CONVITE"
+    ACEITE = "ACEITE"  # resposta (aceite ou recusa) a um convite; veja `dados.resposta`
+    INSCRICAO = "INSCRICAO"  # inscrição concluída e equipe homologada
+    PROPOSTA = "PROPOSTA"
+    RESULTADO = "RESULTADO"
+    MENTOR = "MENTOR"
+    CHAT = "CHAT"  # nunca gera e-mail (RN32)
+    PRAZO = "PRAZO"
+
+
 class SituacaoConta(StrEnum):
     PENDENTE = "PENDENTE"
     ATIVA = "ATIVA"

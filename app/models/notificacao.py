@@ -1,10 +1,11 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import Text, UniqueConstraint
+from sqlalchemy import Column, Text, UniqueConstraint
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
-from app.const.enums import CanalNotificacao, StatusEnvioNotificacao, pg_enum
+from app.const.enums import CanalNotificacao, StatusEnvioNotificacao, TipoNotificacao, pg_enum
 from app.db.defaults import AGORA_UTC
 
 
@@ -37,3 +38,33 @@ class NotificacaoResultado(SQLModel, table=True):
     criado_em: datetime | None = Field(
         default=None, nullable=False, sa_column_kwargs={"server_default": AGORA_UTC}
     )
+
+
+class Notificacao(SQLModel, table=True):
+    """Central de notificações in-app (BE-S5-04): um aviso a um destinatário. Só o próprio
+    usuário a vê. `chave_idempotencia` evita o mesmo aviso duas vezes ao mesmo usuário."""
+
+    __tablename__ = "notificacoes"
+    __table_args__ = (
+        UniqueConstraint("usuario_id", "chave_idempotencia", name="uq_notificacoes_usuario_chave"),
+    )
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
+    usuario_id: UUID = Field(foreign_key="usuarios.id", nullable=False)
+    tipo: TipoNotificacao = Field(
+        sa_type=pg_enum(TipoNotificacao, "tipo_notificacao"), nullable=False
+    )
+    titulo: str = Field(sa_type=Text, nullable=False)
+    mensagem: str = Field(sa_type=Text, nullable=False)
+    dados: dict | None = Field(default=None, sa_column=Column(JSONB, nullable=True))
+    referencia_tipo: str | None = Field(default=None, sa_type=Text)
+    referencia_id: UUID | None = Field(default=None)
+    chave_idempotencia: str = Field(sa_type=Text, nullable=False)
+    # Só no tipo RESULTADO: a linha do RF33 (status de envio e pareceres) que originou o aviso
+    notificacao_resultado_id: UUID | None = Field(
+        default=None, foreign_key="notificacoes_resultado.id", unique=True
+    )
+    criado_em: datetime | None = Field(
+        default=None, nullable=False, sa_column_kwargs={"server_default": AGORA_UTC}
+    )
+    lida_em: datetime | None = Field(default=None)
