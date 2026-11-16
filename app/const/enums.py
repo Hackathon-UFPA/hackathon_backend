@@ -42,6 +42,21 @@ class CategoriaArtefato(StrEnum):
     OUTRO = "OUTRO"
 
 
+class CategoriaEquipe(StrEnum):
+    """Indicada pelo líder ao montar a equipe (decisão de 05/11, BE-S5-01)."""
+
+    ESTUDANTES = "ESTUDANTES"
+    PROFISSIONAIS = "PROFISSIONAIS"
+    MISTA = "MISTA"
+
+
+class TipoIntegrante(StrEnum):
+    """Indicado pelo líder para cada pessoa da equipe; define qual vínculo ela vai comprovar."""
+
+    ESTUDANTE = "ESTUDANTE"
+    PROFISSIONAL = "PROFISSIONAL"
+
+
 class SituacaoEquipe(StrEnum):
     EM_FORMACAO = "EM_FORMACAO"
     AGUARDANDO_HOMOLOGACAO = "AGUARDANDO_HOMOLOGACAO"

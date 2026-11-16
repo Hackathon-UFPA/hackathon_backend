@@ -9,6 +9,7 @@ from app.const.enums import (
     PapelUsuario,
     SituacaoEquipe,
     StatusConvite,
+    TipoIntegrante,
 )
 from app.controllers.convite import (
     contar_pendentes,
@@ -45,6 +46,7 @@ from app.services.email_eventos import avisar_convite
 from app.services.notificacao_eventos import notificar_convite, notificar_resposta_convite
 from app.services.somente_leitura import exigir_equipe_editavel
 from app.services.termo import validar_termos_aceitos
+from app.validations.categoria_equipe import resolver_tipo
 from app.validations.inscricao import inscricoes_abertas
 
 
@@ -52,7 +54,7 @@ def _agora_utc() -> datetime:
     return datetime.now(UTC)
 
 
-async def _equipe_e_hackathon(
+async def equipe_e_hackathon(
     db: AsyncSession, equipe_id: UUID, *, para_atualizar: bool = False
 ) -> tuple[Equipe, Hackathon]:
     equipe = await get_equipe_by_id(db, equipe_id, para_atualizar=para_atualizar)
@@ -62,19 +64,19 @@ async def _equipe_e_hackathon(
     return equipe, hackathon
 
 
-def _exigir_inscricoes_abertas(hackathon: Hackathon) -> None:
+def exigir_inscricoes_abertas(hackathon: Hackathon) -> None:
     """RN06: convites só valem durante as inscrições."""
     if not inscricoes_abertas(hackathon):
         fora_do_periodo_de_inscricao()
 
 
-def _exigir_equipe_em_formacao(equipe: Equipe) -> None:
+def exigir_equipe_em_formacao(equipe: Equipe) -> None:
     """Concluir a inscrição fecha a composição da equipe (RF22): sem convites novos nem aceites."""
     if equipe.situacao != SituacaoEquipe.EM_FORMACAO:
         equipe_nao_editavel()
 
 
-async def _exigir_lider(db: AsyncSession, equipe_id: UUID, usuario: Usuario) -> None:
+async def exigir_lider(db: AsyncSession, equipe_id: UUID, usuario: Usuario) -> None:
     """Líder técnico = `membros_equipe.funcao = LIDER`. DEV passa em tudo (exceção do time)."""
     if usuario.papel == PapelUsuario.DEV:
         return
@@ -83,17 +85,46 @@ async def _exigir_lider(db: AsyncSession, equipe_id: UUID, usuario: Usuario) -> 
         apenas_lider_da_equipe()
 
 
+async def convidar(
+    db: AsyncSession,
+    equipe: Equipe,
+    lider: Usuario,
+    nome: str,
+    email: str,
+    tipo: TipoIntegrante,
+) -> Convite:
+    """Cria o convite com os dados indicados pelo líder e enfileira os avisos (e-mail e central).
+    Sem commit e sem conferir regras de equipe: quem chama já travou a equipe e as validou.
+    Usado pelo convite avulso e pela composição informada de uma vez (BE-S5-01)."""
+    convidado = await get_usuario_by_email(db, email)
+    convite = await criar_convite(
+        db,
+        Convite(
+            equipe_id=equipe.id,
+            nome=nome,
+            email=email,
+            usuario_id=convidado.id if convidado else None,
+            convidado_por=lider.id,
+            tipo_integrante=tipo,
+        ),
+    )
+    # RF18: o aviso entra na fila junto com o convite; o envio acontece depois, no worker
+    await avisar_convite(db, convite, equipe, lider)
+    await notificar_convite(db, convite, equipe, lider)
+    return convite
+
+
 async def enviar_convite(
     db: AsyncSession, lider: Usuario, equipe_id: UUID, dados: ConviteEnvio
 ) -> Convite:
     """O líder convida por nome e e-mail (RF18). O total de integrantes mais convites pendentes
     não passa do máximo do hackathon. O convite aparece no painel de quem tem conta com aquele
     e-mail, e o aviso por e-mail entra na fila (app.services.email_eventos)."""
-    equipe, hackathon = await _equipe_e_hackathon(db, equipe_id, para_atualizar=True)
-    await _exigir_lider(db, equipe.id, lider)
+    equipe, hackathon = await equipe_e_hackathon(db, equipe_id, para_atualizar=True)
+    await exigir_lider(db, equipe.id, lider)
     await exigir_equipe_editavel(db, equipe.id)
-    _exigir_inscricoes_abertas(hackathon)
-    _exigir_equipe_em_formacao(equipe)
+    exigir_inscricoes_abertas(hackathon)
+    exigir_equipe_em_formacao(equipe)
 
     email = str(dados.email).lower()
     convidado = await get_usuario_by_email(db, email)
@@ -104,26 +135,16 @@ async def enviar_convite(
     if ocupadas >= hackathon.max_integrantes:
         equipe_sem_vagas(hackathon.max_integrantes)
 
-    convite = await criar_convite(
-        db,
-        Convite(
-            equipe_id=equipe.id,
-            nome=dados.nome,
-            email=email,
-            usuario_id=convidado.id if convidado else None,
-            convidado_por=lider.id,
-        ),
-    )
-    # RF18: o aviso entra na fila junto com o convite; o envio acontece depois, no worker
-    await avisar_convite(db, convite, equipe, lider)
-    await notificar_convite(db, convite, equipe, lider)
+    # O tipo é indicado pelo líder; na MISTA ele é obrigatório (BE-S5-01)
+    tipo = resolver_tipo(equipe.categoria, dados.tipo_integrante, dados.nome)
+    convite = await convidar(db, equipe, lider, dados.nome, email, tipo)
     await db.commit()
     await db.refresh(convite)
     return convite
 
 
 async def listar_convites(db: AsyncSession, usuario: Usuario, equipe_id: UUID) -> list[Convite]:
-    equipe, _ = await _equipe_e_hackathon(db, equipe_id)
+    equipe, _ = await equipe_e_hackathon(db, equipe_id)
     if usuario.papel != PapelUsuario.DEV and await get_membro(db, equipe.id, usuario.id) is None:
         apenas_integrante_da_equipe()
     return await listar_convites_da_equipe(db, equipe.id)
@@ -168,10 +189,10 @@ async def aceitar_convite(
     termo de consentimento vigentes (RF20). Tudo em uma transação: se algo falhar, nada vale."""
     convite = await _convite_pendente_do_destinatario(db, usuario, convite_id)
     # Trava a equipe para que aceites simultâneos não passem do máximo de integrantes
-    equipe, hackathon = await _equipe_e_hackathon(db, convite.equipe_id, para_atualizar=True)
+    equipe, hackathon = await equipe_e_hackathon(db, convite.equipe_id, para_atualizar=True)
     await exigir_equipe_editavel(db, equipe.id)
-    _exigir_inscricoes_abertas(hackathon)
-    _exigir_equipe_em_formacao(equipe)
+    exigir_inscricoes_abertas(hackathon)
+    exigir_equipe_em_formacao(equipe)
 
     if await get_membro_no_hackathon(db, hackathon.id, usuario.id) is not None:
         ja_esta_em_outra_equipe()
@@ -182,7 +203,14 @@ async def aceitar_convite(
     await registrar_aceites(db, usuario.id, ids_aceitos)
 
     adicionar_membro(
-        db, MembroEquipe(equipe_id=equipe.id, usuario_id=usuario.id, hackathon_id=hackathon.id)
+        db,
+        MembroEquipe(
+            equipe_id=equipe.id,
+            usuario_id=usuario.id,
+            hackathon_id=hackathon.id,
+            # Vem do que o líder indicou no convite; quem aceita não escolhe o próprio tipo
+            tipo_integrante=convite.tipo_integrante,
+        ),
     )
     convite.status = StatusConvite.ACEITO
     convite.usuario_id = usuario.id
@@ -204,9 +232,9 @@ async def aceitar_convite(
 async def recusar_convite(db: AsyncSession, usuario: Usuario, convite_id: UUID) -> Convite:
     """Recusar libera a vaga (índice único só considera convites pendentes e aceitos)."""
     convite = await _convite_pendente_do_destinatario(db, usuario, convite_id)
-    equipe, hackathon = await _equipe_e_hackathon(db, convite.equipe_id)
+    equipe, hackathon = await equipe_e_hackathon(db, convite.equipe_id)
     await exigir_equipe_editavel(db, convite.equipe_id)
-    _exigir_inscricoes_abertas(hackathon)
+    exigir_inscricoes_abertas(hackathon)
 
     convite.status = StatusConvite.RECUSADO
     convite.usuario_id = usuario.id
@@ -223,7 +251,7 @@ async def cancelar_convite(db: AsyncSession, lider: Usuario, convite_id: UUID) -
     convite = await get_convite_by_id(db, convite_id, para_atualizar=True)
     if convite is None:
         convite_nao_encontrado()
-    await _exigir_lider(db, convite.equipe_id, lider)
+    await exigir_lider(db, convite.equipe_id, lider)
     await exigir_equipe_editavel(db, convite.equipe_id)
     if convite.status != StatusConvite.PENDENTE:
         convite_ja_respondido()

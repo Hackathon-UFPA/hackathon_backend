@@ -4,7 +4,7 @@ from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.const.enums import FuncaoMembro, PapelUsuario, SituacaoEquipe
+from app.const.enums import CategoriaEquipe, FuncaoMembro, PapelUsuario, SituacaoEquipe
 from app.controllers.equipe import (
     atualizar_equipe,
     criar_equipe,
@@ -24,7 +24,10 @@ from app.exceptions.db import erro_de_integridade_sql
 from app.exceptions.equipe import consulta_apenas_por_integrante, equipe_nao_editavel
 from app.models import Equipe, MembroEquipe, Usuario
 from app.schemas.equipe import EquipeCreate, EquipeUpdate
+from app.services.composicao import validar_composicao
+from app.services.convite import convidar
 from app.services.somente_leitura import exigir_equipe_editavel
+from app.validations.categoria_equipe import exigir_categoria_permitida, resolver_tipo
 from app.validations.inscricao import inscricoes_abertas
 
 
@@ -37,8 +40,28 @@ async def criar(db: AsyncSession, usuario: Usuario, dados: EquipeCreate) -> Equi
     if await get_membro_no_hackathon(db, hackathon.id, usuario.id) is not None:
         ja_esta_em_outra_equipe()
 
-    # O mínimo de integrantes será validado na conclusão da inscrição, não na formação.
-    equipe = Equipe(**dados.model_dump(), criado_em=datetime.now(UTC))
+    # Sem `categoria`, vale ESTUDANTES: é o comportamento de antes da decisão de 05/11
+    categoria = dados.categoria or CategoriaEquipe.ESTUDANTES
+    if dados.integrantes is not None:
+        # Composição informada de uma vez: tamanho (RN01), categoria, tipos e e-mails conferidos
+        # antes de gravar qualquer coisa. Sem ela, o mínimo só vale na conclusão da inscrição.
+        tipo_lider, indicados = validar_composicao(
+            hackathon,
+            categoria,
+            tipo_lider=dados.tipo_lider,
+            email_lider=usuario.email,
+            integrantes=dados.integrantes,
+        )
+    else:
+        exigir_categoria_permitida(hackathon, categoria)
+        tipo_lider, indicados = resolver_tipo(categoria, dados.tipo_lider, "o líder"), []
+
+    equipe = Equipe(
+        hackathon_id=hackathon.id,
+        nome=dados.nome,
+        categoria=categoria,
+        criado_em=datetime.now(UTC),
+    )
     try:
         await criar_equipe(db, equipe)
         adicionar_membro(
@@ -48,8 +71,14 @@ async def criar(db: AsyncSession, usuario: Usuario, dados: EquipeCreate) -> Equi
                 usuario_id=usuario.id,
                 hackathon_id=hackathon.id,
                 funcao=FuncaoMembro.LIDER,
+                tipo_integrante=tipo_lider,
             ),
         )
+        # Descarrega o vínculo do líder já aqui: a violação de unicidade (RN02) tem de aparecer
+        # neste bloco, como 409, e não dentro da criação de um convite
+        await db.flush()
+        for indicado in indicados:
+            await convidar(db, equipe, usuario, indicado.nome, indicado.email, indicado.tipo)
         await db.commit()
     except IntegrityError as error:
         await db.rollback()

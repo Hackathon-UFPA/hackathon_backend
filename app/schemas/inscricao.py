@@ -3,7 +3,14 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.const.enums import FuncaoMembro, SituacaoEquipe, StatusComprovante, StatusConvite
+from app.const.enums import (
+    CategoriaEquipe,
+    FuncaoMembro,
+    SituacaoEquipe,
+    StatusComprovante,
+    StatusConvite,
+    TipoIntegrante,
+)
 from app.const.inscricao import CodigoPendencia
 
 
@@ -25,6 +32,9 @@ class IntegrantePainelResponse(BaseModel):
     nome: str | None = None
     email: str
     funcao: FuncaoMembro | None = None
+    tipo_integrante: TipoIntegrante | None = Field(
+        default=None, description="Indicado pelo líder (BE-S5-01)"
+    )
     integrante: bool = Field(description="False para quem ainda não entrou: convite em aberto")
     convite: StatusConvite | None = Field(
         default=None, description="Vazio para o líder, que não foi convidado"
@@ -46,6 +56,7 @@ class PainelEquipeResponse(BaseModel):
     equipe_id: UUID
     hackathon_id: UUID
     nome: str | None = None
+    categoria: CategoriaEquipe
     situacao: SituacaoEquipe
     inscricao_concluida_em: datetime | None = None
     homologada_em: datetime | None = None

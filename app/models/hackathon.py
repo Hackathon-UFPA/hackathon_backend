@@ -24,6 +24,10 @@ class Hackathon(SQLModel, table=True):
     # Tamanho da equipe (RN01); 3 a 5 ainda depende da Q04
     min_integrantes: int = Field(default=3, sa_type=SmallInteger, nullable=False)
     max_integrantes: int = Field(default=5, sa_type=SmallInteger, nullable=False)
+    # Política provisória de elegibilidade por categoria de equipe (BE-S5-01, validar com o Squad 1)
+    aceita_equipe_estudantes: bool = Field(default=True, nullable=False)
+    aceita_equipe_profissionais: bool = Field(default=True, nullable=False)
+    aceita_equipe_mista: bool = Field(default=True, nullable=False)
     inscricoes_inicio: datetime | None = Field(default=None)
     inscricoes_fim: datetime | None = Field(default=None)
     homologacao_fim: datetime | None = Field(default=None)

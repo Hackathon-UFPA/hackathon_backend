@@ -18,6 +18,7 @@ from app.const.enums import (
     SituacaoEquipe,
     StatusComprovante,
     StatusConvite,
+    TipoIntegrante,
     TipoTermo,
 )
 from app.const.inscricao import CodigoPendencia
@@ -28,6 +29,11 @@ from app.controllers.termo import listar_aceites_dos_usuarios, listar_termos_vig
 from app.models import Convite, Equipe, Hackathon, MembroEquipe, Usuario
 from app.services.email_eventos import avisar_equipe_homologada
 from app.services.notificacao_eventos import notificar_equipe_homologada
+from app.validations.categoria_equipe import (
+    categoria_permitida,
+    categorias_permitidas,
+    incoerencia_da_composicao,
+)
 from app.validations.inscricao import como_utc, inscricoes_abertas
 
 
@@ -70,6 +76,14 @@ class Avaliacao:
 
 def _nome(usuario: Usuario) -> str:
     return usuario.nome or usuario.email
+
+
+def _profissional(integrante: IntegranteAvaliado) -> str:
+    """O vínculo que a pessoa comprova depende do tipo que o líder indicou (BE-S5-01). Para o
+    estudante os textos seguem como sempre foram; para o profissional ganham " profissional"."""
+    return (
+        " profissional" if integrante.membro.tipo_integrante == TipoIntegrante.PROFISSIONAL else ""
+    )
 
 
 def _convites_em_aberto_ou_recusados(
@@ -158,6 +172,26 @@ async def avaliar(
                 bloqueia_conclusao=True,
             )
         )
+    # A edição pode deixar de aceitar a categoria depois de a equipe se formar: isso só barra a
+    # conclusão. Equipes que já concluíram não voltam atrás por uma mudança de política.
+    if equipe.situacao == SituacaoEquipe.EM_FORMACAO and not categoria_permitida(
+        hackathon, equipe.categoria
+    ):
+        pendencias.append(
+            Pendencia(
+                CodigoPendencia.CATEGORIA_NAO_PERMITIDA,
+                f"A edição não aceita equipes {equipe.categoria}. Categorias aceitas: "
+                f"{', '.join(categorias_permitidas(hackathon))}.",
+                bloqueia_conclusao=True,
+            )
+        )
+    incoerencia = incoerencia_da_composicao(
+        equipe.categoria, [i.membro.tipo_integrante for i in integrantes]
+    )
+    if incoerencia:
+        pendencias.append(
+            Pendencia(CodigoPendencia.CATEGORIA_INCOERENTE, incoerencia, bloqueia_conclusao=True)
+        )
     if not termos_publicados:
         pendencias.append(
             Pendencia(
@@ -202,7 +236,7 @@ async def avaliar(
             pendencias.append(
                 Pendencia(
                     CodigoPendencia.COMPROVANTE_NAO_ENVIADO,
-                    f"{nome} ainda não enviou o comprovante de vínculo.",
+                    f"{nome} ainda não enviou o comprovante de vínculo{_profissional(integrante)}.",
                     usuario.id,
                 )
             )
@@ -210,7 +244,7 @@ async def avaliar(
             pendencias.append(
                 Pendencia(
                     CodigoPendencia.COMPROVANTE_PENDENTE,
-                    f"O comprovante de {nome} aguarda conferência.",
+                    f"O comprovante{_profissional(integrante)} de {nome} aguarda conferência.",
                     usuario.id,
                 )
             )
@@ -218,7 +252,8 @@ async def avaliar(
             pendencias.append(
                 Pendencia(
                     CodigoPendencia.COMPROVANTE_RECUSADO,
-                    f"O comprovante de {nome} foi recusado e precisa ser enviado de novo.",
+                    f"O comprovante{_profissional(integrante)} de {nome} foi recusado e precisa "
+                    "ser enviado de novo.",
                     usuario.id,
                 )
             )

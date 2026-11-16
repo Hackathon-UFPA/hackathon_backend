@@ -5,6 +5,8 @@ do evento e sem commit, e usa as mesmas chaves de idempotência. O e-mail não �
 Um aviso que não pôde ser gravado não derruba a ação principal (veja `notificar`).
 """
 
+from uuid import UUID
+
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.const.enums import FuncaoMembro, StatusConvite, TipoNotificacao
@@ -62,6 +64,21 @@ async def notificar_resposta_convite(
             "equipe_id": equipe.id,
             "resposta": "ACEITO" if aceito else "RECUSADO",
         },
+    )
+
+
+async def notificar_membro_removido(db: AsyncSession, equipe: Equipe, usuario_id: UUID) -> None:
+    """RF24: quem é retirado da equipe pelo líder é avisado na plataforma."""
+    await notificar(
+        db,
+        [usuario_id],
+        TipoNotificacao.INSCRICAO,
+        "Você foi retirado de uma equipe",
+        f"O líder retirou você da equipe {_nome_equipe(equipe)}.",
+        chave=f"membro_removido:{equipe.id}:{usuario_id}",
+        referencia_tipo="EQUIPE",
+        referencia_id=equipe.id,
+        dados={"equipe_id": equipe.id, "evento": "REMOVIDO"},
     )
 
 

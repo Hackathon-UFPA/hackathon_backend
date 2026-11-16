@@ -22,6 +22,7 @@ from app.exceptions.equipe import equipe_nao_editavel, lider_protegido, membro_n
 from app.models import MembroEquipe, Usuario
 from app.schemas.membro_equipe import MembroEquipeUpdate
 from app.services.equipe import consultar
+from app.services.notificacao_eventos import notificar_membro_removido
 from app.services.somente_leitura import exigir_equipe_editavel
 from app.validations.inscricao import inscricoes_abertas
 
@@ -93,6 +94,9 @@ async def remover(db: AsyncSession, usuario: Usuario, equipe_id: UUID, usuario_i
     # bloqueado pelo índice uq_convites_equipe_email_ativo até decisão específica.
     try:
         await remover_membro(db, membro)
+        # RF24: quem é removido é avisado na plataforma (a linha da equipe já está travada)
+        equipe = await get_equipe_by_id(db, equipe_id)
+        await notificar_membro_removido(db, equipe, usuario_id)
         await db.commit()
     except IntegrityError as error:
         await db.rollback()

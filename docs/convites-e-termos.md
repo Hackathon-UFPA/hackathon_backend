@@ -6,7 +6,7 @@ Rotas de RF18, RF19 e RF20. Todas exigem token e **conta ativa** (conta pendente
 
 | Rota | Quem acessa | O que faz |
 |------|-------------|-----------|
-| `POST /equipes/{id}/convites` | Líder da equipe (`membros_equipe.funcao = LIDER`) | Convida por `nome` e `email`; o convite nasce `PENDENTE` |
+| `POST /equipes/{id}/convites` | Líder da equipe (`membros_equipe.funcao = LIDER`) | Convida por `nome`, `email` e `tipo_integrante` (opcional: herda o da categoria; obrigatório na `MISTA`); o convite nasce `PENDENTE` |
 | `GET /equipes/{id}/convites` | Integrantes da equipe | Lista os convites e o estado de cada um (o líder vê quem recusou) |
 | `POST /convites/{id}/cancelar` | Líder da equipe | Retira um convite `PENDENTE` |
 | `GET /convites/meus` | Qualquer usuário | Convites `PENDENTE` dirigidos ao e-mail de quem está logado (painel) |
@@ -21,6 +21,7 @@ Rotas de RF18, RF19 e RF20. Todas exigem token e **conta ativa** (conta pendente
 - Só aceita quem ainda não está em outra equipe do mesmo hackathon (RN02); a restrição única do banco garante isso mesmo com pedidos simultâneos.
 - O convite é dirigido ao **e-mail**: o e-mail do convite é comparado, sem diferenciar maiúsculas, com o de quem responde. Para qualquer outra pessoa, o convite responde 404.
 - Aceitar exige enviar em `termos_ids` os ids de **todas** as versões vigentes (regulamento e termo de consentimento, RN05). Faltou um: 422. Algum id que não é vigente (versão nova publicada, ou de outro hackathon): 409. A data, a hora e a versão ficam em `aceites_termos`, ligadas à linha de `termos` aceita; publicar uma versão nova não altera os aceites antigos.
+- O `tipo_integrante` do convite é indicado pelo líder (BE-S5-01) e copiado para o vínculo no aceite: quem aceita não escolhe o próprio tipo. Para convidar a equipe inteira de uma vez, veja [Equipes e membros](equipes-e-membros.md#categorias-e-composição-informada-pelo-líder-be-s5-01).
 - Quem entra pelo convite fica com `funcao` vazia em `membros_equipe`; o líder define as funções depois.
 
 **Versões do regulamento (BE-S5-12).** Quem cria, edita e publica as versões é o Organizador, por `/admin/hackathons/{id}/termos` (rascunho, publicação e histórico); veja [Conteúdo institucional](conteudo-institucional.md). Publicar uma versão nova aposenta a vigente e passa a exigir novo aceite: rascunhos nunca aparecem em `termos/vigentes`.

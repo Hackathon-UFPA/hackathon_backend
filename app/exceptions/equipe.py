@@ -28,3 +28,25 @@ def lider_protegido():
         detail="O líder não pode ser removido ou rebaixado, nem outro membro promovido a líder. "
         "Transferência de liderança ainda não está disponível.",
     )
+
+
+def composicao_invalida(mensagem: str):
+    """A composição informada pelo líder não fecha (limites, duplicidade, categoria, tipos)."""
+    raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=mensagem)
+
+
+def categoria_nao_permitida(permitidas: list[str]):
+    raise HTTPException(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        detail="Esta edição não aceita equipes da categoria escolhida. "
+        f"Categorias aceitas: {', '.join(permitidas)}.",
+    )
+
+
+def reconvite_indisponivel(emails: list[str]):
+    """O índice uq_convites_equipe_email_ativo ainda impede reconvidar quem já aceitou e saiu."""
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail="Estas pessoas já aceitaram um convite desta equipe e foram removidas; "
+        f"o reconvite à mesma equipe ainda não está disponível: {', '.join(emails)}.",
+    )

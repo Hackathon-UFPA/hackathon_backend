@@ -3,7 +3,7 @@ from uuid import UUID, uuid4
 
 from sqlmodel import Field, SQLModel
 
-from app.const.enums import StatusConvite, pg_enum
+from app.const.enums import StatusConvite, TipoIntegrante, pg_enum
 from app.db.defaults import AGORA_UTC
 
 
@@ -17,6 +17,12 @@ class Convite(SQLModel, table=True):
     # Preenchido quando a pessoa convidada já tem (ou cria) conta
     usuario_id: UUID | None = Field(default=None, foreign_key="usuarios.id")
     convidado_por: UUID = Field(foreign_key="usuarios.id", nullable=False)
+    # Indicado pelo líder (BE-S5-01); a pessoa convidada não o altera
+    tipo_integrante: TipoIntegrante = Field(
+        default=TipoIntegrante.ESTUDANTE,
+        sa_type=pg_enum(TipoIntegrante, "tipo_integrante"),
+        nullable=False,
+    )
     status: StatusConvite = Field(
         default=StatusConvite.PENDENTE,
         sa_type=pg_enum(StatusConvite, "status_convite"),
