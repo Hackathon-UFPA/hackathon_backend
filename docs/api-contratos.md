@@ -4,6 +4,8 @@
 
 BE-S5-11: os contratos de atribuição/substituição/encerramento, consultas por equipe/mentor e conclusão do treinamento estão em [Atribuição de mentores](atribuicao-mentores.md) e na tag Swagger **Atribuições de mentores**. Não é permitido escolher `hackathon_id` ou autor no corpo da atribuição; a edição vem da equipe, e a substituição exige `atribuicao_atual_id` para controle de concorrência.
 
+BE-S5-07: as tags **Perfil** (`/me`), **Autenticação** (recuperação de senha, confirmação de e-mail, sessão e logout) e **Usuários** (`/admin/usuarios`: listar, editar, desativar e reativar) estão descritas em [Autenticação e permissões](autenticacao.md). O token de acesso agora carrega a versão da sessão: trocar ou redefinir a senha e fazer logout encerram todos os tokens anteriores (401), e a resposta de `POST /me/senha` traz um token novo.
+
 Resumo do que a interface (front) precisa saber para consumir a API. O detalhe de cada rota, com campos, exemplos e erros, está no **Swagger** (`/docs`); o contrato em JSON está em `/openapi.json`.
 
 ## Como usar o Swagger
