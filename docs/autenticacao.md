@@ -170,7 +170,7 @@ Mostre sempre a mesma mensagem no pedido de recuperação, tenha ou não conta. 
 
 **Pontos de atenção:**
 - O token não é renovado: depois de `expires_in` segundos o próximo pedido dá 401 e é preciso entrar de novo.
-- No 429 a API manda o tempo restante no cabeçalho `Retry-After`. O navegador só deixa o front ler esse cabeçalho se ele for exposto no CORS, o que ainda não foi configurado; enquanto isso, use a mensagem fixa acima.
+- No 429 a API manda o tempo restante no cabeçalho `Retry-After`. O navegador só deixa o front ler esse cabeçalho se ele for exposto no CORS, o que passou a valer no BE-S5-04 (`expose_headers` com `Retry-After` e `X-Total-Count`); a mensagem fixa acima continua válida.
 - Para o front rodar em outra origem, defina `CORS_ORIGINS` no `.env` da API (hoje o padrão é `*`).
 - A conta de participante do cadastro público fica `PENDENTE` até um Organizador ou o Comitê Científico aprovar o comprovante (`POST /admin/comprovantes/{id}/aprovar`). Mentor não exige comprovante: fica `ativo=false` até concluir o fluxo de [convite e ativação](mentores.md). Alterar somente `situacao_conta` não conclui a RN33.
 

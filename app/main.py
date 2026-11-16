@@ -27,6 +27,8 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    # Sem isto o navegador não deixa o front ler esses cabeçalhos da resposta
+    expose_headers=["X-Total-Count", "Retry-After"],
 )
 
 app.include_router(router)

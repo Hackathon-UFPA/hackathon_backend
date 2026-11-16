@@ -27,6 +27,7 @@ API do sistema de gestão de hackathons da UFPA, construída com **FastAPI**. Cu
 - [Notificações e somente leitura](docs/notificacoes-e-somente-leitura.md): aviso do resultado às equipes e bloqueio de escrita das não aprovadas
 - [E-mails](docs/emails.md): fila de envio, provedor SMTP, templates em português e acompanhamento
 - [Mentores](docs/mentores.md): cadastro, convite seguro, ativação com perfil e termos, desativação (BE-S5-10)
+- [Central de notificações](docs/central-de-notificacoes.md): notificações in-app com leitura, contagem, idempotência e privacidade (BE-S5-04)
 - [Atribuição de mentores](docs/atribuicao-mentores.md): equipes aprovadas, capacidade, histórico e notificações (BE-S5-11)
 - [Banco de dados](docs/banco-de-dados.md): tabelas, enums e migrations
 - [Guia de desenvolvimento](docs/desenvolvimento.md): como criar rotas, comandos e CI/CD
@@ -53,11 +54,12 @@ Com a API no ar, a documentação interativa das rotas fica em `http://localhost
 | Homologação do resultado e aprovadas    | RF31, RF32, BE-S4-11 | Concluído |
 | Notificação do resultado e somente leitura | RF33, RF34, BE-S4-12 | Concluído (canal plataforma) |
 | E-mails transacionais (fila, worker e templates) | RNF28, RF60, BE-S5-05 | Concluído (ver [E-mails](docs/emails.md)) |
-| Atribuição de mentores | RF38, RN16, RN24, RN33, BE-S5-11 | Implementado; publicação in-app depende da central |
+| Central de notificações in-app | RF19, RF22, RF28, RF33, RF38, RF53, RF60, RF61, BE-S5-04 | Concluído (produtores de chat e prazo: BE-S6-06 e BE-S7-06/07) |
+| Atribuição de mentores | RF38, RN16, RN24, RN33, BE-S5-11 | Concluído (publicado na central in-app) |
 
 ### Notificação do resultado e somente leitura (BE-S4-12)
 
-- Canal na plataforma: `GET /me/notificacoes`. A decisão **Q16** foi encerrada (e-mail e plataforma, com o chat como exceção) e o aviso do resultado também sai por e-mail, pela fila de [E-mails](docs/emails.md) (BE-S5-05).
+- Canal na plataforma: `GET /me/notificacoes`, agora a [central de notificações](docs/central-de-notificacoes.md) (BE-S5-04); o item de resultado mantém o formato do RF33. A decisão **Q16** foi encerrada (e-mail e plataforma, com o chat como exceção) e o aviso do resultado também sai por e-mail, pela fila de [E-mails](docs/emails.md) (BE-S5-05).
 - Depois da homologação do resultado, equipe com proposta reprovada fica **somente leitura** no servidor (409 nas rotas de escrita, inclusive para DEV). Equipe sem proposta enviada continua editável (regra a confirmar com o grupo).
 - **Corrida aceita:** uma escrita que passou na checagem antes do commit da homologação vale.
 - Detalhes em [Notificações e somente leitura](docs/notificacoes-e-somente-leitura.md).

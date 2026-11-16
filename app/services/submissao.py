@@ -63,6 +63,7 @@ from app.schemas.submissao import (
 )
 from app.services.email_eventos import avisar_protocolo_proposta
 from app.services.equipe import consultar
+from app.services.notificacao_eventos import notificar_protocolo_proposta
 from app.services.resultado import exigir_resultado_aberto
 from app.services.somente_leitura import exigir_equipe_editavel
 from app.validations.submissao import campos_obrigatorios_pendentes, propostas_abertas
@@ -215,6 +216,7 @@ async def _registrar_envio(
         ),
     )
     await avisar_protocolo_proposta(db, equipe, proposta, protocolo)
+    await notificar_protocolo_proposta(db, equipe, proposta, protocolo)
     return protocolo, numero
 
 

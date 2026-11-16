@@ -27,6 +27,7 @@ from app.controllers.membro_equipe import listar_membros_com_usuario
 from app.controllers.termo import listar_aceites_dos_usuarios, listar_termos_vigentes
 from app.models import Convite, Equipe, Hackathon, MembroEquipe, Usuario
 from app.services.email_eventos import avisar_equipe_homologada
+from app.services.notificacao_eventos import notificar_equipe_homologada
 from app.validations.inscricao import como_utc, inscricoes_abertas
 
 
@@ -252,4 +253,5 @@ async def reavaliar_homologacao(
     await db.flush()
     if equipe.situacao == SituacaoEquipe.HOMOLOGADA:
         await avisar_equipe_homologada(db, equipe)
+        await notificar_equipe_homologada(db, equipe)
     return equipe.situacao

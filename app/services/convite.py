@@ -42,6 +42,7 @@ from app.exceptions.equipe import equipe_nao_editavel
 from app.models import Convite, Equipe, Hackathon, MembroEquipe, Usuario
 from app.schemas.convite import ConviteEnvio, ConviteRecebidoResponse
 from app.services.email_eventos import avisar_convite
+from app.services.notificacao_eventos import notificar_convite, notificar_resposta_convite
 from app.services.somente_leitura import exigir_equipe_editavel
 from app.services.termo import validar_termos_aceitos
 from app.validations.inscricao import inscricoes_abertas
@@ -115,6 +116,7 @@ async def enviar_convite(
     )
     # RF18: o aviso entra na fila junto com o convite; o envio acontece depois, no worker
     await avisar_convite(db, convite, equipe, lider)
+    await notificar_convite(db, convite, equipe, lider)
     await db.commit()
     await db.refresh(convite)
     return convite
@@ -187,6 +189,7 @@ async def aceitar_convite(
     convite.respondido_em = _agora_utc()
     db.add(convite)
     try:
+        await notificar_resposta_convite(db, convite, equipe, usuario)
         await db.commit()
     except IntegrityError as error:
         await db.rollback()
@@ -201,7 +204,7 @@ async def aceitar_convite(
 async def recusar_convite(db: AsyncSession, usuario: Usuario, convite_id: UUID) -> Convite:
     """Recusar libera a vaga (índice único só considera convites pendentes e aceitos)."""
     convite = await _convite_pendente_do_destinatario(db, usuario, convite_id)
-    _, hackathon = await _equipe_e_hackathon(db, convite.equipe_id)
+    equipe, hackathon = await _equipe_e_hackathon(db, convite.equipe_id)
     await exigir_equipe_editavel(db, convite.equipe_id)
     _exigir_inscricoes_abertas(hackathon)
 
@@ -209,6 +212,7 @@ async def recusar_convite(db: AsyncSession, usuario: Usuario, convite_id: UUID) 
     convite.usuario_id = usuario.id
     convite.respondido_em = _agora_utc()
     db.add(convite)
+    await notificar_resposta_convite(db, convite, equipe, usuario)
     await db.commit()
     await db.refresh(convite)
     return convite

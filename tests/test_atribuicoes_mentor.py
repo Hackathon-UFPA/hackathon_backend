@@ -454,7 +454,10 @@ def test_notifica_todos_atomicamente_e_entrega(client, s, sql, processar):
         a=UUID(resposta.json()["id"]),
     )
     assert {e["usuario_id"] for e in eventos} == {mentor["id"], *(m["id"] for m in membros)}
-    assert all(e["email_enfileirado"] and e["publicado_na_plataforma_em"] is None for e in eventos)
+    # BE-S5-04: o evento já nasce publicado na central in-app
+    assert all(
+        e["email_enfileirado"] and e["publicado_na_plataforma_em"] is not None for e in eventos
+    )
     provedor = ProvedorMemoria()
     assert processar(provedor).enviados == 3
     assert {m.destinatario for m in provedor.enviadas} == {
@@ -686,24 +689,37 @@ def test_rollback_de_substituicao_preserva_anterior_e_avisos(client, s, sql, mon
     assert sql("SELECT 1 FROM eventos_notificacao_mentoria WHERE tipo='SUBSTITUIDA'") == []
 
 
-def test_eventos_pendentes_para_a_central_sem_publicacao_ficticia(client, s):
+def test_eventos_pendentes_para_a_central_so_quando_a_publicacao_falha(client, s, monkeypatch):
     from app.controllers.atribuicao_mentor import eventos_pendentes_plataforma
     from tests.test_email_fila import com_sessao
 
+    # BE-S5-04: com a central integrada, o evento sai publicado e não sobra pendência.
     membro = s.membro()
     assert atribuir(client, s, s.mentor()).status_code == 201
-    # O endpoint atual é específico de resultado, não uma central genérica já implementada.
-    assert client.get("/me/notificacoes", headers=headers(membro)).json() == []
+    [aviso] = client.get("/me/notificacoes", headers=headers(membro)).json()
+    assert aviso["tipo"] == "MENTOR"
+
+    async def sem_pendentes(db):
+        assert await eventos_pendentes_plataforma(db) == []
+
+    com_sessao(sem_pendentes)
+
+    # Se a publicação falhar, o evento fica pendente para ser reprocessado
+    async def falhou(*_, **__):
+        return None
+
+    monkeypatch.setattr("app.services.notificacao_mentoria.notificar", falhou)
+    assert atribuir(client, s, s.mentor(), equipe=s.equipes[1]).status_code == 201
 
     async def consumir(db):
         eventos = await eventos_pendentes_plataforma(db)
-        assert len(eventos) == 2
+        assert len(eventos) == 1
         assert all(e.publicado_na_plataforma_em is None for e in eventos)
         from datetime import UTC, datetime
 
         eventos[0].publicado_na_plataforma_em = datetime.now(UTC)
         db.add(eventos[0])
         await db.commit()
-        assert len(await eventos_pendentes_plataforma(db)) == 1
+        assert await eventos_pendentes_plataforma(db) == []
 
     com_sessao(consumir)

@@ -7,7 +7,7 @@ RF33 e RF34. Dependem de RF31, RF32 ([Resultado](resultado.md)) e RF06.
 | Rota | Quem acessa | O que faz |
 |------|-------------|-----------|
 | `POST /admin/hackathons/{id}/resultado/homologar` | Organizador (e DEV) | Além de homologar, cria as notificações dos integrantes na mesma transação |
-| `GET /me/notificacoes` | Qualquer usuário autenticado e ativo | Lista as notificações do próprio usuário, da mais recente para a mais antiga |
+| `GET /me/notificacoes` | Qualquer usuário autenticado e ativo | Lista as notificações do próprio usuário, da mais recente para a mais antiga. Desde o BE-S5-04 é a [central de notificações](central-de-notificacoes.md): o item `RESULTADO` mantém os campos abaixo |
 | `GET /equipes/{id}/resultado` | Integrantes da equipe e DEV | Resultado e pareceres da própria equipe |
 
 ## Notificação (RF33)
@@ -27,9 +27,9 @@ RF33 e RF34. Dependem de RF31, RF32 ([Resultado](resultado.md)) e RF06.
 | `enviado_em` | Obrigatório quando `ENVIADO` |
 | `erro` | Só aceito quando `FALHA` |
 
-Na plataforma a linha nasce `ENVIADO`, porque o aviso já está visível ao integrante. Há uma notificação por `(homologação, usuário, canal)`. Não existe "marcar como lida".
+Na plataforma a linha nasce `ENVIADO`, porque o aviso já está visível ao integrante. Há uma notificação por `(homologação, usuário, canal)`. Desde o BE-S5-04 cada uma ganha também uma linha na [central](central-de-notificacoes.md), na mesma transação, e o integrante pode marcá-la como lida por `POST /me/notificacoes/{notificacao_id}/lida` (o `notificacao_id` vem no item; o `id` do RF33 não muda).
 
-**Atomicidade.** As notificações são criadas na transação da homologação. Se não for possível criá-las, a homologação inteira falha (rollback): como ela é imutável, não pode existir sem o aviso.
+**Atomicidade.** As notificações (RF33 e central) são criadas na transação da homologação. Se não for possível criá-las, a homologação inteira falha (rollback): como ela é imutável, não pode existir sem o aviso.
 
 ## Resultado da própria equipe
 
@@ -62,7 +62,7 @@ Rotas cobertas:
 | `POST /equipes/{id}/inscricao/concluir` | Líder |
 | `POST /equipes/{id}/proposta/rascunho`, `PATCH .../rascunho`, `POST .../proposta/enviar` | Líder |
 
-Continuam permitidas as consultas: equipe, membros, convites, painel, proposta, rascunho, resultado da equipe e notificações.
+Continuam permitidas as consultas: equipe, membros, convites, painel, proposta, rascunho, resultado da equipe e notificações (inclusive marcá-las como lidas, que é do usuário e não da equipe).
 
 Fora do bloqueio, por não serem de uma equipe: `POST /equipes` (nova equipe), `POST /hackathons/{id}/termos/aceites` (aceite do usuário, sem equipe), comprovantes e as rotas de Organizador, avaliador e rubrica.
 
