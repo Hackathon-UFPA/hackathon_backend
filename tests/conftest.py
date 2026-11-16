@@ -84,6 +84,7 @@ def hackathon_aberto():
     )[0]["id"]
     yield id_
     executar_sql("DELETE FROM comprovantes_vinculo WHERE hackathon_id = :id", id=id_)
+    executar_sql("DELETE FROM autodeclaracoes_vinculo WHERE hackathon_id = :id", id=id_)
     executar_sql("DELETE FROM convites_mentor WHERE hackathon_id = :id", id=id_)
     executar_sql("DELETE FROM hackathon WHERE id = :id", id=id_)
 
@@ -115,6 +116,7 @@ def edicoes_fora_do_periodo(sql, hackathon_aberto):
     finally:
         for id_ in ids:
             sql("DELETE FROM comprovantes_vinculo WHERE hackathon_id = :h", h=id_)
+            sql("DELETE FROM autodeclaracoes_vinculo WHERE hackathon_id = :h", h=id_)
             sql("DELETE FROM hackathon WHERE id = :h", h=id_)
 
 
@@ -131,6 +133,11 @@ def emails_criados():
         )
         executar_sql(
             "DELETE FROM comprovantes_vinculo WHERE usuario_id IN"
+            " (SELECT id FROM usuarios WHERE lower(email) = ANY(:emails))",
+            emails=minusculos,
+        )
+        executar_sql(
+            "DELETE FROM autodeclaracoes_vinculo WHERE usuario_id IN"
             " (SELECT id FROM usuarios WHERE lower(email) = ANY(:emails))",
             emails=minusculos,
         )
