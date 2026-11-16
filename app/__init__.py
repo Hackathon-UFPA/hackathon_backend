@@ -28,6 +28,28 @@ tags = [
         "description": "Consulta, cadastro, edição e exclusão das edições do hackathon",
     },
     {
+        "name": "Conteúdo institucional",
+        "description": "Apoiadores, FAQ e cronograma da edição, para a organização (RF12 a RF14)",
+    },
+    {
+        "name": "Página pública",
+        "description": "Página da edição sem login: descrição, regulamento, FAQ, cronograma e "
+        "apoiadores publicados (RF10 a RF14)",
+    },
+    {
+        "name": "Regulamento e termos (admin)",
+        "description": "Versões do regulamento e dos termos: rascunho, publicação e histórico "
+        "(RF11)",
+    },
+    {
+        "name": "Treinamento (admin)",
+        "description": "Sessões e materiais do treinamento, para a organização (RF35)",
+    },
+    {
+        "name": "Treinamento",
+        "description": "Agenda e materiais do treinamento, para equipes aprovadas (RF35)",
+    },
+    {
         "name": "Equipes",
         "description": "Criação, consulta e edição de equipes e membros (RF18, RF24)",
     },

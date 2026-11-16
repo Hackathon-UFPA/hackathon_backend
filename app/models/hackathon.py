@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import SmallInteger
+from sqlalchemy import SmallInteger, Text
 from sqlmodel import Field, SQLModel
 
 from app.const.enums import StatusHackathon, pg_enum
@@ -13,6 +13,8 @@ class Hackathon(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     nome: str | None = Field(default=None)
     tema: str | None = Field(default=None)
+    # Texto da página pública (RF10, BE-S5-12)
+    descricao: str | None = Field(default=None, sa_type=Text)
     data_inicio: datetime | None = Field(default=None)
     data_fim: datetime | None = Field(default=None)
     status: StatusHackathon | None = Field(

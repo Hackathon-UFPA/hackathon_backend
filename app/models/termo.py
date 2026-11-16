@@ -20,6 +20,8 @@ class Termo(SQLModel, table=True):
     conteudo: str | None = Field(default=None, sa_type=Text)
     url: str | None = Field(default=None)
     vigente: bool = Field(default=False, nullable=False)
+    # BE-S5-12: rascunho é editável e excluível; publicado, a versão não muda mais
+    rascunho: bool = Field(default=False, nullable=False)
     publicado_em: datetime | None = Field(
         default=None, sa_column_kwargs={"server_default": AGORA_UTC}
     )

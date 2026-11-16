@@ -9,6 +9,7 @@ from app.const.enums import StatusHackathon
 class HackathonCreate(BaseModel):
     nome: str | None = Field(default=None, max_length=255, examples=["Hackathon UFPA 2026"])
     tema: str | None = Field(default=None, max_length=255, examples=["Cidades inteligentes"])
+    descricao: str | None = Field(default=None, max_length=20000, description="Página pública")
     data_inicio: datetime | None = None
     data_fim: datetime | None = None
     status: StatusHackathon = Field(default=StatusHackathon.INSCRICOES)
@@ -34,6 +35,7 @@ class HackathonUpdate(BaseModel):
 
     nome: str | None = Field(default=None, max_length=255)
     tema: str | None = Field(default=None, max_length=255)
+    descricao: str | None = Field(default=None, max_length=20000)
     data_inicio: datetime | None = None
     data_fim: datetime | None = None
     status: StatusHackathon | None = None

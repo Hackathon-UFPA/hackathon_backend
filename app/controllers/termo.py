@@ -4,6 +4,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.const.enums import TipoTermo
 from app.models import AceiteTermo, Termo
 
 
@@ -15,6 +16,43 @@ async def listar_termos_vigentes(db: AsyncSession, hackathon_id: UUID) -> list[T
         .order_by(Termo.tipo)
     )
     return list((await db.exec(consulta)).all())
+
+
+async def listar_termos(
+    db: AsyncSession,
+    hackathon_id: UUID,
+    *,
+    tipo: TipoTermo | None,
+    rascunho: bool | None,
+    limite: int,
+    deslocamento: int,
+) -> list[Termo]:
+    """Todas as versões, das mais novas para as mais antigas (BE-S5-12)."""
+    consulta = select(Termo).where(Termo.hackathon_id == hackathon_id)
+    if tipo is not None:
+        consulta = consulta.where(Termo.tipo == tipo)
+    if rascunho is not None:
+        consulta = consulta.where(Termo.rascunho == rascunho)
+    consulta = consulta.order_by(
+        Termo.tipo, col(Termo.publicado_em).desc().nulls_first(), Termo.versao, Termo.id
+    )
+    return list((await db.exec(consulta.limit(limite).offset(deslocamento))).all())
+
+
+async def get_termo(
+    db: AsyncSession, hackathon_id: UUID, termo_id: UUID, *, bloquear: bool = False
+) -> Termo | None:
+    consulta = select(Termo).where(Termo.id == termo_id, Termo.hackathon_id == hackathon_id)
+    if bloquear:
+        consulta = consulta.with_for_update()
+    return (await db.exec(consulta)).first()
+
+
+async def get_termo_vigente(db: AsyncSession, hackathon_id: UUID, tipo: TipoTermo) -> Termo | None:
+    consulta = select(Termo).where(
+        Termo.hackathon_id == hackathon_id, Termo.tipo == tipo, col(Termo.vigente).is_(True)
+    )
+    return (await db.exec(consulta)).first()
 
 
 async def registrar_aceites(db: AsyncSession, usuario_id: UUID, termos_ids: list[UUID]) -> None:

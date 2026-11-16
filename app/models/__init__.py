@@ -17,6 +17,7 @@ Exemplo (models/produto.py):
 """
 
 from .aceite_termo import AceiteTermo
+from .apoiador import Apoiador
 from .artefato import Artefato
 from .atribuicao_mentor import AtribuicaoMentor
 from .avaliacao import Avaliacao
@@ -28,13 +29,17 @@ from .designacao_avaliacao import DesignacaoAvaliacao
 from .email_outbox import EmailOutbox
 from .equipe import Equipe
 from .evento_mentoria import EventoNotificacaoMentoria
+from .faq_item import FaqItem
+from .fase_cronograma import FaseCronograma
 from .hackathon import Hackathon
+from .material_treinamento import MaterialTreinamento
 from .membro_equipe import MembroEquipe
 from .nota_criterio_avaliacao import NotaCriterioAvaliacao
 from .notificacao import NotificacaoResultado
 from .protocolo import Protocolo
 from .resultado import HomologacaoResultado, ResultadoProposta
 from .rubrica import Rubrica
+from .sessao_treinamento import SessaoTreinamento
 from .submissao import Submissao
 from .tema import Tema
 from .termo import Termo
@@ -44,6 +49,7 @@ from .versao_proposta import VersaoProposta
 
 __all__ = [
     "AceiteTermo",
+    "Apoiador",
     "Artefato",
     "AtribuicaoMentor",
     "Avaliacao",
@@ -54,15 +60,19 @@ __all__ = [
     "DesignacaoAvaliacao",
     "EmailOutbox",
     "Equipe",
+    "FaqItem",
+    "FaseCronograma",
     "EventoNotificacaoMentoria",
     "Hackathon",
     "HomologacaoResultado",
+    "MaterialTreinamento",
     "MembroEquipe",
     "NotaCriterioAvaliacao",
     "NotificacaoResultado",
     "Protocolo",
     "ResultadoProposta",
     "Rubrica",
+    "SessaoTreinamento",
     "Submissao",
     "Tema",
     "Termo",
