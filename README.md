@@ -20,6 +20,7 @@ API do sistema de gestão de hackathons da UFPA, construída com **FastAPI**. Cu
 - [Conteúdo institucional e treinamento](docs/conteudo-institucional.md): página pública, regulamento com versões, FAQ, cronograma, apoiadores e agenda do treinamento (BE-S5-12)
 - [Equipes e membros](docs/equipes-e-membros.md): inclui categorias e composição informada pelo líder (BE-S5-01)
 - [Inscrição e homologação](docs/inscricao-e-homologacao.md)
+- [Autodeclaração e comprovantes por tipo](docs/autodeclaracao-e-comprovantes.md): declaração do próprio vínculo, comprovante por tipo e homologação por categoria (BE-S5-03)
 - [Propostas](docs/propostas.md): envio definitivo, protocolo, reenvio e histórico de versões (BE-S5-09)
 - [Temas e rubrica](docs/temas-e-rubrica.md): catálogo público, Comitê Científico e uma rubrica por fase (BE-S5-08)
 - [Avaliação](docs/avaliacao.md): distribuição e registro da avaliação científica pela rubrica
@@ -45,6 +46,7 @@ Com a API no ar, a documentação interativa das rotas fica em `http://localhost
 | Convites, aceite de participação e termos | RF18 a RF20      | Concluído |
 | Equipes e membros                       | RF18, RF24         | Concluído |
 | Comprovantes, inscrição e homologação   | RF21 a RF23, RF25  | Concluído |
+| Autodeclaração e comprovantes individuais por categoria | RF01, RF18, RF20 a RF23, RN01, RN05, RN25, BE-S5-03 | Concluído, com a regra de comprovantes por tipo provisória até a validação do Squad 1 (ver [Autodeclaração e comprovantes](docs/autodeclaracao-e-comprovantes.md)) |
 | Equipes por categoria e composição informada pelo líder | RF01, RF18, RF21 a RF24, RN01 a RN03, RN05, RN25, BE-S5-01 | Concluído, com a elegibilidade de profissionais e mistos provisória até a validação do Squad 1 (ver [Equipes e membros](docs/equipes-e-membros.md#categorias-e-composição-informada-pelo-líder-be-s5-01)) |
 | Rascunho e envio da proposta            | RF26 a RF28        | Concluído |
 | Reenvio/versionamento da proposta e travas de homologação | RF26 a RF28, RF31, RN07, RN08, BE-S5-09 | Concluído (ver [Propostas](docs/propostas.md) e [Resultado](docs/resultado.md)) |
