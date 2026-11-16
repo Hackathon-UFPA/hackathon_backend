@@ -62,9 +62,14 @@ Quem tinha mais de 100 notificações passa a receber só as 100 mais recentes a
 from app.services.notificacao import notificar
 
 await notificar(
-    db, [usuario_id, ...], TipoNotificacao.CHAT, "Nova mensagem", "Maria escreveu na conversa",
+    db,
+    [usuario_id, ...],
+    TipoNotificacao.CHAT,
+    "Nova mensagem",
+    "Maria escreveu na conversa",
     chave=f"chat:{mensagem_id}",
-    referencia_tipo="CONVERSA", referencia_id=conversa_id,
+    referencia_tipo="CONVERSA",
+    referencia_id=conversa_id,
     dados={"conversa_id": conversa_id},
 )
 ```
