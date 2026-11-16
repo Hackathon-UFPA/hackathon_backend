@@ -3,7 +3,7 @@ from uuid import UUID, uuid4
 
 from sqlmodel import Field, SQLModel
 
-from app.const.enums import SituacaoEquipe, pg_enum
+from app.const.enums import CategoriaEquipe, SituacaoEquipe, pg_enum
 
 
 class Equipe(SQLModel, table=True):
@@ -15,6 +15,12 @@ class Equipe(SQLModel, table=True):
     situacao: SituacaoEquipe = Field(
         default=SituacaoEquipe.EM_FORMACAO,
         sa_type=pg_enum(SituacaoEquipe, "situacao_equipe"),
+        nullable=False,
+    )
+    # Indicada pelo líder (BE-S5-01); equipes anteriores à decisão de 05/11 são ESTUDANTES
+    categoria: CategoriaEquipe = Field(
+        default=CategoriaEquipe.ESTUDANTES,
+        sa_type=pg_enum(CategoriaEquipe, "categoria_equipe"),
         nullable=False,
     )
     inscricao_concluida_em: datetime | None = Field(default=None)

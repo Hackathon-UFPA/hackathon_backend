@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.const.enums import FuncaoMembro
+from app.const.enums import FuncaoMembro, TipoIntegrante
 
 
 class MembroEquipeCreate(BaseModel):
@@ -20,6 +20,7 @@ class MembroEquipeUpdate(BaseModel):
 
 class MembroEquipeResponse(MembroEquipeCreate):
     hackathon_id: UUID
+    tipo_integrante: TipoIntegrante
     entrou_em: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)

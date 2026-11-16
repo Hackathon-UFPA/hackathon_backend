@@ -3,7 +3,7 @@ from uuid import UUID
 
 from sqlmodel import Field, SQLModel
 
-from app.const.enums import FuncaoMembro, pg_enum
+from app.const.enums import FuncaoMembro, TipoIntegrante, pg_enum
 from app.db.defaults import AGORA_UTC
 
 
@@ -16,5 +16,11 @@ class MembroEquipe(SQLModel, table=True):
     hackathon_id: UUID = Field(nullable=False)
     funcao: FuncaoMembro | None = Field(
         default=None, sa_type=pg_enum(FuncaoMembro, "funcao_membro")
+    )
+    # Indicado pelo líder (BE-S5-01): copiado do convite no aceite; o do líder vem da criação
+    tipo_integrante: TipoIntegrante = Field(
+        default=TipoIntegrante.ESTUDANTE,
+        sa_type=pg_enum(TipoIntegrante, "tipo_integrante"),
+        nullable=False,
     )
     entrou_em: datetime | None = Field(default=None, sa_column_kwargs={"server_default": AGORA_UTC})

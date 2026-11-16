@@ -28,6 +28,19 @@ async def listar_convites_da_equipe(db: AsyncSession, equipe_id: UUID) -> list[C
     return list((await db.exec(consulta)).all())
 
 
+async def travar_convites_pendentes(db: AsyncSession, equipe_id: UUID) -> None:
+    """Trava os convites pendentes da equipe, na ordem do id. O aceite trava o convite e só depois
+    a equipe; quem altera a composição precisa travar nesta mesma ordem (convites, depois equipe)
+    para os dois nunca ficarem esperando um pelo outro (deadlock)."""
+    consulta = (
+        select(Convite)
+        .where(Convite.equipe_id == equipe_id, Convite.status == StatusConvite.PENDENTE)
+        .order_by(col(Convite.id))
+        .with_for_update()
+    )
+    await db.exec(consulta)
+
+
 async def listar_pendentes_do_email(db: AsyncSession, email: str) -> list[tuple[Convite, Equipe]]:
     """Convites pendentes endereçados ao e-mail (sem diferenciar maiúsculas), com a equipe."""
     consulta = (

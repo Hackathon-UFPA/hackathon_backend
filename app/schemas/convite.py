@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
-from app.const.enums import StatusConvite
+from app.const.enums import StatusConvite, TipoIntegrante
 
 
 # O líder informa só nome e e-mail; o resto a pessoa completa ao confirmar (RF18, RV20)
@@ -22,6 +22,7 @@ class ConviteUpdate(BaseModel):
 class ConviteResponse(ConviteCreate):
     id: UUID
     usuario_id: UUID | None = None
+    tipo_integrante: TipoIntegrante
     status: StatusConvite
     enviado_em: datetime | None = None
     respondido_em: datetime | None = None
@@ -35,6 +36,13 @@ class ConviteEnvio(BaseModel):
 
     nome: str = Field(min_length=1, max_length=255, examples=["Maria Souza"])
     email: EmailStr = Field(examples=["maria@example.com"])
+    tipo_integrante: TipoIntegrante | None = Field(
+        default=None,
+        description=(
+            "Indicado pelo líder (BE-S5-01). Omitido, vale o tipo da categoria da equipe; "
+            "obrigatório na categoria MISTA"
+        ),
+    )
 
 
 # Ids das versões de termo que a pessoa leu e aceita (GET /hackathons/{id}/termos/vigentes)

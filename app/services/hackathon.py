@@ -60,6 +60,12 @@ def _validar(hackathon: Hackathon) -> None:
     """Valida o estado final (no PATCH, campos enviados junto com os já gravados)."""
     if hackathon.min_integrantes > hackathon.max_integrantes:
         periodo_invalido("min_integrantes não pode ser maior que max_integrantes.")
+    if not (
+        hackathon.aceita_equipe_estudantes
+        or hackathon.aceita_equipe_profissionais
+        or hackathon.aceita_equipe_mista
+    ):
+        periodo_invalido("A edição precisa aceitar ao menos uma categoria de equipe.")
     for inicio, fim, aceita_igual, mensagem in PERIODOS:
         a, b = getattr(hackathon, inicio), getattr(hackathon, fim)
         if a is not None and b is not None and (b < a or (b == a and not aceita_igual)):

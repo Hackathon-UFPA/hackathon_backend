@@ -21,11 +21,21 @@ class HackathonCreate(BaseModel):
     propostas_inicio: datetime | None = None
     propostas_fim: datetime | None = None
     avaliadores_por_proposta: int | None = Field(default=None, ge=2, le=3)
+    # Categorias de equipe aceitas na edição (política provisória, BE-S5-01); ao menos uma
+    aceita_equipe_estudantes: bool = True
+    aceita_equipe_profissionais: bool = True
+    aceita_equipe_mista: bool = True
 
     @model_validator(mode="after")
     def validar_integrantes(self):
         if self.min_integrantes > self.max_integrantes:
             raise ValueError("min_integrantes não pode ser maior que max_integrantes")
+        if not (
+            self.aceita_equipe_estudantes
+            or self.aceita_equipe_profissionais
+            or self.aceita_equipe_mista
+        ):
+            raise ValueError("A edição precisa aceitar ao menos uma categoria de equipe")
         return self
 
 
@@ -47,8 +57,19 @@ class HackathonUpdate(BaseModel):
     propostas_inicio: datetime | None = None
     propostas_fim: datetime | None = None
     avaliadores_por_proposta: int | None = Field(default=None, ge=2, le=3)
+    aceita_equipe_estudantes: bool | None = None
+    aceita_equipe_profissionais: bool | None = None
+    aceita_equipe_mista: bool | None = None
 
-    @field_validator("status", "min_integrantes", "max_integrantes", mode="before")
+    @field_validator(
+        "status",
+        "min_integrantes",
+        "max_integrantes",
+        "aceita_equipe_estudantes",
+        "aceita_equipe_profissionais",
+        "aceita_equipe_mista",
+        mode="before",
+    )
     @classmethod
     def obrigatorio_nao_aceita_null(cls, valor):
         if valor is None:
