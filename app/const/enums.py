@@ -110,6 +110,13 @@ class SituacaoConta(StrEnum):
     ATIVA = "ATIVA"
 
 
+class FinalidadeToken(StrEnum):
+    """Para que serve um token de uso único enviado por e-mail (BE-S5-07)."""
+
+    REDEFINICAO_SENHA = "REDEFINICAO_SENHA"
+    CONFIRMACAO_EMAIL = "CONFIRMACAO_EMAIL"
+
+
 class TipoEmail(StrEnum):
     """Cada tipo tem um template em `app/templates/emails/` (RNF28, RF60)."""
 

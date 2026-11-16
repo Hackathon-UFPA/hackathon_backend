@@ -22,6 +22,30 @@ def pode_cadastrar(quem_cadastra: PapelUsuario, perfil: PapelUsuario) -> bool:
     return perfil in perfis_cadastraveis(quem_cadastra)
 
 
+# Gestão de contas (RN24, BE-S5-07): quem pode cadastrar um perfil também pode editá-lo,
+# desativá-lo e reativá-lo. O Comitê Científico gerencia Comitê Técnico e Mentor; o Organizador,
+# todos menos DEV.
+def pode_gerenciar(quem_gerencia: PapelUsuario, perfil: PapelUsuario) -> bool:
+    return pode_cadastrar(quem_gerencia, perfil)
+
+
+# Perfis entre os quais um gestor pode mover uma conta. Participante fica de fora porque tem
+# equipe, inscrição e comprovante; Mentor, porque segue o fluxo próprio de ativação (RN33); DEV,
+# por ser exceção interna. Quem recebe o novo perfil também precisa estar no alcance do gestor.
+PAPEIS_TROCAVEIS = frozenset(
+    {PapelUsuario.COMITE_TECNICO, PapelUsuario.COMITE_CIENTIFICO, PapelUsuario.ORGANIZADOR}
+)
+
+
+def pode_trocar_papel(quem_gerencia: PapelUsuario, de: PapelUsuario, para: PapelUsuario) -> bool:
+    return (
+        de in PAPEIS_TROCAVEIS
+        and para in PAPEIS_TROCAVEIS
+        and pode_gerenciar(quem_gerencia, de)
+        and pode_gerenciar(quem_gerencia, para)
+    )
+
+
 # Quem confere o comprovante de vínculo (RF21). A Q25 ainda não decidiu se é só o Organizador ou
 # também o Comitê Científico; enquanto isso os dois podem. Ajustar aqui muda todas as rotas.
 PERFIS_QUE_VALIDAM_COMPROVANTE = (PapelUsuario.ORGANIZADOR, PapelUsuario.COMITE_CIENTIFICO)

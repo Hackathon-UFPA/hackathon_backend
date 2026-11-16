@@ -34,6 +34,9 @@ from app.services.email_template import renderizar
 
 logger = logging.getLogger(__name__)
 
+# E-mails cujo corpo traz um link de acesso: se a gravação falhar, o log não pode repetir o link
+CHAVES_COM_LINK_SECRETO = ("convite-mentor:", "recuperacao-senha:", "confirmacao-email:")
+
 
 def link_front(caminho: str) -> str:
     """Endereço de uma página do front (`FRONTEND_URL`), para o botão do e-mail."""
@@ -83,8 +86,9 @@ async def enfileirar(
                 },
             )
     except Exception as falha:
-        if (chave or "").startswith("convite-mentor:"):
-            # Exceções SQL/template podem conter parâmetros com o link secreto do convite.
+        if (chave or "").startswith(CHAVES_COM_LINK_SECRETO):
+            # Exceções SQL/template podem conter parâmetros com o link secreto do convite, da
+            # redefinição de senha ou da confirmação de e-mail.
             logger.error(
                 "Não foi possível enfileirar o e-mail %s para o usuário %s (%s)",
                 tipo,

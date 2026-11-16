@@ -22,6 +22,10 @@ class Usuario(SQLModel, table=True):
     senha_hash: str | None = Field(default=None)
     tentativas_login: int = Field(default=0, sa_type=SmallInteger, nullable=False)
     bloqueado_ate: datetime | None = Field(default=None)
+    # BE-S5-07: posse do e-mail comprovada (informativo) e versão que entra no token de acesso;
+    # aumentar a versão encerra todas as sessões abertas
+    email_confirmado_em: datetime | None = Field(default=None)
+    versao_sessao: int = Field(default=0, nullable=False)
     # Participante: PENDENTE até aprovação do comprovante (RN25). Mentor usa marcos RN33.
     situacao_conta: SituacaoConta = Field(
         default=SituacaoConta.ATIVA,

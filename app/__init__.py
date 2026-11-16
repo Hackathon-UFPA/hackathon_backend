@@ -6,8 +6,23 @@ tags = [
     },
     {"name": "Mentores", "description": "Cadastro e ativação de mentores (RF37, RN24, RN33)"},
     {"name": "Health", "description": "Verificação de saúde da API e do banco de dados"},
-    {"name": "Autenticação", "description": "Cadastro de participante e login (RF01, RF02)"},
-    {"name": "Usuários", "description": "Cadastro de usuários de outros perfis (RF07, RF08)"},
+    {
+        "name": "Autenticação",
+        "description": (
+            "Cadastro de participante, login, recuperação de senha, confirmação de e-mail e "
+            "encerramento da sessão (RF01, RF02, RF04, RF09)"
+        ),
+    },
+    {
+        "name": "Perfil",
+        "description": "Dados da própria conta, troca de e-mail e de senha (RF05, RF09)",
+    },
+    {
+        "name": "Usuários",
+        "description": (
+            "Cadastro, edição, desativação e reativação de usuários por perfil (RF07, RF08, RN24)"
+        ),
+    },
     {
         "name": "Hackathons",
         "description": "Consulta, cadastro, edição e exclusão das edições do hackathon",
