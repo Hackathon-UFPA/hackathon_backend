@@ -17,6 +17,7 @@ API do sistema de gestão de hackathons da UFPA, construída com **FastAPI**. Cu
 - [Contratos da API](docs/api-contratos.md): Swagger, autenticação e formato dos erros
 - [Autenticação e permissões](docs/autenticacao.md): cadastro, login, perfil, recuperação de senha, sessão, gestão de contas e guia para o front (BE-S5-07)
 - [Convites e termos](docs/convites-e-termos.md)
+- [Conteúdo institucional e treinamento](docs/conteudo-institucional.md): página pública, regulamento com versões, FAQ, cronograma, apoiadores e agenda do treinamento (BE-S5-12)
 - [Equipes e membros](docs/equipes-e-membros.md)
 - [Inscrição e homologação](docs/inscricao-e-homologacao.md)
 - [Propostas](docs/propostas.md): envio definitivo, protocolo, reenvio e histórico de versões (BE-S5-09)
@@ -39,6 +40,7 @@ Com a API no ar, a documentação interativa das rotas fica em `http://localhost
 | Estrutura do projeto, Docker e CI       | —                  | Concluído |
 | Autenticação, perfis e cadastro de usuários | RF01, RF02, RF06 a RF08 | Concluído |
 | Perfil, recuperação de senha, confirmação de e-mail e gestão de contas | RF01, RF04, RF05, RF07 a RF09, RN24, BE-S5-07 | Concluído, exceto login social, que depende da Q17 (ver [Autenticação](docs/autenticacao.md)) |
+| Conteúdo institucional, regulamento, FAQ, cronograma e treinamento | RF10 a RF14, RF35, RF59, RN05, RNF20, BE-S5-12 | Concluído, exceto o aviso de mudança do treinamento (Q09) e a transição de fases (BE-S7-05); ver [Conteúdo institucional](docs/conteudo-institucional.md) |
 | Convites, aceite de participação e termos | RF18 a RF20      | Concluído |
 | Equipes e membros                       | RF18, RF24         | Concluído |
 | Comprovantes, inscrição e homologação   | RF21 a RF23, RF25  | Concluído |

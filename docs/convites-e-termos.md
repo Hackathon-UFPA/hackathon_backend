@@ -23,6 +23,8 @@ Rotas de RF18, RF19 e RF20. Todas exigem token e **conta ativa** (conta pendente
 - Aceitar exige enviar em `termos_ids` os ids de **todas** as versões vigentes (regulamento e termo de consentimento, RN05). Faltou um: 422. Algum id que não é vigente (versão nova publicada, ou de outro hackathon): 409. A data, a hora e a versão ficam em `aceites_termos`, ligadas à linha de `termos` aceita; publicar uma versão nova não altera os aceites antigos.
 - Quem entra pelo convite fica com `funcao` vazia em `membros_equipe`; o líder define as funções depois.
 
+**Versões do regulamento (BE-S5-12).** Quem cria, edita e publica as versões é o Organizador, por `/admin/hackathons/{id}/termos` (rascunho, publicação e histórico); veja [Conteúdo institucional](conteudo-institucional.md). Publicar uma versão nova aposenta a vigente e passa a exigir novo aceite: rascunhos nunca aparecem em `termos/vigentes`.
+
 **Guia para a interface.** Painel do convidado: `GET /convites/meus`. Ao clicar em aceitar, buscar `GET /hackathons/{hackathon_id}/termos/vigentes` (o `hackathon_id` vem no próprio convite), mostrar `conteudo` ou `url` de cada documento e, quando a pessoa concordar, enviar os ids para `POST /convites/{id}/aceitar` com `{ "termos_ids": ["...", "..."] }`.
 
 **E-mail do convite.** Ao convidar, o aviso `CONVITE_EQUIPE` entra na fila de e-mails na mesma transação do convite e o worker o envia depois (veja [E-mails](emails.md)). Um convite recusado pelas regras (equipe cheia, fora do prazo, sem permissão) não gera e-mail. Ficou de fora: o aviso ao líder quando alguém recusa (RF19). Por enquanto o líder consulta `GET /equipes/{id}/convites`.
