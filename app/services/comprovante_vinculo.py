@@ -6,7 +6,11 @@ from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.const.enums import SituacaoConta, StatusComprovante
+from app.const.enums import SituacaoConta, StatusComprovante, TipoIntegrante
+from app.controllers.autodeclaracao import (
+    get_autodeclaracoes_por_id,
+    listar_autodeclaracoes,
+)
 from app.controllers.comprovante_vinculo import (
     criar_comprovante,
     get_comprovante_by_id,
@@ -15,6 +19,7 @@ from app.controllers.comprovante_vinculo import (
     listar_comprovantes_do_usuario,
 )
 from app.controllers.hackathon import get_hackathon_com_inscricoes
+from app.controllers.membro_equipe import get_membro_no_hackathon
 from app.exceptions.auth import inscricoes_indisponiveis
 from app.exceptions.db import erro_de_integridade_sql
 from app.exceptions.inscricao import (
@@ -22,7 +27,8 @@ from app.exceptions.inscricao import (
     comprovante_ja_decidido,
     comprovante_nao_encontrado,
 )
-from app.models import ComprovanteVinculo, Usuario
+from app.models import AutodeclaracaoVinculo, ComprovanteVinculo, Usuario
+from app.schemas.autodeclaracao import AutodeclaracaoResponse
 from app.schemas.comprovante_vinculo import (
     ComprovanteAdminResponse,
     ComprovanteEnvio,
@@ -32,9 +38,17 @@ from app.schemas.comprovante_vinculo import (
 from app.services.inscricao import reavaliar_equipe_do_usuario
 
 
-def _resposta(comprovante: ComprovanteVinculo, usuario: Usuario) -> ComprovanteAdminResponse:
+def _resposta(
+    comprovante: ComprovanteVinculo,
+    usuario: Usuario,
+    declaracao: AutodeclaracaoVinculo | None = None,
+) -> ComprovanteAdminResponse:
     base = ComprovanteVinculoResponse.model_validate(comprovante).model_dump()
-    return ComprovanteAdminResponse(**base, usuario=UsuarioResumo.model_validate(usuario))
+    return ComprovanteAdminResponse(
+        **base,
+        usuario=UsuarioResumo.model_validate(usuario),
+        autodeclaracao=AutodeclaracaoResponse.model_validate(declaracao) if declaracao else None,
+    )
 
 
 async def listar(
@@ -53,7 +67,13 @@ async def listar(
         limite=limite,
         deslocamento=deslocamento,
     )
-    return [_resposta(comprovante, usuario) for comprovante, usuario in pares]
+    declaracoes = await get_autodeclaracoes_por_id(
+        db, [c.autodeclaracao_id for c, _ in pares if c.autodeclaracao_id]
+    )
+    return [
+        _resposta(comprovante, usuario, declaracoes.get(comprovante.autodeclaracao_id))
+        for comprovante, usuario in pares
+    ]
 
 
 async def _comprovante_pendente(db: AsyncSession, comprovante_id: UUID) -> ComprovanteVinculo:
@@ -91,7 +111,9 @@ async def aprovar(
         await db.rollback()
         raise
     await db.refresh(comprovante)
-    return _resposta(comprovante, usuario)
+    ids = [comprovante.autodeclaracao_id] if comprovante.autodeclaracao_id else []
+    declaracoes = await get_autodeclaracoes_por_id(db, ids)
+    return _resposta(comprovante, usuario, declaracoes.get(comprovante.autodeclaracao_id))
 
 
 async def recusar(
@@ -112,11 +134,30 @@ async def recusar(
         erro_de_integridade_sql(error)
     await db.refresh(comprovante)
     usuario = await db.get(Usuario, comprovante.usuario_id)
-    return _resposta(comprovante, usuario)
+    ids = [comprovante.autodeclaracao_id] if comprovante.autodeclaracao_id else []
+    declaracoes = await get_autodeclaracoes_por_id(db, ids)
+    return _resposta(comprovante, usuario, declaracoes.get(comprovante.autodeclaracao_id))
 
 
 async def listar_meus(db: AsyncSession, usuario: Usuario) -> list[ComprovanteVinculo]:
     return await listar_comprovantes_do_usuario(db, usuario.id)
+
+
+async def _tipo_e_declaracao(
+    db: AsyncSession, usuario: Usuario, hackathon_id
+) -> tuple[TipoIntegrante, AutodeclaracaoVinculo | None]:
+    """O vínculo que o novo comprovante comprova: o que o líder indicou, se a pessoa já está em
+    uma equipe da edição; senão o que ela declarou; senão o acadêmico, como antes da BE-S5-03.
+    A declaração ligada é a mais recente do mesmo tipo."""
+    declaracoes = await listar_autodeclaracoes(db, usuario.id, hackathon_id)
+    membro = await get_membro_no_hackathon(db, hackathon_id, usuario.id)
+    if membro is not None:
+        tipo = membro.tipo_integrante
+    elif declaracoes:
+        tipo = declaracoes[0].tipo
+    else:
+        tipo = TipoIntegrante.ESTUDANTE
+    return tipo, next((d for d in declaracoes if d.tipo == tipo), None)
 
 
 async def reenviar(
@@ -128,7 +169,9 @@ async def reenviar(
     if hackathon is None:
         inscricoes_indisponiveis()
 
-    ultimo = await get_ultimo_comprovante(db, usuario.id, hackathon.id)
+    # Quem é o dono do documento e qual vínculo ele comprova vêm do servidor, nunca do pedido
+    tipo, declaracao = await _tipo_e_declaracao(db, usuario, hackathon.id)
+    ultimo = await get_ultimo_comprovante(db, usuario.id, hackathon.id, tipo)
     if ultimo is not None and ultimo.status != StatusComprovante.RECUSADO:
         comprovante_ativo_existente()
 
@@ -139,6 +182,8 @@ async def reenviar(
                 usuario_id=usuario.id,
                 hackathon_id=hackathon.id,
                 arquivo_url=str(dados.arquivo_url),
+                tipo_vinculo=tipo,
+                autodeclaracao_id=declaracao.id if declaracao else None,
             ),
         )
         await db.commit()

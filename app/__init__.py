@@ -18,6 +18,13 @@ tags = [
         "description": "Dados da própria conta, troca de e-mail e de senha (RF05, RF09)",
     },
     {
+        "name": "Autodeclaração",
+        "description": (
+            "Declaração do próprio vínculo (estudante ou profissional), separada da comprovação "
+            "aprovada (RF01, RF21, RN25)"
+        ),
+    },
+    {
         "name": "Usuários",
         "description": (
             "Cadastro, edição, desativação e reativação de usuários por perfil (RF07, RF08, RN24)"

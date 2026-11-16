@@ -20,6 +20,7 @@ from .aceite_termo import AceiteTermo
 from .apoiador import Apoiador
 from .artefato import Artefato
 from .atribuicao_mentor import AtribuicaoMentor
+from .autodeclaracao_vinculo import AutodeclaracaoVinculo
 from .avaliacao import Avaliacao
 from .comprovante_vinculo import ComprovanteVinculo
 from .convite import Convite
@@ -51,6 +52,7 @@ __all__ = [
     "AceiteTermo",
     "Apoiador",
     "Artefato",
+    "AutodeclaracaoVinculo",
     "AtribuicaoMentor",
     "Avaliacao",
     "ComprovanteVinculo",

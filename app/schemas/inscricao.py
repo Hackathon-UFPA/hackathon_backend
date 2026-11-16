@@ -43,6 +43,9 @@ class IntegrantePainelResponse(BaseModel):
     comprovante: StatusComprovante | None = Field(
         default=None, description="Vazio quando nenhum comprovante foi enviado"
     )
+    tipo_declarado: TipoIntegrante | None = Field(
+        default=None, description="Tipo que a própria pessoa autodeclarou (BE-S5-03)"
+    )
 
 
 class ProtocoloResponse(BaseModel):

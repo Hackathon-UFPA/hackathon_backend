@@ -25,6 +25,10 @@ class HackathonCreate(BaseModel):
     aceita_equipe_estudantes: bool = True
     aceita_equipe_profissionais: bool = True
     aceita_equipe_mista: bool = True
+    # Verificação do vínculo na homologação (política provisória, BE-S5-03)
+    exige_autodeclaracao: bool = False
+    exige_comprovante_estudante: bool = True
+    exige_comprovante_profissional: bool = True
 
     @model_validator(mode="after")
     def validar_integrantes(self):
@@ -60,6 +64,9 @@ class HackathonUpdate(BaseModel):
     aceita_equipe_estudantes: bool | None = None
     aceita_equipe_profissionais: bool | None = None
     aceita_equipe_mista: bool | None = None
+    exige_autodeclaracao: bool | None = None
+    exige_comprovante_estudante: bool | None = None
+    exige_comprovante_profissional: bool | None = None
 
     @field_validator(
         "status",
@@ -68,6 +75,9 @@ class HackathonUpdate(BaseModel):
         "aceita_equipe_estudantes",
         "aceita_equipe_profissionais",
         "aceita_equipe_mista",
+        "exige_autodeclaracao",
+        "exige_comprovante_estudante",
+        "exige_comprovante_profissional",
         mode="before",
     )
     @classmethod

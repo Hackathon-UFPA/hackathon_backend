@@ -12,8 +12,9 @@ from pydantic import (
     model_validator,
 )
 
-from app.const.enums import StatusComprovante
+from app.const.enums import StatusComprovante, TipoIntegrante
 from app.schemas.auth import validar_link_do_comprovante
+from app.schemas.autodeclaracao import AutodeclaracaoResponse
 
 
 class ComprovanteVinculoCreate(BaseModel):
@@ -37,6 +38,9 @@ class ComprovanteVinculoUpdate(BaseModel):
 
 class ComprovanteVinculoResponse(ComprovanteVinculoCreate):
     id: UUID
+    # Vínculo que o documento comprova e a declaração que ele sustenta (BE-S5-03)
+    tipo_vinculo: TipoIntegrante
+    autodeclaracao_id: UUID | None = None
     status: StatusComprovante
     motivo_recusa: str | None = None
     enviado_em: datetime | None = None
@@ -79,3 +83,5 @@ class UsuarioResumo(BaseModel):
 
 class ComprovanteAdminResponse(ComprovanteVinculoResponse):
     usuario: UsuarioResumo
+    # O que a pessoa declarou, para o conferente comparar com o documento (BE-S5-03)
+    autodeclaracao: AutodeclaracaoResponse | None = None
