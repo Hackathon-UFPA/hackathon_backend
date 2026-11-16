@@ -21,6 +21,8 @@ BE-S4-05 (RF21, RF22, RF23, RF25).
 
 **Homologação automática** (RF23): além do que vale para concluir, todos os integrantes precisam ter o comprovante mais recente `APROVADO` no hackathon. A reavaliação roda ao concluir, ao aprovar um comprovante e em `POST /admin/hackathons/{id}/equipes/reavaliar`. Quem publicar uma nova versão de termos (ou mudar o tamanho de equipe) deve chamar `reavaliar_hackathon` do `app/services/inscricao.py` ou essa rota, para equipes homologadas que deixaram de cumprir os requisitos voltarem a pendentes. A lógica única fica em `app/services/homologacao.py`: o painel, a conclusão e a homologação usam a mesma avaliação.
 
+**Categoria (BE-S5-01).** O painel traz a `categoria` da equipe e o `tipo_integrante` de cada pessoa. Duas pendências novas bloqueiam a conclusão: `CATEGORIA_NAO_PERMITIDA` (a edição não aceita a categoria) e `CATEGORIA_INCOERENTE` (os tipos dos integrantes não formam a categoria). Veja [Equipes e membros](equipes-e-membros.md#categorias-e-composição-informada-pelo-líder-be-s5-01).
+
 **Painel.** `pendencias` lista cada coisa que falta, com `codigo`, `mensagem`, a pessoa responsável (`usuario_id`) e `bloqueia_conclusao`. `pode_concluir` é a flag para a interface mostrar o botão de concluir: só é verdadeira para o líder, com a equipe em formação e nenhum bloqueio. Convites sem resposta ou recusados aparecem na lista de `integrantes` com `integrante = false`.
 
 **Decisões em aberto que o código assume** (ajuste se a equipe decidir diferente):

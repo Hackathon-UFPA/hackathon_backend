@@ -2,6 +2,8 @@
 
 # Banco de dados
 
+BE-S5-01: `V202611161300__equipes_por_categoria.sql` adiciona os tipos `categoria_equipe` e `tipo_integrante`, `equipes.categoria`, `convites.tipo_integrante`, `membros_equipe.tipo_integrante` e a política de elegibilidade por edição (`hackathon.aceita_equipe_estudantes`, `aceita_equipe_profissionais` e `aceita_equipe_mista`, ao menos uma verdadeira: `ck_hackathon_categorias`). Equipes, convites e vínculos que já existiam entram como `ESTUDANTES`/`ESTUDANTE` (eram todos acadêmicos) e as três categorias nascem liberadas. Detalhes em [Equipes e membros](equipes-e-membros.md#categorias-e-composição-informada-pelo-líder-be-s5-01).
+
 BE-S5-04: `V202611161200__central_notificacoes.sql` adiciona o tipo `tipo_notificacao` e a tabela `notificacoes` (central in-app, com `lida_em`, chave de idempotência por usuário e jsonb opcional) e migra como lidos o histórico de `notificacoes_resultado` (canal `PLATAFORMA`) e os eventos de mentoria pendentes. Detalhes em [Central de notificações](central-de-notificacoes.md).
 
 BE-S5-12: `V202611161100__conteudo_institucional.sql` adiciona `hackathon.descricao`, `termos.rascunho` (rascunho nunca é vigente: `ck_termos_rascunho_nao_vigente`) e as tabelas `apoiadores`, `faq_itens`, `fases_cronograma`, `sessoes_treinamento` e `materiais_treinamento`. Todo conteúdo nasce não publicado; arquivos nunca são guardados, só links (RNF20). Detalhes em [Conteúdo institucional](conteudo-institucional.md).
@@ -54,10 +56,10 @@ erDiagram
 |------------------------|-----------------------------------------------------------------------------------------------|
 | `usuarios`             | Pessoas do sistema; `email` único, `papel`, `ativo`, instituição, curso e período; dados do mentor (empresa, área, máx. de equipes); `senha_hash` (Argon2), `tentativas_login`, `bloqueado_ate`, `situacao_conta`, `email_confirmado_em` e `versao_sessao` |
 | `tokens_usuario`       | Token de uso único de redefinição de senha e confirmação de e-mail (BE-S5-07): `finalidade`, `token_hash` (SHA-256, único), `email` (só na confirmação), `expira_em` e `utilizado_em` |
-| `hackathon`            | Edição do evento: datas, `status`, tamanho da equipe (`min/max_integrantes`), prazos da Fase 1 e `avaliadores_por_proposta` (2 a 3, sem padrão) |
-| `equipes`              | Equipes de um hackathon, com a `situacao` (Em formação → Homologada)                           |
-| `membros_equipe`       | Usuário ↔ equipe com a `funcao`; uma equipe por pessoa em cada hackathon e um único `LIDER`     |
-| `convites`             | Integrantes informados pelo líder (nome e e-mail) aguardando confirmação                       |
+| `hackathon`            | Edição do evento: datas, `status`, tamanho da equipe (`min/max_integrantes`), categorias de equipe aceitas (`aceita_equipe_*`), prazos da Fase 1 e `avaliadores_por_proposta` (2 a 3, sem padrão) |
+| `equipes`              | Equipes de um hackathon, com a `categoria` indicada pelo líder e a `situacao` (Em formação → Homologada) |
+| `membros_equipe`       | Usuário ↔ equipe com a `funcao` e o `tipo_integrante` indicado pelo líder; uma equipe por pessoa em cada hackathon e um único `LIDER` |
+| `convites`             | Integrantes informados pelo líder (nome, e-mail e `tipo_integrante`) aguardando confirmação    |
 | `termos`               | Regulamento e termo de consentimento, versionados; uma versão vigente por tipo; `rascunho` até publicar (BE-S5-12) |
 | `apoiadores`           | Realizadores, apoiadores e patrocinadores da edição: `categoria`, `logo_url`, `site_url`, `ordem`, `publicado` (RF14) |
 | `faq_itens`            | Perguntas frequentes ordenáveis (`ordem`), com `publicado` (RF12)                              |
@@ -100,6 +102,8 @@ Definidos como `ENUM` nativo no Postgres (migration) e espelhados em [`app/const
 | `categoria_artefato` | `REPOSITORIO_CODIGO`, `DIAGRAMA`, `VIDEO`, `APRESENTACAO`, `DOCUMENTACAO`, `PROTOTIPO`, `OUTRO` |
 | `situacao_equipe`    | `EM_FORMACAO` (padrão), `AGUARDANDO_HOMOLOGACAO`, `HOMOLOGADA`, `NAO_HOMOLOGADA`                 |
 | `status_convite`     | `PENDENTE` (padrão), `ACEITO`, `RECUSADO`, `CANCELADO`                                          |
+| `categoria_equipe`   | `ESTUDANTES` (padrão, legado), `PROFISSIONAIS`, `MISTA`                                          |
+| `tipo_integrante`    | `ESTUDANTE` (padrão, legado), `PROFISSIONAL`                                                     |
 | `tipo_termo`         | `REGULAMENTO`, `TERMO_CONSENTIMENTO`                                                            |
 | `status_comprovante` | `PENDENTE` (padrão), `APROVADO`, `RECUSADO`                                                     |
 | `situacao_conta`     | `ATIVA` (padrão), `PENDENTE` (participante até o comprovante ser aprovado)                      |
