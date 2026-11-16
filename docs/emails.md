@@ -4,7 +4,7 @@
 
 BE-S5-05 (RNF28, RF60; RF01, RF04, RF08, RF18, RF19, RF22, RF28, RF33, RF37). Envio assíncrono e confiável de e-mails em português, por um provedor configurável, com tentativas automáticas e status de entrega rastreável.
 
-A decisão Q16 está encerrada no documento de requisitos: as notificações do sistema (RF60) saem por **e-mail e plataforma**. A exceção é o chat entre equipe e mentor (RF43, RN32), que gera aviso só na plataforma e **nunca** por e-mail.
+A decisão Q16 está encerrada no documento de requisitos: as notificações do sistema (RF60) saem por **e-mail e plataforma**. A exceção é o chat entre equipe e mentor (RF43, RN32), que gera aviso só na plataforma e **nunca** por e-mail: os avisos in-app saem pela [central de notificações](central-de-notificacoes.md), cujo serviço `notificar` não usa a fila de e-mails.
 
 ## Como funciona
 

@@ -87,7 +87,7 @@ O encerramento não exige que o mentor ainda esteja ativo nem que a edição per
 
 O cancelamento da edição em outra transação pode ocorrer depois da checagem de fase da atribuição. Os bloqueios garantem exclusividade/capacidade; não representam uma transação global de encerramento de todas as operações do hackathon.
 
-## RF60 e a dependência da central in-app
+## RF60 e a central in-app
 
 Cada atribuição gera avisos para todos os integrantes atuais da equipe e para o mentor, sem duplicar destinatários. Substituições avisam também o mentor anterior; encerramentos avisam a equipe e o mentor do vínculo encerrado. Motivos administrativos, avaliações, notas e senhas não são enviados por e-mail.
 
@@ -95,9 +95,9 @@ O novo tipo `ATRIBUICAO_MENTOR` reutiliza `enfileirar`, os templates texto/HTML,
 
 A validação identificou uma falha intermitente na reserva da fila: a seleção limitada dentro de `UPDATE ... WHERE id IN (...)` podia ser reexecutada em planos com nested loop e exceder o limite do lote. A seleção agora usa uma CTE `MATERIALIZED`, mantendo `FOR UPDATE SKIP LOCKED`, com ordenação explícita do retorno. A regressão reproduz o excesso no código anterior com estatísticas desatualizadas e um plano genérico alternativo, e verifica limite, ordem e contagem de tentativas.
 
-**A central genérica in-app ainda não está integrada nesta base.** O único endpoint existente, `GET /me/notificacoes`, é específico de resultado. Este card não altera seu contrato nem registra uma publicação fictícia. A tabela `eventos_notificacao_mentoria` guarda, na mesma transação da atribuição, cada destinatário, o vínculo, o tipo (`ATRIBUIDA`, `SUBSTITUIDA`, `ENCERRADA`), a mensagem e a situação de enfileiramento do e-mail. `publicado_na_plataforma_em=NULL` significa publicação pendente.
+**Central in-app (BE-S5-04).** Cada evento também gera uma notificação do tipo `MENTOR` na [central](central-de-notificacoes.md), com a chave `mentoria:{atribuicao_id}:{tipo}` (única por usuário), e o evento recebe `publicado_na_plataforma_em`. A tabela `eventos_notificacao_mentoria` segue guardando, na mesma transação da atribuição, cada destinatário, o vínculo, o tipo (`ATRIBUIDA`, `SUBSTITUIDA`, `ENCERRADA`), a mensagem e a situação de enfileiramento do e-mail.
 
-O adaptador `app.controllers.atribuicao_mentor.eventos_pendentes_plataforma()` oferece leitura com `FOR UPDATE SKIP LOCKED`. O consumidor da central deve criar a notificação usando o id do evento como chave de deduplicação e preencher `publicado_na_plataforma_em` na **mesma transação**; falhas devem desfazer ambos. O teste cobre essa leitura e a retirada de eventos já publicados. Publicação in-app e sua interface ficam dependentes da integração da central (BE-S5-04).
+A publicação na central tolera falhas: se não for possível gravar, o evento fica com `publicado_na_plataforma_em=NULL` (pendente) e a atribuição continua válida. `app.controllers.atribuicao_mentor.eventos_pendentes_plataforma()` lê esses pendentes com `FOR UPDATE SKIP LOCKED` para um reprocessamento. Os eventos que já estavam pendentes quando a central foi criada foram migrados como lidos.
 
 A gravação do evento durável é obrigatória: se falhar, toda a atribuição é desfeita. O enfileiramento de e-mail mantém a política de tolerância a falhas do PR #15. Os avisos desta entrega são de mudança de mentoria; o futuro chat continua sem gerar e-mails (RN32).
 

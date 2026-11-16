@@ -69,6 +69,8 @@ A única exceção é o **422** de validação do FastAPI, em que `detail` é um
 
 Cada rota lista no Swagger os códigos que ela pode devolver.
 
+**Cabeçalhos legíveis pelo navegador.** O CORS expõe `Retry-After` (429) e `X-Total-Count` (total de itens em listas paginadas, hoje `GET /me/notificacoes`). Sem `expose_headers`, o front não os enxergaria.
+
 ## Convenções dos contratos
 
 - **IDs** são UUID.

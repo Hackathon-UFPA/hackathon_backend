@@ -2,6 +2,8 @@
 
 # Banco de dados
 
+BE-S5-04: `V202611161200__central_notificacoes.sql` adiciona o tipo `tipo_notificacao` e a tabela `notificacoes` (central in-app, com `lida_em`, chave de idempotência por usuário e jsonb opcional) e migra como lidos o histórico de `notificacoes_resultado` (canal `PLATAFORMA`) e os eventos de mentoria pendentes. Detalhes em [Central de notificações](central-de-notificacoes.md).
+
 BE-S5-12: `V202611161100__conteudo_institucional.sql` adiciona `hackathon.descricao`, `termos.rascunho` (rascunho nunca é vigente: `ck_termos_rascunho_nao_vigente`) e as tabelas `apoiadores`, `faq_itens`, `fases_cronograma`, `sessoes_treinamento` e `materiais_treinamento`. Todo conteúdo nasce não publicado; arquivos nunca são guardados, só links (RNF20). Detalhes em [Conteúdo institucional](conteudo-institucional.md).
 
 BE-S5-07: `V202611161000__perfil_recuperacao_senha.sql` adiciona `usuarios.email_confirmado_em` (informativo; contas com mentor ativado já nascem confirmadas), `usuarios.versao_sessao` (entra no token de acesso; aumentar encerra as sessões), o tipo `finalidade_token` e a tabela `tokens_usuario`, com o SHA-256 do token de uso único, a finalidade (`REDEFINICAO_SENHA` ou `CONFIRMACAO_EMAIL`), o e-mail a confirmar, a validade e o uso. O valor puro do token nunca é gravado. Detalhes em [Autenticação e permissões](autenticacao.md).
@@ -77,6 +79,7 @@ erDiagram
 | `homologacoes_resultado` | Homologação do resultado da avaliação (RF31): quem, quando e totais; uma por hackathon, sem `UPDATE` (trigger) |
 | `resultados_proposta` | Retrato de cada proposta na homologação: equipe, tema, título, média, classificação, recomendações e `aprovada`; sem `UPDATE` (trigger) |
 | `notificacoes_resultado` | Aviso do resultado a cada integrante (RF33): `canal`, `status_envio` (`PENDENTE`, `ENVIADO`, `FALHA` com `erro`), `aprovada` e `mensagem`; única por `(homologacao_id, usuario_id, canal)` |
+| `notificacoes` | Central de notificações in-app (BE-S5-04): `tipo`, `titulo`, `mensagem`, `dados` (jsonb), `referencia_tipo`/`referencia_id`, `chave_idempotencia`, `lida_em`; `unique(usuario_id, chave_idempotencia)`; `notificacao_resultado_id` liga o tipo `RESULTADO` à linha do RF33 |
 | `emails_outbox` | Fila de e-mails transacionais (RNF28), gravada na transação da ação de origem: `tipo`, destinatário, `assunto`, corpo (apagado depois do envio), `status`, `tentativas`, `proxima_tentativa_em`, `reservado_ate`, `ultimo_erro` e `chave_idempotencia` única |
 
 As constraints do banco garantem as regras que dependem de uma única tabela (ex.: proposta enviada exige tema, comprovante recusado exige motivo). Regras que dependem de contagem, prazo ou perfil (3 a 5 integrantes, homologação automática, bloqueio após o prazo) ficam nos services.
@@ -108,6 +111,7 @@ Definidos como `ENUM` nativo no Postgres (migration) e espelhados em [`app/const
 | `fase_rubrica` | `PROPOSTA` (padrão; avaliação científica), `PROJETO_FINAL` |
 | `canal_notificacao` | `PLATAFORMA`, `EMAIL` (reservado e sem uso: o e-mail é rastreado em `emails_outbox`) |
 | `status_envio_notificacao` | `PENDENTE`, `ENVIADO`, `FALHA` |
+| `tipo_notificacao` | `CONVITE`, `ACEITE`, `INSCRICAO`, `PROPOSTA`, `RESULTADO`, `MENTOR`, `CHAT`, `PRAZO` |
 | `tipo_email` | `CONFIRMACAO_EMAIL`, `RECUPERACAO_SENHA`, `DEFINICAO_SENHA`, `CONVITE_EQUIPE`, `INSCRICAO_CONCLUIDA`, `EQUIPE_HOMOLOGADA`, `PROTOCOLO_PROPOSTA`, `RESULTADO_PROPOSTA` |
 | `status_email` | `PENDENTE`, `ENVIANDO`, `ENVIADO`, `FALHA` |
 
