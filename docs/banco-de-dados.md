@@ -2,6 +2,8 @@
 
 # Banco de dados
 
+BE-S5-12: `V202611161100__conteudo_institucional.sql` adiciona `hackathon.descricao`, `termos.rascunho` (rascunho nunca é vigente: `ck_termos_rascunho_nao_vigente`) e as tabelas `apoiadores`, `faq_itens`, `fases_cronograma`, `sessoes_treinamento` e `materiais_treinamento`. Todo conteúdo nasce não publicado; arquivos nunca são guardados, só links (RNF20). Detalhes em [Conteúdo institucional](conteudo-institucional.md).
+
 BE-S5-07: `V202611161000__perfil_recuperacao_senha.sql` adiciona `usuarios.email_confirmado_em` (informativo; contas com mentor ativado já nascem confirmadas), `usuarios.versao_sessao` (entra no token de acesso; aumentar encerra as sessões), o tipo `finalidade_token` e a tabela `tokens_usuario`, com o SHA-256 do token de uso único, a finalidade (`REDEFINICAO_SENHA` ou `CONFIRMACAO_EMAIL`), o e-mail a confirmar, a validade e o uso. O valor puro do token nunca é gravado. Detalhes em [Autenticação e permissões](autenticacao.md).
 
 BE-S5-11: `V202611121300__atribuicao_mentores.sql` adiciona `atribuicoes_mentor` (histórico e unicidade parcial por equipe), `eventos_notificacao_mentoria` (integração da central), marco auditado de treinamento em `hackathon` e o tipo de e-mail `ATRIBUICAO_MENTOR`. Detalhes em [Atribuição de mentores](atribuicao-mentores.md).
@@ -33,6 +35,11 @@ erDiagram
     criterios_rubrica ||--o{ notas_criterio_avaliacao : pontuado
     equipes ||--o{ convites : envia
     hackathon ||--o{ termos : publica
+    hackathon ||--o{ apoiadores : apoiada_por
+    hackathon ||--o{ faq_itens : responde
+    hackathon ||--o{ fases_cronograma : programa
+    hackathon ||--o{ sessoes_treinamento : treina_em
+    sessoes_treinamento ||--o{ materiais_treinamento : tem
     termos ||--o{ aceites_termos : recebe
     usuarios ||--o{ aceites_termos : aceita
     usuarios ||--o{ comprovantes_vinculo : envia
@@ -49,7 +56,12 @@ erDiagram
 | `equipes`              | Equipes de um hackathon, com a `situacao` (Em formação → Homologada)                           |
 | `membros_equipe`       | Usuário ↔ equipe com a `funcao`; uma equipe por pessoa em cada hackathon e um único `LIDER`     |
 | `convites`             | Integrantes informados pelo líder (nome e e-mail) aguardando confirmação                       |
-| `termos`               | Regulamento e termo de consentimento, versionados; uma versão vigente por tipo                 |
+| `termos`               | Regulamento e termo de consentimento, versionados; uma versão vigente por tipo; `rascunho` até publicar (BE-S5-12) |
+| `apoiadores`           | Realizadores, apoiadores e patrocinadores da edição: `categoria`, `logo_url`, `site_url`, `ordem`, `publicado` (RF14) |
+| `faq_itens`            | Perguntas frequentes ordenáveis (`ordem`), com `publicado` (RF12)                              |
+| `fases_cronograma`     | Fases extras do cronograma (`inicio` e `fim`, `fim >= inicio`); as datas do edital vêm de `hackathon` (RF13) |
+| `sessoes_treinamento`  | Sessões do treinamento: data e horário, local ou link (um dos dois é obrigatório), `publicado` (RF35) |
+| `materiais_treinamento` | Links de materiais de uma sessão (`ON DELETE CASCADE`) (RF35, RNF20)                          |
 | `aceites_termos`       | Aceite de um usuário a uma versão de termo, com data e hora                                    |
 | `comprovantes_vinculo` | Comprovante de vínculo e a conferência do Comitê Científico; reenvio cria uma linha nova       |
 | `temas`                | Temas do edital, com ODS relacionados e `ativo`                                               |

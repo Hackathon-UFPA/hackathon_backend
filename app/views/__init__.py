@@ -5,6 +5,8 @@ from app.views.auth import router as auth
 from app.views.avaliacao import router_admin as avaliacao_admin
 from app.views.avaliacao import router_avaliador as avaliacao_avaliador
 from app.views.comprovantes import router as comprovantes
+from app.views.conteudo import router as conteudo
+from app.views.conteudo import router_publico as conteudo_publico
 from app.views.convites import router as convites
 from app.views.emails import router as emails
 from app.views.equipe import router as equipes
@@ -17,6 +19,7 @@ from app.views.mentores import router as mentores
 from app.views.mentores import router_publico as mentores_publico
 from app.views.notificacoes import router as notificacoes
 from app.views.perfil import router as perfil
+from app.views.regulamento import router as regulamento
 from app.views.resultado import router_admin as resultado_admin
 from app.views.resultado import router_equipe as resultado_equipe
 from app.views.resultado import router_publico as resultado_publico
@@ -26,6 +29,8 @@ from app.views.submissao import router_proposta
 from app.views.temas import router as temas
 from app.views.temas import router_hackathon as temas_hackathon
 from app.views.termos import router as termos
+from app.views.treinamento import router as treinamento
+from app.views.treinamento import router_consulta as treinamento_consulta
 from app.views.usuarios import router as usuarios
 
 router = APIRouter()
@@ -39,6 +44,11 @@ router.include_router(mentores)
 router.include_router(mentores_publico)
 router.include_router(hackathons)
 router.include_router(hackathons_publico)
+router.include_router(conteudo)
+router.include_router(conteudo_publico)
+router.include_router(regulamento)
+router.include_router(treinamento)
+router.include_router(treinamento_consulta)
 router.include_router(equipes)
 router.include_router(membros_equipe)
 router.include_router(convites)

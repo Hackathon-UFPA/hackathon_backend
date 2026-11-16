@@ -58,5 +58,9 @@ PERFIS_QUE_GERENCIAM_EDITAL = (PapelUsuario.ORGANIZADOR,)
 # DEV passa sempre.
 PERFIS_QUE_GERENCIAM_TEMAS_E_RUBRICAS = (PapelUsuario.COMITE_CIENTIFICO, PapelUsuario.ORGANIZADOR)
 
+# Quem vê todas as sessões e materiais do treinamento, além das equipes aprovadas (RF35). DEV passa
+# sempre.
+PERFIS_QUE_ACOMPANHAM_TREINAMENTO = (PapelUsuario.ORGANIZADOR, PapelUsuario.COMITE_CIENTIFICO)
+
 # Quem acompanha a fila de e-mails e pede o reenvio dos que falharam (RNF28). DEV passa sempre.
 PERFIS_QUE_ACOMPANHAM_EMAILS = (PapelUsuario.ORGANIZADOR,)
