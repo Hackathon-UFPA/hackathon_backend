@@ -22,11 +22,12 @@ from app.const.enums import (
     TipoTermo,
 )
 from app.const.inscricao import CodigoPendencia
+from app.controllers.autodeclaracao import ultima_autodeclaracao_por_usuario
 from app.controllers.comprovante_vinculo import ultimo_comprovante_por_usuario
 from app.controllers.convite import listar_convites_da_equipe, listar_usuarios_com_convite_aceito
 from app.controllers.membro_equipe import listar_membros_com_usuario
 from app.controllers.termo import listar_aceites_dos_usuarios, listar_termos_vigentes
-from app.models import Convite, Equipe, Hackathon, MembroEquipe, Usuario
+from app.models import AutodeclaracaoVinculo, Convite, Equipe, Hackathon, MembroEquipe, Usuario
 from app.services.email_eventos import avisar_equipe_homologada
 from app.services.notificacao_eventos import notificar_equipe_homologada
 from app.validations.categoria_equipe import (
@@ -52,6 +53,7 @@ class IntegranteAvaliado:
     convite: StatusConvite | None
     termos_aceitos: bool
     comprovante: StatusComprovante | None
+    autodeclaracao: AutodeclaracaoVinculo | None = None
 
 
 @dataclass
@@ -76,6 +78,12 @@ class Avaliacao:
 
 def _nome(usuario: Usuario) -> str:
     return usuario.nome or usuario.email
+
+
+def _exige_comprovante(hackathon: Hackathon, integrante: IntegranteAvaliado) -> bool:
+    if integrante.membro.tipo_integrante == TipoIntegrante.PROFISSIONAL:
+        return hackathon.exige_comprovante_profissional
+    return hackathon.exige_comprovante_estudante
 
 
 def _profissional(integrante: IntegranteAvaliado) -> str:
@@ -119,7 +127,10 @@ async def avaliar(
     termos_publicados = {termo.tipo for termo in vigentes} == set(TipoTermo)
     aceites = await listar_aceites_dos_usuarios(db, usuarios_ids, vigentes_ids)
     com_convite_aceito = await listar_usuarios_com_convite_aceito(db, equipe.id)
-    comprovantes = await ultimo_comprovante_por_usuario(db, hackathon.id, usuarios_ids)
+    # Só vale o comprovante do vínculo que o líder indicou para cada pessoa (BE-S5-03)
+    tipos = {membro.usuario_id: membro.tipo_integrante for membro, _ in pares}
+    comprovantes = await ultimo_comprovante_por_usuario(db, hackathon.id, usuarios_ids, tipos)
+    declaracoes = await ultima_autodeclaracao_por_usuario(db, hackathon.id, usuarios_ids)
     convites = await listar_convites_da_equipe(db, equipe.id)
 
     integrantes: list[IntegranteAvaliado] = []
@@ -135,6 +146,7 @@ async def avaliar(
                 else (StatusConvite.ACEITO if usuario.id in com_convite_aceito else None),
                 termos_aceitos=termos_publicados and vigentes_ids <= aceites.get(usuario.id, set()),
                 comprovante=comprovante.status if comprovante else None,
+                autodeclaracao=declaracoes.get(usuario.id),
             )
         )
 
@@ -231,7 +243,33 @@ async def avaliar(
                     bloqueia_conclusao=True,
                 )
             )
-        # O comprovante só pesa na homologação: não impede a conclusão da inscrição
+        # Autodeclaração (BE-S5-03): é o que a pessoa afirma e não comprova nada, mas precisa
+        # existir quando a edição exige e não pode contradizer o tipo que o líder indicou. Como o
+        # comprovante, só pesa na homologação.
+        declarada = integrante.autodeclaracao
+        if declarada is None:
+            if hackathon.exige_autodeclaracao:
+                pendencias.append(
+                    Pendencia(
+                        CodigoPendencia.AUTODECLARACAO_PENDENTE,
+                        f"{nome} ainda não preencheu a autodeclaração de vínculo.",
+                        usuario.id,
+                    )
+                )
+        elif declarada.tipo != integrante.membro.tipo_integrante:
+            pendencias.append(
+                Pendencia(
+                    CodigoPendencia.TIPO_DIVERGENTE,
+                    f"{nome} declarou ser {declarada.tipo}, mas o líder indicou "
+                    f"{integrante.membro.tipo_integrante}: o líder corrige a composição ou a "
+                    "pessoa revê a declaração.",
+                    usuario.id,
+                )
+            )
+        # O comprovante só pesa na homologação: não impede a conclusão da inscrição. Quais tipos
+        # precisam dele é política da edição (provisória, até o Squad 1 validar).
+        if not _exige_comprovante(hackathon, integrante):
+            continue
         if integrante.comprovante is None:
             pendencias.append(
                 Pendencia(

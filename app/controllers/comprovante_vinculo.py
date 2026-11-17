@@ -3,7 +3,7 @@ from uuid import UUID
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.const.enums import StatusComprovante
+from app.const.enums import StatusComprovante, TipoIntegrante
 from app.models import ComprovanteVinculo, Usuario
 
 
@@ -61,25 +61,31 @@ async def listar_comprovantes_do_usuario(
 
 
 async def get_ultimo_comprovante(
-    db: AsyncSession, usuario_id: UUID, hackathon_id: UUID
+    db: AsyncSession,
+    usuario_id: UUID,
+    hackathon_id: UUID,
+    tipo_vinculo: TipoIntegrante | None = None,
 ) -> ComprovanteVinculo | None:
-    consulta = (
-        select(ComprovanteVinculo)
-        .where(
-            ComprovanteVinculo.usuario_id == usuario_id,
-            ComprovanteVinculo.hackathon_id == hackathon_id,
-        )
-        .order_by(col(ComprovanteVinculo.enviado_em).desc())
-        .limit(1)
+    """O mais recente da pessoa na edição; com `tipo_vinculo`, só entre os desse tipo."""
+    consulta = select(ComprovanteVinculo).where(
+        ComprovanteVinculo.usuario_id == usuario_id,
+        ComprovanteVinculo.hackathon_id == hackathon_id,
     )
+    if tipo_vinculo is not None:
+        consulta = consulta.where(ComprovanteVinculo.tipo_vinculo == tipo_vinculo)
+    consulta = consulta.order_by(col(ComprovanteVinculo.enviado_em).desc()).limit(1)
     return (await db.exec(consulta)).first()
 
 
 async def ultimo_comprovante_por_usuario(
-    db: AsyncSession, hackathon_id: UUID, usuarios_ids: list[UUID]
+    db: AsyncSession,
+    hackathon_id: UUID,
+    usuarios_ids: list[UUID],
+    tipos: dict[UUID, TipoIntegrante] | None = None,
 ) -> dict[UUID, ComprovanteVinculo]:
     """O comprovante mais recente de cada pessoa neste hackathon. Um reenvio depois de recusa
-    é uma linha nova, então o último é o que vale."""
+    é uma linha nova, então o último é o que vale. Com `tipos`, só vale o comprovante do vínculo
+    que cada pessoa precisa comprovar (BE-S5-03): um comprovante de outro tipo não conta."""
     consulta = (
         select(ComprovanteVinculo)
         .where(
@@ -90,5 +96,7 @@ async def ultimo_comprovante_por_usuario(
     )
     mais_recente: dict[UUID, ComprovanteVinculo] = {}
     for comprovante in (await db.exec(consulta)).all():
+        if tipos is not None and comprovante.tipo_vinculo != tipos.get(comprovante.usuario_id):
+            continue
         mais_recente.setdefault(comprovante.usuario_id, comprovante)
     return mais_recente
