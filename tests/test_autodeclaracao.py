@@ -42,14 +42,15 @@ class CenarioDeclaracao(CenarioInscricao):
         atribuicoes = ", ".join(f"{campo} = :{campo}" for campo in campos)
         self.sql(f"UPDATE hackathon SET {atribuicoes} WHERE id = :h", h=self.hackathon_id, **campos)
 
-    def tornar(self, categoria: str, tipos: dict):
-        """Define a categoria da equipe e o tipo indicado pelo líder para cada pessoa."""
+    def tornar(self, categoria: str, tipos: list[tuple[dict, str]]):
+        """Define a categoria da equipe e o tipo indicado pelo líder para cada pessoa, dada como
+        pares (usuário, tipo): o usuário é um dict, então não serve de chave."""
         self.sql(
             "UPDATE equipes SET categoria = CAST(:c AS categoria_equipe) WHERE id = :e",
             c=categoria,
             e=self.equipe_id,
         )
-        for pessoa, tipo in tipos.items():
+        for pessoa, tipo in tipos:
             self.sql(
                 "UPDATE membros_equipe SET tipo_integrante = CAST(:t AS tipo_integrante)"
                 " WHERE equipe_id = :e AND usuario_id = :u",
@@ -348,7 +349,7 @@ def test_equipe_de_estudantes_homologa_como_antes(client, decl):
 
 def test_equipe_de_profissionais_so_homologa_com_comprovante_profissional(client, decl):
     pessoas = decl.montar(client)
-    decl.tornar("PROFISSIONAIS", {p: "PROFISSIONAL" for p in pessoas})
+    decl.tornar("PROFISSIONAIS", [(p, "PROFISSIONAL") for p in pessoas])
     for pessoa in pessoas:
         decl.comprovante_tipo(pessoa, "ESTUDANTE")  # aprovados, mas de outro vínculo
 
@@ -371,7 +372,10 @@ def test_equipe_de_profissionais_so_homologa_com_comprovante_profissional(client
 
 def test_equipe_mista_exige_cada_comprovante_do_tipo_de_cada_pessoa(client, decl):
     lider, estudante, profissional = decl.montar(client)
-    decl.tornar("MISTA", {lider: "ESTUDANTE", estudante: "ESTUDANTE", profissional: "PROFISSIONAL"})
+    decl.tornar(
+        "MISTA",
+        [(lider, "ESTUDANTE"), (estudante, "ESTUDANTE"), (profissional, "PROFISSIONAL")],
+    )
     for pessoa in (lider, estudante, profissional):
         decl.comprovante_tipo(pessoa, "ESTUDANTE")
 
@@ -387,7 +391,7 @@ def test_equipe_mista_exige_cada_comprovante_do_tipo_de_cada_pessoa(client, decl
 
 def test_politica_da_edicao_dispensa_o_comprovante_do_tipo(client, decl):
     pessoas = decl.montar(client)
-    decl.tornar("PROFISSIONAIS", {p: "PROFISSIONAL" for p in pessoas})
+    decl.tornar("PROFISSIONAIS", [(p, "PROFISSIONAL") for p in pessoas])
     decl.configurar_edicao(exige_comprovante_profissional=False)
 
     corpo = decl.concluir(client).json()
@@ -457,7 +461,7 @@ def test_lider_corrige_o_tipo_indicado_e_resolve_a_divergencia(client, decl):
     decl.declarar(client, pessoas[2], **PROFISSIONAL)
     assert "TIPO_DIVERGENTE" in decl.codigos(client)
 
-    decl.tornar("MISTA", {pessoas[2]: "PROFISSIONAL"})
+    decl.tornar("MISTA", [(pessoas[2], "PROFISSIONAL")])
     decl.comprovante_tipo(pessoas[2], "PROFISSIONAL")
 
     assert "TIPO_DIVERGENTE" not in decl.codigos(client)
@@ -469,7 +473,7 @@ def test_lider_corrige_o_tipo_indicado_e_resolve_a_divergencia(client, decl):
 def test_recusa_e_reenvio_do_comprovante_profissional(client, decl):
     pessoas = decl.montar(client)
     profissional = pessoas[1]
-    decl.tornar("MISTA", {profissional: "PROFISSIONAL"})
+    decl.tornar("MISTA", [(profissional, "PROFISSIONAL")])
     decl.comprovante_tipo(pessoas[0], "ESTUDANTE")
     decl.comprovante_tipo(pessoas[2], "ESTUDANTE")
     decl.declarar(client, profissional, **PROFISSIONAL)
@@ -506,7 +510,7 @@ def test_recusa_e_reenvio_do_comprovante_profissional(client, decl):
 
 def test_reenvio_simultaneo_gera_um_so_comprovante(client, decl):
     pessoas = decl.montar(client)
-    decl.tornar("PROFISSIONAIS", {p: "PROFISSIONAL" for p in pessoas})
+    decl.tornar("PROFISSIONAIS", [(p, "PROFISSIONAL") for p in pessoas])
 
     with ThreadPoolExecutor(max_workers=2) as pool:
         futuros = [pool.submit(decl.enviar_comprovante, client, pessoas[1]) for _ in range(2)]
