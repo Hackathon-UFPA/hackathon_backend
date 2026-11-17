@@ -43,9 +43,23 @@ class DuasOrganizacoes:
         )
         return usuario
 
+    def publicar_termos(self):
+        """Regulamento e termo vigentes no hackathon A: o convite de mentor exige os dois."""
+        for tipo in ("REGULAMENTO", "TERMO_CONSENTIMENTO"):
+            self.sql(
+                "INSERT INTO termos (hackathon_id, tipo, versao, titulo, conteudo, vigente)"
+                " VALUES (:h, CAST(:t AS tipo_termo), '1.0', 'Termo', 'texto', true)",
+                h=self.hackathon_a,
+                t=tipo,
+            )
+
     def limpar(self):
         h = self.hackathon_a
-        for tabela in ("comprovantes_vinculo", "termos", "temas"):
+        # Mentores e e-mails criados pela API nos testes
+        criados = "SELECT id FROM usuarios WHERE organizacao_id = ANY(:o) AND email LIKE 'org_%'"
+        self.sql(f"DELETE FROM emails_outbox WHERE usuario_id IN ({criados})", o=self.orgs)
+        self.sql(f"DELETE FROM convites_mentor WHERE usuario_id IN ({criados})", o=self.orgs)
+        for tabela in ("comprovantes_vinculo", "termos", "temas", "equipes"):
             self.sql(f"DELETE FROM {tabela} WHERE hackathon_id = :h", h=h)
         self.sql(
             "DELETE FROM hackathon WHERE id = :h OR organizacao_id = ANY(:o)", h=h, o=self.orgs
@@ -229,3 +243,124 @@ def test_minha_organizacao(client, cenario, usuario_no_banco):
     assert publica.status_code == 200 and publica.json()["descricao"] == "Sobre nós"
     assert comite_edita.status_code == 403
     assert client.get(f"/organizacoes/{uuid4()}").status_code == 404
+
+
+# --- Isolamento das rotas que vieram sem organização (mentores, treinamento, conteúdo,
+# usuários e e-mails) ---
+
+
+@pytest.mark.parametrize(
+    ("metodo", "caminho"),
+    [
+        ("get", "/admin/hackathons/{h}/treinamento"),
+        ("post", "/admin/hackathons/{h}/treinamento/concluir"),
+        ("get", "/admin/hackathons/{h}/treinamento/sessoes"),
+        ("get", "/admin/hackathons/{h}/faq"),
+        ("get", "/admin/hackathons/{h}/apoiadores"),
+        ("get", "/admin/hackathons/{h}/cronograma"),
+        ("get", "/admin/equipes/{e}/mentoria"),
+        ("get", "/admin/equipes/{e}/mentoria/historico"),
+    ],
+)
+def test_rotas_do_hackathon_e_da_equipe_ficam_na_organizacao(client, cenario, metodo, caminho):
+    equipe = cenario.sql(
+        "INSERT INTO equipes (hackathon_id, nome) VALUES (:h, 'Equipe A') RETURNING id",
+        h=cenario.hackathon_a,
+    )[0]["id"]
+    url = caminho.format(h=cenario.hackathon_a, e=equipe)
+
+    resposta = getattr(client, metodo)(url, headers=com_token(cenario.org_b_organizador["id"]))
+
+    assert resposta.status_code == 403, resposta.text
+    assert resposta.json() == {"detail": "Este hackathon pertence a outra organização."}
+
+
+def dados_de_mentor(hackathon_id) -> dict:
+    return {
+        "nome": "Mentora",
+        "email": f"org_{uuid4().hex[:8]}@testes.com",
+        "empresa_parceira": "Empresa",
+        "area_atuacao": "Dados",
+        "max_equipes": 2,
+        "hackathon_id": str(hackathon_id),
+    }
+
+
+def test_mentor_pertence_a_organizacao_e_some_para_as_outras(client, cenario):
+    cenario.publicar_termos()
+    de_a = com_token(cenario.org_a_organizador["id"])
+    de_b = com_token(cenario.org_b_organizador["id"])
+
+    criado = client.post("/admin/mentores", json=dados_de_mentor(cenario.hackathon_a), headers=de_a)
+    assert criado.status_code == 201, criado.text
+    mentor = criado.json()
+    lista_a = client.get("/admin/mentores", params={"limite": 100}, headers=de_a).json()
+    lista_b = client.get("/admin/mentores", params={"limite": 100}, headers=de_b).json()
+
+    assert mentor["organizacao_id"] == str(cenario.org_a)
+    assert mentor["id"] in [m["id"] for m in lista_a]
+    assert mentor["id"] not in [m["id"] for m in lista_b]
+    assert client.get(f"/admin/mentores/{mentor['id']}", headers=de_a).status_code == 200
+    for metodo, sufixo in [("get", ""), ("get", "/convites"), ("get", "/equipes")]:
+        url = f"/admin/mentores/{mentor['id']}{sufixo}"
+        assert getattr(client, metodo)(url, headers=de_b).status_code == 404
+    assert client.post(f"/admin/mentores/{mentor['id']}/desativar", headers=de_b).status_code == 404
+
+
+def test_outra_organizacao_nao_convida_mentor_para_o_hackathon_dela(client, cenario):
+    cenario.publicar_termos()
+
+    resposta = client.post(
+        "/admin/mentores",
+        json=dados_de_mentor(cenario.hackathon_a),
+        headers=com_token(cenario.org_b_organizador["id"]),
+    )
+
+    assert resposta.status_code == 403
+
+
+def test_fila_de_emails_mostra_so_a_organizacao(client, cenario):
+    cenario.publicar_termos()
+    de_a = com_token(cenario.org_a_organizador["id"])
+    de_b = com_token(cenario.org_b_organizador["id"])
+    dados = dados_de_mentor(cenario.hackathon_a)
+    assert client.post("/admin/mentores", json=dados, headers=de_a).status_code == 201
+    filtro = {"destinatario": dados["email"]}
+
+    fila_a = client.get("/admin/emails", params=filtro, headers=de_a).json()
+    fila_b = client.get("/admin/emails", params=filtro, headers=de_b).json()
+
+    assert len(fila_a) == 1
+    assert fila_b == []
+    assert client.get(f"/admin/emails/{fila_a[0]['id']}", headers=de_b).status_code == 404
+    assert client.post(f"/admin/emails/{fila_a[0]['id']}/reenviar", headers=de_b).status_code == 404
+
+
+def test_gestao_de_usuarios_fica_na_organizacao(client, cenario):
+    de_b = com_token(cenario.org_b_organizador["id"])
+    alvo = cenario.org_a_comite["id"]
+
+    lista = client.get("/admin/usuarios", params={"limite": 100}, headers=de_b).json()
+
+    ids = [u["id"] for u in lista]
+    assert str(cenario.org_b_comite["id"]) in ids
+    assert str(alvo) not in ids and str(cenario.org_a_organizador["id"]) not in ids
+    assert client.get(f"/admin/usuarios/{alvo}", headers=de_b).status_code == 404
+    assert (
+        client.patch(f"/admin/usuarios/{alvo}", json={"nome": "Invadido"}, headers=de_b).status_code
+        == 404
+    )
+    assert client.post(f"/admin/usuarios/{alvo}/desativar", headers=de_b).status_code == 404
+
+
+def test_ultimo_organizador_conta_por_organizacao(client, cenario, usuario_no_banco):
+    """A organização A tem um só Organizador: mesmo com Organizadores em outras organizações,
+    ele não pode ser desativado."""
+    dev = usuario_no_banco(papel="DEV")
+
+    resposta = client.post(
+        f"/admin/usuarios/{cenario.org_a_organizador['id']}/desativar",
+        headers=com_token(dev["id"]),
+    )
+
+    assert resposta.status_code == 409

@@ -27,13 +27,14 @@ from app.exceptions.conteudo import (
     conteudo_invalido,
     item_nao_encontrado,
 )
-from app.models import MaterialTreinamento, SessaoTreinamento, Usuario
+from app.models import Hackathon, MaterialTreinamento, SessaoTreinamento, Usuario
 from app.schemas.conteudo import (
     MaterialCreate,
     SessaoCreate,
     SessaoResponse,
     SessaoUpdate,
 )
+from app.security.organizacao import mesma_organizacao
 from app.security.permissoes import PERFIS_QUE_ACOMPANHAM_TREINAMENTO
 from app.services.conteudo import agora_utc, edicao
 from app.validations.inscricao import como_utc
@@ -166,9 +167,13 @@ async def remover_material(
 
 
 async def pode_ver(db: AsyncSession, usuario: Usuario, hackathon_id: UUID) -> bool:
-    """Organização (e DEV) sempre; os demais, só integrantes de equipe aprovada na edição."""
-    if usuario.papel == PapelUsuario.DEV or usuario.papel in PERFIS_QUE_ACOMPANHAM_TREINAMENTO:
+    """Equipe interna da organização dona (e DEV) sempre; os demais, só integrantes de equipe
+    aprovada na edição."""
+    if usuario.papel == PapelUsuario.DEV:
         return True
+    if usuario.papel in PERFIS_QUE_ACOMPANHAM_TREINAMENTO:
+        hackathon = await db.get(Hackathon, hackathon_id)
+        return hackathon is not None and mesma_organizacao(usuario, hackathon.organizacao_id)
     membro = await get_membro_no_hackathon(db, hackathon_id, usuario.id)
     return membro is not None and await equipe_aprovada(db, membro.equipe_id, hackathon_id)
 

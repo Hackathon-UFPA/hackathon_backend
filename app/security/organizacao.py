@@ -19,7 +19,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.const.enums import PapelUsuario
 from app.db.db import get_session
 from app.exceptions.auth import outra_organizacao
-from app.models import ComprovanteVinculo, Hackathon, Submissao, Tema, Usuario
+from app.models import ComprovanteVinculo, Equipe, Hackathon, Submissao, Tema, Usuario
 from app.security.dependencias import exigir_papeis
 
 
@@ -108,3 +108,59 @@ def conferente_do_comprovante(*papeis: PapelUsuario):
         return usuario
 
     return verificar
+
+
+def gestor_do_mentor(*papeis: PapelUsuario):
+    """Perfis informados + o `{mentor_id}` do caminho é da organização de quem pede. Mentor de
+    outra organização responde 404, como se não existisse."""
+    base = exigir_papeis(*papeis)
+
+    async def verificar(
+        mentor_id: UUID,
+        db: AsyncSession = Depends(get_session),
+        usuario: Usuario = Depends(base),
+    ) -> Usuario:
+        mentor = await _ler(db, Usuario, mentor_id)
+        if (
+            mentor is not None
+            and mentor.papel == PapelUsuario.MENTOR
+            and not mesma_organizacao(usuario, mentor.organizacao_id)
+        ):
+            from app.exceptions.mentor import mentor_nao_encontrado
+
+            mentor_nao_encontrado()
+        return usuario
+
+    return verificar
+
+
+def gestor_da_equipe(*papeis: PapelUsuario):
+    """Perfis informados + a `{equipe_id}` do caminho é de um hackathon da organização."""
+    base = exigir_papeis(*papeis)
+
+    async def verificar(
+        equipe_id: UUID,
+        db: AsyncSession = Depends(get_session),
+        usuario: Usuario = Depends(base),
+    ) -> Usuario:
+        equipe = await _ler(db, Equipe, equipe_id)
+        await garantir_hackathon_da_organizacao(
+            db, usuario, equipe.hackathon_id if equipe else None
+        )
+        return usuario
+
+    return verificar
+
+
+async def garantir_mentor_da_organizacao(
+    db: AsyncSession, usuario: Usuario, mentor_id: UUID | None
+) -> None:
+    """Mentor informado no corpo (atribuição) precisa ser da organização de quem pede. Mentor de
+    outra organização responde 404, como se não existisse."""
+    if mentor_id is None:
+        return
+    mentor = await _ler(db, Usuario, mentor_id)
+    if mentor is not None and not mesma_organizacao(usuario, mentor.organizacao_id):
+        from app.exceptions.mentor import mentor_nao_encontrado
+
+        mentor_nao_encontrado()

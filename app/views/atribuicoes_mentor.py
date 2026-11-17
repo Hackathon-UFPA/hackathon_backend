@@ -16,10 +16,20 @@ from app.schemas.atribuicao_mentor import (
     TreinamentoResponse,
 )
 from app.security.dependencias import exigir_papeis, usuario_ativo
+from app.security.organizacao import (
+    garantir_mentor_da_organizacao,
+    gestor_da_equipe,
+    gestor_do_hackathon,
+    gestor_do_mentor,
+)
 from app.services import atribuicao_mentor as service
 from app.utils.openapi import respostas_de_erro
 
-gestor = exigir_papeis(PapelUsuario.COMITE_CIENTIFICO, PapelUsuario.ORGANIZADOR)
+PERFIS_DA_MENTORIA = (PapelUsuario.COMITE_CIENTIFICO, PapelUsuario.ORGANIZADOR)
+# Equipe, mentor e hackathon do caminho precisam ser da organização de quem pede (DEV passa)
+gestor_desta_equipe = gestor_da_equipe(*PERFIS_DA_MENTORIA)
+gestor_deste_mentor = gestor_do_mentor(*PERFIS_DA_MENTORIA)
+gestor_deste_hackathon = gestor_do_hackathon(*PERFIS_DA_MENTORIA)
 router = APIRouter(
     tags=["Atribuições de mentores"],
     responses=respostas_de_erro(
@@ -39,7 +49,7 @@ async def atribuir(
     equipe_id: UUID,
     dados: AtribuicaoCreate,
     db: AsyncSession = Depends(get_session),
-    usuario: Usuario = Depends(gestor),
+    usuario: Usuario = Depends(gestor_desta_equipe),
 ):
     """RF38/RN16/RN24/RN33: atribui mentor elegível após treinamento à equipe aprovada.
 
@@ -47,6 +57,7 @@ async def atribuir(
     edições, uma atribuição vigente por equipe. Avisos por e-mail entram no outbox; eventos
     in-app permanecem pendentes para a central. Nenhuma regra de negócio é dispensada por perfil.
     """
+    await garantir_mentor_da_organizacao(db, usuario, dados.mentor_id)
     return await service.atribuir(db, usuario, equipe_id, dados)
 
 
@@ -55,13 +66,14 @@ async def substituir(
     equipe_id: UUID,
     dados: AtribuicaoSubstituir,
     db: AsyncSession = Depends(get_session),
-    usuario: Usuario = Depends(gestor),
+    usuario: Usuario = Depends(gestor_desta_equipe),
 ):
     """Substitui o vínculo esperado; preserva quem/quando/motivo e notifica envolvidos.
 
     `atribuicao_atual_id` protege contra alterações concorrentes (409 se já mudou).
     O novo mentor deve cumprir as mesmas regras da primeira atribuição.
     """
+    await garantir_mentor_da_organizacao(db, usuario, dados.mentor_id)
     return await service.atribuir(
         db, usuario, equipe_id, dados, atribuicao_atual_id=dados.atribuicao_atual_id
     )
@@ -72,7 +84,7 @@ async def encerrar(
     equipe_id: UUID,
     dados: AtribuicaoEncerrar,
     db: AsyncSession = Depends(get_session),
-    usuario: Usuario = Depends(gestor),
+    usuario: Usuario = Depends(gestor_desta_equipe),
 ):
     """Encerra logicamente o vínculo esperado e libera capacidade; não apaga o histórico."""
     return await service.encerrar(db, usuario, equipe_id, dados)
@@ -80,7 +92,9 @@ async def encerrar(
 
 @router.get(ADMIN_EQUIPE, response_model=AtribuicaoResponse)
 async def consultar_admin(
-    equipe_id: UUID, db: AsyncSession = Depends(get_session), _: Usuario = Depends(gestor)
+    equipe_id: UUID,
+    db: AsyncSession = Depends(get_session),
+    _: Usuario = Depends(gestor_desta_equipe),
 ):
     return await service.consultar_admin(db, equipe_id)
 
@@ -91,7 +105,7 @@ async def historico(
     limite: int = Query(default=50, ge=1, le=100),
     deslocamento: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_session),
-    _: Usuario = Depends(gestor),
+    _: Usuario = Depends(gestor_desta_equipe),
 ):
     return await service.historico(db, equipe_id, limite, deslocamento)
 
@@ -104,7 +118,7 @@ async def equipes_do_mentor(
     limite: int = Query(default=50, ge=1, le=100),
     deslocamento: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_session),
-    _: Usuario = Depends(gestor),
+    _: Usuario = Depends(gestor_deste_mentor),
 ):
     return await service.equipes_do_mentor(
         db, mentor_id, hackathon_id, apenas_vigentes, limite, deslocamento
@@ -142,7 +156,9 @@ async def mentor_da_equipe(
 
 @router.get("/admin/hackathons/{hackathon_id}/treinamento", response_model=TreinamentoResponse)
 async def treinamento(
-    hackathon_id: UUID, db: AsyncSession = Depends(get_session), _: Usuario = Depends(gestor)
+    hackathon_id: UUID,
+    db: AsyncSession = Depends(get_session),
+    _: Usuario = Depends(gestor_deste_hackathon),
 ):
     return await service.treinamento(db, hackathon_id)
 
@@ -153,7 +169,7 @@ async def treinamento(
 async def concluir_treinamento(
     hackathon_id: UUID,
     db: AsyncSession = Depends(get_session),
-    usuario: Usuario = Depends(exigir_papeis(PapelUsuario.ORGANIZADOR)),
+    usuario: Usuario = Depends(gestor_do_hackathon(PapelUsuario.ORGANIZADOR)),
 ):
     """Organizador/DEV confirma o término real do treinamento após homologação do resultado.
 

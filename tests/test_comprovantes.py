@@ -386,3 +386,39 @@ def test_cada_um_ve_so_os_seus_comprovantes(client, fila):
     assert len(meus) == 1
     assert meus[0]["usuario_id"] == str(dono["id"])
     assert str(outro["id"]) not in str(meus)
+
+
+# Envio sem hackathon_id: vale o hackathon com inscrições abertas (como na main)
+
+
+def test_reenvio_ignora_edicoes_mais_recentes_fora_do_periodo(
+    client, fila, edicoes_fora_do_periodo
+):
+    usuario, anterior = fila.enviar("RECUSADO")
+
+    resposta = client.post(
+        "/comprovantes", json={"arquivo_url": LINK}, headers=com_token(usuario["id"])
+    )
+
+    assert resposta.status_code == 201, resposta.text
+    assert resposta.json()["hackathon_id"] == str(fila.hackathon_id)
+    assert resposta.json()["id"] != anterior
+    assert resposta.json()["status"] == "PENDENTE"
+    assert fila.hackathon_id not in edicoes_fora_do_periodo
+
+
+def test_reenvio_sem_edicao_aberta_preserva_erro_e_historico(client, fila, monkeypatch):
+    usuario, anterior = fila.enviar("RECUSADO")
+
+    async def nenhum(db):
+        return None
+
+    monkeypatch.setattr("app.services.comprovante_vinculo.get_hackathon_com_inscricoes", nenhum)
+    resposta = client.post(
+        "/comprovantes", json={"arquivo_url": LINK}, headers=com_token(usuario["id"])
+    )
+
+    assert resposta.status_code == 409
+    assert resposta.json() == {"detail": "Não há hackathon com inscrições abertas no momento."}
+    historico = client.get("/comprovantes/meus", headers=com_token(usuario["id"])).json()
+    assert [c["id"] for c in historico] == [anterior]

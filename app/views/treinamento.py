@@ -12,7 +12,8 @@ from app.schemas.conteudo import (
     SessaoResponse,
     SessaoUpdate,
 )
-from app.security.dependencias import exigir_papeis, usuario_ativo
+from app.security.dependencias import usuario_ativo
+from app.security.organizacao import gestor_do_hackathon
 from app.security.permissoes import PERFIS_QUE_GERENCIAM_EDITAL
 from app.services import treinamento as service
 from app.utils.openapi import respostas_de_erro
@@ -22,7 +23,8 @@ router = APIRouter(
 )
 router_consulta = APIRouter(prefix="/hackathons/{hackathon_id}/treinamento", tags=["Treinamento"])
 
-gerencia_treinamento = exigir_papeis(*PERFIS_QUE_GERENCIAM_EDITAL)
+# Só o Organizador da organização dona do hackathon (e DEV)
+gerencia_treinamento = gestor_do_hackathon(*PERFIS_QUE_GERENCIAM_EDITAL)
 
 ERRO_401 = "Sem token, ou token inválido, vencido ou de conta desativada"
 ERRO_403 = "Conta pendente, ou quem pede não tem permissão (só Organizador e DEV)"

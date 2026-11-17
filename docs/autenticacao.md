@@ -9,7 +9,6 @@ A plataforma é **multi-organização**: empresas e instituições de ensino se 
 | `POST /auth/cadastro` | Qualquer pessoa                               | Cria um **Participante** com conta pendente e registra o comprovante (RF01) |
 | `POST /auth/cadastro/convite` | Público, com o token do link do convite | Cadastro próprio de quem foi convidado para uma equipe sem ter conta; e-mail e papel vêm do convite (BE-S5-02) |
 | `POST /auth/cadastro/convite/consulta` | Público, com o token do link do convite | Mostra o convite antes do cadastro, sem gastar o token (BE-S5-02) |
-| `POST /auth/cadastro` | Qualquer pessoa                               | Cria um **Participante** com a conta já ativa (RF01)                       |
 | `POST /auth/cadastro-organizacao` | Qualquer pessoa                   | Cria a **organização** e o primeiro **Organizador** dela, e devolve o token |
 | `POST /auth/login`    | Qualquer pessoa                               | Devolve o token de acesso e os dados do usuário (RF02)                    |
 | `GET /auth/me`        | Qualquer usuário logado, inclusive conta pendente | Dados de quem está logado                                             |
@@ -28,11 +27,11 @@ A plataforma é **multi-organização**: empresas e instituições de ensino se 
 | `PATCH /admin/usuarios/{id}` | Organizador e Comitê Científico (e DEV) | Edita dados pessoais e, só entre perfis de gestão, o perfil (RN24)       |
 | `POST /admin/usuarios/{id}/desativar`, `.../reativar` | Organizador e Comitê Científico (e DEV) | Desativa ou reativa uma conta do seu alcance (RN24)        |
 
-**Cadastro de participante.** Exige nome, e-mail e senha; instituição, curso e período são opcionais. A senha precisa de 8 a 128 caracteres, com pelo menos uma letra e um número. O e-mail é guardado em minúsculas e não pode repetir. O perfil nunca vem do cliente. A conta nasce `ATIVA` e não depende de haver hackathon aberto. O **comprovante de vínculo** é enviado depois, por hackathon, em `POST /comprovantes` com `hackathon_id` e `arquivo_url`, e é conferido pela organização dona daquele hackathon. Sem comprovante aprovado no hackathon, a equipe não é homologada.
+**Cadastro de participante.** Exige nome, e-mail, instituição, curso, período, senha e o link do comprovante de vínculo (`https`, terminando em `.pdf`, `.png`, `.jpg` ou `.jpeg`; o arquivo fica em um serviço externo como o Cloudinary). A senha precisa de 8 a 128 caracteres, com pelo menos uma letra e um número. O e-mail é guardado em minúsculas e não pode repetir. O perfil nunca vem do cliente. O comprovante é ligado ao hackathon com inscrições abertas (`status = INSCRICOES`); sem nenhum, o cadastro responde 409. A conta nasce `PENDENTE` e só passa a `ATIVA` quando o Comitê Científico aprovar o comprovante (RN25, tarefa futura). Para participar de outro hackathon, a pessoa envia um novo comprovante em `POST /comprovantes`, informando o `hackathon_id` (sem ele, vale o hackathon com inscrições abertas, como no cadastro).
 
 **Cadastro de organização.** Recebe `organizacao` (`nome`, `tipo` = `EMPRESA`, `INSTITUICAO_ENSINO` ou `OUTRO`, `site` e `descricao` opcionais) e `responsavel` (`nome`, `email`, `senha`). Cria as duas coisas na mesma transação e já devolve o token, como o login.
 
-**Isolamento entre organizações.** Organizador, Comitê Científico, Comitê Técnico e Mentor pertencem a uma organização (`usuarios.organizacao_id`), e cada hackathon também (`hackathon.organizacao_id`). As rotas que agem sobre um hackathon (edição, termos, temas, rubrica, comprovantes, distribuição, resultado) conferem que ele é da organização de quem pede, e respondem 403 "Este hackathon pertence a outra organização" se não for. A fila de comprovantes mostra só os da organização, e a distribuição sorteia só avaliadores dela. Quem é cadastrado por um gestor em `POST /admin/usuarios` entra na organização dele. DEV continua passando em tudo. As dependências ficam em `app/security/organizacao.py`.
+**Isolamento entre organizações.** Organizador, Comitê Científico, Comitê Técnico e Mentor pertencem a uma organização (`usuarios.organizacao_id`), e cada hackathon também (`hackathon.organizacao_id`). As rotas que agem sobre um hackathon ou uma equipe (edição, regulamento e termos, temas, rubrica, comprovantes, distribuição, resultado, treinamento, apoiadores, cronograma, FAQ e mentoria) conferem que ele é da organização de quem pede, e respondem 403 "Este hackathon pertence a outra organização" se não for. A fila de comprovantes mostra só os da organização, e a distribuição sorteia só avaliadores dela. A gestão de contas (`/admin/usuarios`) e a de mentores (`/admin/mentores`) só listam e alteram contas da própria organização; conta de outra organização responde 404, como se não existisse, e a regra do último Organizador ativo vale por organização. A fila de e-mails (`/admin/emails`) mostra só os enviados a contas da organização. Quem é cadastrado por um gestor em `POST /admin/usuarios` entra na organização dele, e o mentor entra na organização do hackathon do convite. DEV continua passando em tudo. As dependências ficam em `app/security/organizacao.py`.
 
 **Cadastro pelo convite (BE-S5-02).** Quem é convidado sem ter conta recebe um link de uso único e cria o próprio acesso com a própria senha: o e-mail vem do convite, o papel é sempre Participante e o e-mail já nasce confirmado, porque o token prova a posse. A conta continua `PENDENTE` até o comprovante ser aprovado (RN25), e a pessoa já pode aceitar o convite e os termos. Detalhes em [Cadastro da equipe e dos integrantes](cadastro-equipe-integrantes.md).
 
@@ -100,7 +99,7 @@ Respostas: sem token, token inválido, vencido ou de conta desativada dão **401
 | `SENHA_RESET_INTERVALO_SEGUNDOS` | `60` | Intervalo mínimo entre dois pedidos de redefinição (e de reenvio da confirmação) da mesma conta; `0` desliga |
 | `EMAIL_CONFIRMACAO_MINUTOS` | `1440` | Validade do link de confirmação de e-mail                            |
 
-**Primeiro Organizador.** O caminho normal é o cadastro de organização acima. O script abaixo continua servindo para criar um DEV ou um Organizador fora de qualquer organização (só para desenvolvimento), dentro do container da API, dentro do container da API (a senha é pedida no terminal e não fica no histórico):
+**Primeiro Organizador.** O caminho normal é o cadastro de organização acima. O script abaixo continua servindo para criar um DEV ou um Organizador fora de qualquer organização (só para desenvolvimento), dentro do container da API (a senha é pedida no terminal e não fica no histórico):
 
 ```bash
 docker compose exec app python -m app.scripts.criar_usuario --email organizador@ufpa.br --nome "Nome Completo" --papel ORGANIZADOR
@@ -122,16 +121,17 @@ O acesso de mentores por convite temporário está implementado em [Mentores](me
 
 O Swagger em `/docs` descreve cada rota, os campos e os erros possíveis e serve de contrato. Em resumo, o que a interface faz:
 
-**1. Cadastro do participante** (tela pública):
+**1. Cadastro do participante** (tela pública). Envia o comprovante (PDF ou imagem, até 10 MB) para um serviço externo, como o Cloudinary, e manda só o link:
 
 ```
 POST /auth/cadastro
 { "nome": "Ana Souza", "email": "ana@ufpa.br", "senha": "segredo123",
-  "instituicao": "UFPA", "curso": "Sistemas de Informação", "periodo": 5 }
-→ 201  { "id": "...", "email": "ana@ufpa.br", "papel": "PARTICIPANTE", "situacao_conta": "ATIVA", ... }
+  "instituicao": "UFPA", "curso": "Sistemas de Informação", "periodo": 5,
+  "comprovante_url": "https://res.cloudinary.com/.../comprovante.pdf" }
+→ 201  { "id": "...", "email": "ana@ufpa.br", "papel": "PARTICIPANTE", "situacao_conta": "PENDENTE", ... }
 ```
 
-Ao escolher um hackathon, a interface envia o comprovante (PDF ou imagem, até 10 MB) para um serviço externo, como o Cloudinary, e manda só o link:
+Para entrar em outro hackathon depois, a interface envia um novo comprovante:
 
 ```
 POST /comprovantes

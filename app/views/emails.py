@@ -44,10 +44,12 @@ async def listar_emails(
     limite: int = Query(default=50, ge=1, le=100),
     deslocamento: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_session),
-    _: Usuario = Depends(acompanha_emails),
+    quem: Usuario = Depends(acompanha_emails),
 ):
+    """Só os e-mails para contas da organização de quem pede (DEV vê toda a fila)."""
     return await listar(
         db,
+        quem,
         status=situacao,
         tipo=tipo,
         destinatario=destinatario,
@@ -69,9 +71,9 @@ async def listar_emails(
 async def consultar_email(
     email_id: UUID,
     db: AsyncSession = Depends(get_session),
-    _: Usuario = Depends(acompanha_emails),
+    quem: Usuario = Depends(acompanha_emails),
 ):
-    return await consultar(db, email_id)
+    return await consultar(db, quem, email_id)
 
 
 @router.post(
@@ -98,6 +100,6 @@ async def consultar_email(
 async def reenviar_email(
     email_id: UUID,
     db: AsyncSession = Depends(get_session),
-    _: Usuario = Depends(acompanha_emails),
+    quem: Usuario = Depends(acompanha_emails),
 ):
-    return await reenviar(db, email_id)
+    return await reenviar(db, quem, email_id)

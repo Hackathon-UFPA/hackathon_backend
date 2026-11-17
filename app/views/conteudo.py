@@ -26,7 +26,7 @@ from app.schemas.conteudo import (
     PaginaPublicaResponse,
     RegulamentoPublico,
 )
-from app.security.dependencias import exigir_papeis
+from app.security.organizacao import gestor_do_hackathon
 from app.security.permissoes import PERFIS_QUE_GERENCIAM_EDITAL
 from app.services import conteudo as service
 from app.utils.openapi import respostas_de_erro
@@ -34,7 +34,8 @@ from app.utils.openapi import respostas_de_erro
 router = APIRouter(prefix="/admin/hackathons/{hackathon_id}", tags=["Conteúdo institucional"])
 router_publico = APIRouter(prefix="/publico/hackathons", tags=["Página pública"])
 
-gerencia_conteudo = exigir_papeis(*PERFIS_QUE_GERENCIAM_EDITAL)
+# Só o Organizador da organização dona do hackathon (e DEV)
+gerencia_conteudo = gestor_do_hackathon(*PERFIS_QUE_GERENCIAM_EDITAL)
 
 ERRO_401 = "Sem token, ou token inválido, vencido ou de conta desativada"
 ERRO_403 = "Conta pendente, ou quem pede não tem permissão (só Organizador e DEV)"
