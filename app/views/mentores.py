@@ -19,11 +19,14 @@ from app.schemas.mentor import (
     MentorUpdate,
 )
 from app.security.dependencias import exigir_papeis
+from app.security.organizacao import garantir_hackathon_da_organizacao, gestor_do_mentor
 from app.services import mentor as service
 from app.services.termo import termos_vigentes_do_hackathon
 from app.utils.openapi import respostas_de_erro
 
 gestor = exigir_papeis(PapelUsuario.COMITE_CIENTIFICO, PapelUsuario.ORGANIZADOR)
+# Só a equipe interna da organização do mentor (e DEV) gerencia o mentor
+gestor_deste_mentor = gestor_do_mentor(PapelUsuario.COMITE_CIENTIFICO, PapelUsuario.ORGANIZADOR)
 router = APIRouter(
     prefix="/admin/mentores",
     tags=["Mentores"],
@@ -37,12 +40,18 @@ ERROS_MENTOR = respostas_de_erro(
 
 
 @router.post("", response_model=MentorResponse, status_code=201, responses=ERROS_MENTOR)
-async def cadastrar(dados: MentorCreate, db: AsyncSession = Depends(get_session)):
+async def cadastrar(
+    dados: MentorCreate,
+    db: AsyncSession = Depends(get_session),
+    quem: Usuario = Depends(gestor),
+):
     """Cadastra mentor inativo e emite convite vinculado a hackathon_id (RF37, RN24, RN33).
 
+    O hackathon precisa ser da organização de quem cadastra; o mentor passa a ser dela.
     Falhas de e-mail preservam o cadastro; consulte /{id}/convites para verificar pendências.
     """
-    return await service.cadastrar(db, dados)
+    await garantir_hackathon_da_organizacao(db, quem, dados.hackathon_id)
+    return await service.cadastrar(db, quem, dados)
 
 
 @router.get("", response_model=list[MentorResponse])
@@ -51,33 +60,56 @@ async def listar(
     limite: int = Query(default=50, ge=1, le=100),
     deslocamento: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_session),
+    quem: Usuario = Depends(gestor),
 ):
-    return await listar_mentores(db, ativo, limite, deslocamento)
+    """Só os mentores da organização de quem pede (DEV vê todos)."""
+    return await listar_mentores(
+        db,
+        ativo,
+        limite,
+        deslocamento,
+        organizacao_id=quem.organizacao_id,
+        todas_as_organizacoes=quem.papel == PapelUsuario.DEV,
+    )
 
 
 @router.get("/{mentor_id}", response_model=MentorResponse, responses=ERROS_MENTOR)
-async def consultar(mentor_id: UUID, db: AsyncSession = Depends(get_session)):
+async def consultar(
+    mentor_id: UUID,
+    db: AsyncSession = Depends(get_session),
+    _: Usuario = Depends(gestor_deste_mentor),
+):
     return await service.consultar(db, mentor_id)
 
 
 @router.patch("/{mentor_id}", response_model=MentorResponse, responses=ERROS_MENTOR)
-async def editar(mentor_id: UUID, dados: MentorUpdate, db: AsyncSession = Depends(get_session)):
+async def editar(
+    mentor_id: UUID,
+    dados: MentorUpdate,
+    db: AsyncSession = Depends(get_session),
+    quem: Usuario = Depends(gestor_deste_mentor),
+):
     """Edita o cadastro; alterar e-mail exige nova ativação pelo destinatário.
 
     Reduzir max_equipes abaixo dos vínculos vigentes, em qualquer edição, retorna 409.
     """
+    await garantir_hackathon_da_organizacao(db, quem, dados.hackathon_id)
     return await service.editar(db, mentor_id, dados)
 
 
 @router.post("/{mentor_id}/convite", response_model=MentorResponse, responses=ERROS_MENTOR)
 async def reenviar_convite(
-    mentor_id: UUID, dados: ConviteMentorCreate, db: AsyncSession = Depends(get_session)
+    mentor_id: UUID,
+    dados: ConviteMentorCreate,
+    db: AsyncSession = Depends(get_session),
+    quem: Usuario = Depends(gestor_deste_mentor),
 ):
     """Emite convite para a edição informada, inclusive para mentor já ativo.
 
     Revoga convites e cancela mensagens não enviadas somente da mesma edição.
     Confira falhas de enfileiramento/entrega em GET /{id}/convites. Não retorna tokens.
     """
+    await garantir_hackathon_da_organizacao(db, quem, dados.hackathon_id)
     return await service.reenviar_convite(db, mentor_id, dados.hackathon_id)
 
 
@@ -91,6 +123,7 @@ async def listar_convites(
     limite: int = Query(default=50, ge=1, le=100),
     deslocamento: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_session),
+    _: Usuario = Depends(gestor_deste_mentor),
 ):
     """Histórico paginado e pendências de convite, sem hashes, tokens ou corpos de e-mail."""
     return await service.listar_convites(db, mentor_id, limite, deslocamento)
@@ -98,14 +131,22 @@ async def listar_convites(
 
 @router.post("/{mentor_id}/ativar", response_model=MentorResponse, responses=ERROS_MENTOR)
 async def reativar(
-    mentor_id: UUID, dados: MentorReativacao, db: AsyncSession = Depends(get_session)
+    mentor_id: UUID,
+    dados: MentorReativacao,
+    db: AsyncSession = Depends(get_session),
+    quem: Usuario = Depends(gestor_deste_mentor),
 ):
     """Reativa somente quem já concluiu a RN33 e aceitou os termos vigentes da edição."""
+    await garantir_hackathon_da_organizacao(db, quem, dados.hackathon_id)
     return await service.reativar(db, mentor_id, dados.hackathon_id)
 
 
 @router.post("/{mentor_id}/desativar", response_model=MentorResponse, responses=ERROS_MENTOR)
-async def desativar(mentor_id: UUID, db: AsyncSession = Depends(get_session)):
+async def desativar(
+    mentor_id: UUID,
+    db: AsyncSession = Depends(get_session),
+    _: Usuario = Depends(gestor_deste_mentor),
+):
     """Preserva histórico, bloqueia acesso e novas atribuições; invalida convites abertos."""
     return await service.desativar(db, mentor_id)
 

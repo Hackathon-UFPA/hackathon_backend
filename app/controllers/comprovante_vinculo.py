@@ -4,7 +4,7 @@ from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.const.enums import StatusComprovante, TipoIntegrante
-from app.models import ComprovanteVinculo, Usuario
+from app.models import ComprovanteVinculo, Hackathon, Usuario
 
 
 async def criar_comprovante(
@@ -34,8 +34,11 @@ async def listar_comprovantes(
     hackathon_id: UUID | None,
     limite: int,
     deslocamento: int,
+    filtrar_organizacao: bool = False,
+    organizacao_id: UUID | None = None,
 ) -> list[tuple[ComprovanteVinculo, Usuario]]:
-    """Fila de conferência: os mais antigos primeiro, com quem enviou."""
+    """Fila de conferência: os mais antigos primeiro, com quem enviou. Com
+    `filtrar_organizacao`, só os comprovantes de hackathons da organização informada."""
     consulta = (
         select(ComprovanteVinculo, Usuario)
         .join(Usuario, col(Usuario.id) == col(ComprovanteVinculo.usuario_id))
@@ -46,6 +49,10 @@ async def listar_comprovantes(
     )
     if hackathon_id is not None:
         consulta = consulta.where(ComprovanteVinculo.hackathon_id == hackathon_id)
+    if filtrar_organizacao:
+        consulta = consulta.join(
+            Hackathon, col(Hackathon.id) == col(ComprovanteVinculo.hackathon_id)
+        ).where(col(Hackathon.organizacao_id).is_not_distinct_from(organizacao_id))
     return [(c, u) for c, u in (await db.exec(consulta)).all()]
 
 

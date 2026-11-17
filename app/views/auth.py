@@ -7,7 +7,12 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.const.config import settings
 from app.db.db import get_session
 from app.models import Usuario
-from app.schemas.auth import CadastroRequest, LoginRequest, TokenResponse
+from app.schemas.auth import (
+    CadastroOrganizacaoRequest,
+    CadastroRequest,
+    LoginRequest,
+    TokenResponse,
+)
 from app.schemas.perfil import (
     ConfirmarEmailRequest,
     MensagemResponse,
@@ -20,7 +25,7 @@ from app.security.dependencias import bearer, usuario_atual
 from app.security.token import criar_token, segundos_restantes
 from app.services import perfil as servico_perfil
 from app.services import recuperacao_senha
-from app.services.auth import autenticar, cadastrar_participante
+from app.services.auth import autenticar, cadastrar_organizacao, cadastrar_participante
 from app.utils.openapi import respostas_de_erro
 
 router = APIRouter(prefix="/auth", tags=["Autenticação"])
@@ -43,6 +48,29 @@ router = APIRouter(prefix="/auth", tags=["Autenticação"])
 )
 async def cadastrar(dados: CadastroRequest, db: AsyncSession = Depends(get_session)):
     return await cadastrar_participante(db, dados)
+
+
+@router.post(
+    "/cadastro-organizacao",
+    response_model=TokenResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Cadastrar organização",
+    description=(
+        "Cadastro público, sem login, de uma empresa ou instituição de ensino que quer "
+        "organizar hackathons na plataforma. Cria a organização e o primeiro **Organizador** "
+        "dela, com a conta ativa, e já devolve o token de acesso, como o login."
+    ),
+    responses=respostas_de_erro({409: "E-mail do responsável já cadastrado"}),
+)
+async def cadastrar_nova_organizacao(
+    dados: CadastroOrganizacaoRequest, db: AsyncSession = Depends(get_session)
+):
+    usuario = await cadastrar_organizacao(db, dados)
+    return TokenResponse(
+        access_token=criar_token(usuario.id),
+        expires_in=settings.JWT_EXPIRE_MINUTES * 60,
+        usuario=usuario,
+    )
 
 
 @router.post(

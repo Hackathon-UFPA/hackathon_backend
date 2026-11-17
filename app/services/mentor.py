@@ -14,7 +14,7 @@ from app.controllers.termo import listar_aceites, registrar_aceites
 from app.controllers.usuario import criar_usuario, get_usuario_by_email
 from app.exceptions.auth import email_ja_cadastrado
 from app.exceptions.mentor import convite_invalido, mentor_inelegivel, mentor_nao_encontrado
-from app.models import ConviteMentor, Usuario
+from app.models import ConviteMentor, Hackathon, Usuario
 from app.schemas.mentor import (
     ConviteMentorAdminResponse,
     MentorAtivacao,
@@ -65,14 +65,18 @@ async def convidar(db: AsyncSession, mentor: Usuario, hackathon_id: UUID) -> Non
     db.add(convite)
 
 
-async def cadastrar(db: AsyncSession, dados: MentorCreate) -> Usuario:
+async def cadastrar(db: AsyncSession, quem_cadastra: Usuario, dados: MentorCreate) -> Usuario:
+    """O mentor entra na equipe interna da organização dona do hackathon do convite, que é a de
+    quem cadastra (a rota já conferiu isso; DEV pode cadastrar para qualquer organização)."""
     await termos_vigentes_do_hackathon(db, dados.hackathon_id)
+    hackathon = await db.get(Hackathon, dados.hackathon_id)
     mentor = await criar_usuario(
         db,
         Usuario(
             **dados.model_dump(exclude={"email", "hackathon_id"}),
             email=dados.email.lower(),
             papel=PapelUsuario.MENTOR,
+            organizacao_id=hackathon.organizacao_id if hackathon else quem_cadastra.organizacao_id,
             ativo=False,
             criado_em=agora_utc(),
         ),

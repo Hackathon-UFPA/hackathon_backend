@@ -78,8 +78,12 @@ async def listar_usuarios(
     busca: str | None,
     limite: int,
     deslocamento: int,
+    organizacao_id: UUID | None = None,
+    todas_as_organizacoes: bool = True,
 ) -> list[Usuario]:
     consulta = select(Usuario).where(col(Usuario.papel).in_(papeis))
+    if not todas_as_organizacoes:
+        consulta = consulta.where(mesma_organizacao_sql(Usuario.organizacao_id, organizacao_id))
     if papel is not None:
         consulta = consulta.where(Usuario.papel == papel)
     if ativo is not None:
@@ -104,9 +108,12 @@ async def serializar_gestao_de_usuarios(db: AsyncSession) -> None:
     await db.exec(select(func.pg_advisory_xact_lock(BLOQUEIO_GESTAO_DE_ORGANIZADORES)))
 
 
-async def contar_organizadores_ativos(db: AsyncSession) -> int:
+async def contar_organizadores_ativos(db: AsyncSession, organizacao_id: UUID | None) -> int:
+    """Organizadores ativos da organização: cada uma precisa manter pelo menos um."""
     consulta = select(func.count()).where(
-        Usuario.papel == PapelUsuario.ORGANIZADOR, Usuario.ativo.is_(True)
+        Usuario.papel == PapelUsuario.ORGANIZADOR,
+        Usuario.ativo.is_(True),
+        mesma_organizacao_sql(Usuario.organizacao_id, organizacao_id),
     )
     return (await db.exec(consulta)).one()
 
@@ -121,3 +128,8 @@ async def encerrar_sessoes(db: AsyncSession, usuario_id: UUID) -> int:
         .returning(Usuario.versao_sessao)
     )
     return resultado.scalar_one()
+
+
+def mesma_organizacao_sql(coluna, organizacao_id: UUID | None):
+    """Filtro de organização; organização nula (dados antigos) só casa com nula."""
+    return coluna.is_(None) if organizacao_id is None else coluna == organizacao_id

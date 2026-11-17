@@ -6,6 +6,7 @@ from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.const.enums import PapelUsuario, StatusEmail
+from app.controllers.usuario import mesma_organizacao_sql
 from app.models import ConviteMentor, EmailOutbox, Usuario
 
 
@@ -19,9 +20,17 @@ async def get_mentor(
 
 
 async def listar_mentores(
-    db: AsyncSession, ativo: bool | None, limite: int, deslocamento: int
+    db: AsyncSession,
+    ativo: bool | None,
+    limite: int,
+    deslocamento: int,
+    *,
+    organizacao_id: UUID | None = None,
+    todas_as_organizacoes: bool = True,
 ) -> list[Usuario]:
     consulta = select(Usuario).where(Usuario.papel == PapelUsuario.MENTOR)
+    if not todas_as_organizacoes:
+        consulta = consulta.where(mesma_organizacao_sql(Usuario.organizacao_id, organizacao_id))
     if ativo is not None:
         consulta = consulta.where(Usuario.ativo == ativo)
     return list(

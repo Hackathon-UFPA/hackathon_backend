@@ -1,20 +1,37 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
+from fastapi.security import HTTPAuthorizationCredentials
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.db.db import get_session
 from app.models import Usuario
 from app.schemas.aceite_termo import AceiteTermoResponse, AceiteTermosCreate
 from app.schemas.termo import TermoResponse
-from app.security.dependencias import usuario_convidado
-from app.services.termo import aceitar_termos, termos_vigentes_do_hackathon
+from app.security.dependencias import bearer_opcional, usuario_atual, usuario_convidado
+from app.services.termo import (
+    aceitar_termos,
+    termos_vigentes_do_hackathon,
+)
 from app.utils.openapi import respostas_de_erro
 
 router = APIRouter(prefix="/hackathons/{hackathon_id}/termos", tags=["Termos"])
 
+
 ERRO_401 = "Sem token, ou token inválido, vencido ou de conta desativada"
 ERRO_403 = "Mentor que ainda não concluiu a ativação (RN33)"
+
+
+async def visitante_ou_convidado(
+    credenciais: HTTPAuthorizationCredentials | None = Depends(bearer_opcional),
+    db: AsyncSession = Depends(get_session),
+) -> Usuario | None:
+    """Os termos vigentes são públicos (página do hackathon). Quem manda token, porém, passa pelas
+    mesmas regras do aceite: token inválido ou de convite de mentor dá 401, e mentor ainda sem
+    ativação (RN33) dá 403."""
+    if credenciais is None:
+        return None
+    return await usuario_convidado(await usuario_atual(credenciais, db))
 
 
 @router.get(
@@ -24,14 +41,14 @@ ERRO_403 = "Mentor que ainda não concluiu a ativação (RN33)"
     description=(
         "Regulamento e termo de consentimento em vigor, com `versao`, `titulo` e o `conteudo` "
         "ou a `url` do documento, para a pessoa ler antes de aceitar (RF20). Os ids daqui são "
-        "os que se enviam ao aceitar."
+        "os que se enviam ao aceitar. Público, sem login."
     ),
-    responses=respostas_de_erro({401: ERRO_401, 403: ERRO_403, 404: "Hackathon não encontrado"}),
+    responses=respostas_de_erro({404: "Hackathon não encontrado"}),
 )
 async def termos_vigentes(
     hackathon_id: UUID,
     db: AsyncSession = Depends(get_session),
-    _: Usuario = Depends(usuario_convidado),
+    _: Usuario | None = Depends(visitante_ou_convidado),
 ):
     return await termos_vigentes_do_hackathon(db, hackathon_id)
 

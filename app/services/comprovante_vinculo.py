@@ -6,7 +6,7 @@ from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.const.enums import SituacaoConta, StatusComprovante, TipoIntegrante
+from app.const.enums import PapelUsuario, SituacaoConta, StatusComprovante, TipoIntegrante
 from app.controllers.autodeclaracao import (
     get_autodeclaracoes_por_id,
     listar_autodeclaracoes,
@@ -18,9 +18,11 @@ from app.controllers.comprovante_vinculo import (
     listar_comprovantes,
     listar_comprovantes_do_usuario,
 )
+from app.controllers.equipe import get_hackathon_by_id
 from app.controllers.hackathon import get_hackathon_com_inscricoes
 from app.controllers.membro_equipe import get_membro_no_hackathon
 from app.exceptions.auth import inscricoes_indisponiveis
+from app.exceptions.convite import fora_do_periodo_de_inscricao, hackathon_nao_encontrado
 from app.exceptions.db import erro_de_integridade_sql
 from app.exceptions.inscricao import (
     comprovante_ativo_existente,
@@ -36,6 +38,7 @@ from app.schemas.comprovante_vinculo import (
     UsuarioResumo,
 )
 from app.services.inscricao import reavaliar_equipe_do_usuario
+from app.validations.inscricao import inscricoes_abertas
 
 
 def _resposta(
@@ -58,14 +61,18 @@ async def listar(
     hackathon_id: UUID | None,
     limite: int,
     deslocamento: int,
+    conferente: Usuario,
 ) -> list[ComprovanteAdminResponse]:
-    """Fila de conferência, com o link do arquivo para o conferente abrir."""
+    """Fila de conferência, com o link do arquivo para o conferente abrir. Cada organização vê
+    só os comprovantes dos próprios hackathons; DEV vê todos."""
     pares = await listar_comprovantes(
         db,
         status=status,
         hackathon_id=hackathon_id,
         limite=limite,
         deslocamento=deslocamento,
+        filtrar_organizacao=conferente.papel != PapelUsuario.DEV,
+        organizacao_id=conferente.organizacao_id,
     )
     declaracoes = await get_autodeclaracoes_por_id(
         db, [c.autodeclaracao_id for c, _ in pares if c.autodeclaracao_id]
@@ -163,11 +170,19 @@ async def _tipo_e_declaracao(
 async def reenviar(
     db: AsyncSession, usuario: Usuario, dados: ComprovanteEnvio
 ) -> ComprovanteVinculo:
-    """Novo comprovante depois de uma recusa; o anterior fica no histórico. Vale para o
-    hackathon com inscrições abertas, como no cadastro."""
-    hackathon = await get_hackathon_com_inscricoes(db)
-    if hackathon is None:
-        inscricoes_indisponiveis()
+    """Comprovante de vínculo para participar de um hackathon (RF21). Também serve para mandar
+    outro depois de uma recusa; o anterior fica no histórico. Exige inscrições abertas. Sem
+    `hackathon_id`, vale o hackathon com inscrições abertas, como no cadastro."""
+    if dados.hackathon_id is None:
+        hackathon = await get_hackathon_com_inscricoes(db)
+        if hackathon is None:
+            inscricoes_indisponiveis()
+    else:
+        hackathon = await get_hackathon_by_id(db, dados.hackathon_id)
+        if hackathon is None:
+            hackathon_nao_encontrado()
+        if not inscricoes_abertas(hackathon):
+            fora_do_periodo_de_inscricao()
 
     # Quem é o dono do documento e qual vínculo ele comprova vêm do servidor, nunca do pedido
     tipo, declaracao = await _tipo_e_declaracao(db, usuario, hackathon.id)

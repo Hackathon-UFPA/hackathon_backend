@@ -11,7 +11,7 @@ from pydantic import (
     model_validator,
 )
 
-from app.const.enums import PapelUsuario
+from app.const.enums import PapelUsuario, TipoOrganizacao
 from app.schemas.usuario import UsuarioCreate, UsuarioResponse
 from app.security.senha import SENHA_MAX_CARACTERES, SENHA_MIN_CARACTERES, validar_forca_da_senha
 
@@ -116,3 +116,23 @@ class PerfisCadastraveisResponse(BaseModel):
         description="Perfis que o usuário logado pode cadastrar",
         examples=[["COMITE_TECNICO", "MENTOR"]],
     )
+
+
+class OrganizacaoDados(BaseModel):
+    nome: Texto = Field(examples=["Universidade Federal do Pará"])
+    tipo: TipoOrganizacao = Field(examples=["INSTITUICAO_ENSINO"])
+    site: HttpUrl | None = Field(default=None, examples=["https://ufpa.br"])
+    descricao: str | None = Field(default=None, max_length=2000)
+
+
+class ResponsavelDados(BaseModel):
+    nome: Texto = Field(description="Nome completo", examples=["Maria Souza"])
+    email: EmailStr = Field(examples=["maria@ufpa.br"])
+    senha: SenhaNova = Field(description=DESCRICAO_DA_SENHA, examples=["segredo123"])
+
+
+class CadastroOrganizacaoRequest(BaseModel):
+    """Cadastro público de organização: cria a organização e o primeiro Organizador dela."""
+
+    organizacao: OrganizacaoDados
+    responsavel: ResponsavelDados

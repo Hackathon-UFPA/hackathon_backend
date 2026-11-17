@@ -21,7 +21,7 @@ from uuid import UUID
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.const.config import settings
-from app.const.enums import StatusEmail, TipoEmail
+from app.const.enums import PapelUsuario, StatusEmail, TipoEmail
 from app.controllers.email_outbox import (
     adicionar_email,
     get_email,
@@ -29,7 +29,8 @@ from app.controllers.email_outbox import (
     recolocar_na_fila,
 )
 from app.exceptions.email import email_cancelado, email_nao_encontrado, reenvio_nao_permitido
-from app.models import EmailOutbox
+from app.models import EmailOutbox, Usuario
+from app.security.organizacao import mesma_organizacao
 from app.services.email_template import renderizar
 
 logger = logging.getLogger(__name__)
@@ -103,8 +104,21 @@ async def enfileirar(
     return email_id is not None
 
 
+async def _garantir_da_organizacao(db: AsyncSession, quem: Usuario, email: EmailOutbox) -> None:
+    """E-mail de conta de outra organização (ou de participante, que não tem organização)
+    responde como inexistente. DEV vê toda a fila."""
+    if quem.papel == PapelUsuario.DEV:
+        return
+    dono = await db.get(Usuario, email.usuario_id) if email.usuario_id else None
+    # E-mail sem conta ligada conta como "sem organização", como os demais dados antigos
+    organizacao_do_email = dono.organizacao_id if dono else None
+    if not mesma_organizacao(quem, organizacao_do_email):
+        email_nao_encontrado()
+
+
 async def listar(
     db: AsyncSession,
+    quem: Usuario,
     *,
     status: StatusEmail | None,
     tipo: TipoEmail | None,
@@ -119,22 +133,26 @@ async def listar(
         destinatario=destinatario,
         limite=limite,
         deslocamento=deslocamento,
+        organizacao_id=quem.organizacao_id,
+        todas_as_organizacoes=quem.papel == PapelUsuario.DEV,
     )
 
 
-async def consultar(db: AsyncSession, email_id: UUID) -> EmailOutbox:
+async def consultar(db: AsyncSession, quem: Usuario, email_id: UUID) -> EmailOutbox:
     email = await get_email(db, email_id)
     if email is None:
         email_nao_encontrado()
+    await _garantir_da_organizacao(db, quem, email)
     return email
 
 
-async def reenviar(db: AsyncSession, email_id: UUID) -> EmailOutbox:
+async def reenviar(db: AsyncSession, quem: Usuario, email_id: UUID) -> EmailOutbox:
     """Devolve à fila um e-mail em FALHA, com as tentativas zeradas. Os demais estados já estão
     na fila ou já foram entregues, então reenviar seria duplicar o aviso."""
     email = await get_email(db, email_id, para_atualizar=True)
     if email is None:
         email_nao_encontrado()
+    await _garantir_da_organizacao(db, quem, email)
     if email.cancelado_em is not None:
         email_cancelado()
     if email.status != StatusEmail.FALHA:

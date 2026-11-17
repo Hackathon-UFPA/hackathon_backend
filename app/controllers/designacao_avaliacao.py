@@ -31,12 +31,15 @@ async def listar_enviadas_do_hackathon(db: AsyncSession, hackathon_id: UUID) -> 
     return list((await db.exec(consulta)).all())
 
 
-async def listar_avaliadores_elegiveis(db: AsyncSession) -> list[Usuario]:
-    """Comitê Científico com conta ativa (RF29). Não há vínculo avaliador-hackathon no banco."""
+async def listar_avaliadores_elegiveis(
+    db: AsyncSession, organizacao_id: UUID | None
+) -> list[Usuario]:
+    """Comitê Científico com conta ativa (RF29) da organização dona do hackathon."""
     consulta = (
         select(Usuario)
         .where(
             Usuario.papel == PapelUsuario.COMITE_CIENTIFICO,
+            col(Usuario.organizacao_id).is_not_distinct_from(organizacao_id),
             col(Usuario.ativo).is_(True),
             Usuario.situacao_conta == SituacaoConta.ATIVA,
         )
@@ -45,10 +48,13 @@ async def listar_avaliadores_elegiveis(db: AsyncSession) -> list[Usuario]:
     return list((await db.exec(consulta)).all())
 
 
-async def contar_elegiveis_entre(db: AsyncSession, avaliador_ids: list[UUID]) -> int:
+async def contar_elegiveis_entre(
+    db: AsyncSession, avaliador_ids: list[UUID], organizacao_id: UUID | None
+) -> int:
     consulta = select(func.count()).where(
         col(Usuario.id).in_(avaliador_ids),
         Usuario.papel == PapelUsuario.COMITE_CIENTIFICO,
+        col(Usuario.organizacao_id).is_not_distinct_from(organizacao_id),
         col(Usuario.ativo).is_(True),
         Usuario.situacao_conta == SituacaoConta.ATIVA,
     )

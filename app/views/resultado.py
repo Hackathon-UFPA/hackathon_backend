@@ -12,7 +12,8 @@ from app.schemas.resultado import (
     ResultadoAvaliacaoResponse,
     ResultadoEquipeResponse,
 )
-from app.security.dependencias import exigir_papeis, usuario_ativo
+from app.security.dependencias import usuario_ativo
+from app.security.organizacao import gestor_do_hackathon
 from app.services.resultado import (
     consultar_resultado,
     consultar_resultado_da_equipe,
@@ -27,7 +28,7 @@ router_equipe = APIRouter(prefix="/equipes/{equipe_id}/resultado", tags=["Result
 
 ERRO_401 = "Sem token, ou token inválido, vencido ou de conta desativada"
 ERRO_403 = "Conta pendente, ou quem pede não tem permissão para esta rota"
-ORGANIZADOR = exigir_papeis(PapelUsuario.ORGANIZADOR)
+ORGANIZADOR = gestor_do_hackathon(PapelUsuario.ORGANIZADOR)
 
 
 @router_admin.get(

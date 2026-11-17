@@ -6,7 +6,8 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.db.db import get_session
 from app.models import Usuario
 from app.schemas.tema import TemaCreate, TemaResponse, TemaUpdate
-from app.security.dependencias import exigir_papeis, usuario_opcional
+from app.security.dependencias import usuario_opcional
+from app.security.organizacao import gestor_do_hackathon, gestor_do_tema
 from app.security.permissoes import PERFIS_QUE_GERENCIAM_TEMAS_E_RUBRICAS
 from app.services import tema as service
 from app.utils.openapi import respostas_de_erro
@@ -14,7 +15,9 @@ from app.utils.openapi import respostas_de_erro
 router_hackathon = APIRouter(prefix="/hackathons/{hackathon_id}/temas", tags=["Temas"])
 router = APIRouter(prefix="/temas", tags=["Temas"])
 
-gerencia_temas = exigir_papeis(*PERFIS_QUE_GERENCIAM_TEMAS_E_RUBRICAS)
+# Só a equipe da organização dona do hackathon gerencia os temas dele.
+gerencia_temas = gestor_do_hackathon(*PERFIS_QUE_GERENCIAM_TEMAS_E_RUBRICAS)
+gerencia_tema = gestor_do_tema(*PERFIS_QUE_GERENCIAM_TEMAS_E_RUBRICAS)
 
 ERRO_401 = "Sem token, ou token inválido, vencido ou de conta desativada"
 ERRO_403 = "Conta pendente, ou quem pede não tem permissão para esta rota"
@@ -107,7 +110,7 @@ async def editar_tema(
     tema_id: UUID,
     dados: TemaUpdate,
     db: AsyncSession = Depends(get_session),
-    _: Usuario = Depends(gerencia_temas),
+    _: Usuario = Depends(gerencia_tema),
 ):
     return await service.editar(db, tema_id, dados)
 
@@ -134,6 +137,6 @@ async def editar_tema(
 async def excluir_tema(
     tema_id: UUID,
     db: AsyncSession = Depends(get_session),
-    _: Usuario = Depends(gerencia_temas),
+    _: Usuario = Depends(gerencia_tema),
 ):
     await service.excluir(db, tema_id)

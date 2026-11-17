@@ -13,8 +13,10 @@ class Hackathon(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     nome: str | None = Field(default=None)
     tema: str | None = Field(default=None)
-    # Texto da página pública (RF10, BE-S5-12)
+    # Organização dona da edição: só a equipe interna dela gerencia o hackathon
+    organizacao_id: UUID | None = Field(default=None, foreign_key="organizacoes.id")
     descricao: str | None = Field(default=None, sa_type=Text)
+    local: str | None = Field(default=None, max_length=255)
     data_inicio: datetime | None = Field(default=None)
     data_fim: datetime | None = Field(default=None)
     status: StatusHackathon | None = Field(

@@ -11,7 +11,8 @@ from app.schemas.inscricao import (
     PainelEquipeResponse,
     ReavaliacaoResponse,
 )
-from app.security.dependencias import exigir_papeis, usuario_ativo
+from app.security.dependencias import usuario_ativo
+from app.security.organizacao import gestor_do_hackathon
 from app.services.inscricao import concluir, painel, reavaliar_hackathon
 from app.utils.openapi import respostas_de_erro
 
@@ -89,6 +90,6 @@ async def concluir_inscricao(
 async def reavaliar_equipes(
     hackathon_id: UUID,
     db: AsyncSession = Depends(get_session),
-    _: Usuario = Depends(exigir_papeis(PapelUsuario.ORGANIZADOR)),
+    _: Usuario = Depends(gestor_do_hackathon(PapelUsuario.ORGANIZADOR)),
 ):
     return await reavaliar_hackathon(db, hackathon_id)

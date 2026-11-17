@@ -1,13 +1,14 @@
 from uuid import UUID
 
-from sqlalchemy import func, text, update
+from sqlalchemy import func, or_, text, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.const.enums import StatusEmail, TipoEmail
+from app.controllers.usuario import mesma_organizacao_sql
 from app.db.defaults import AGORA_UTC
-from app.models import EmailOutbox
+from app.models import EmailOutbox, Usuario
 
 
 async def adicionar_email(db: AsyncSession, valores: dict) -> UUID | None:
@@ -38,14 +39,25 @@ async def listar_emails(
     destinatario: str | None,
     limite: int,
     deslocamento: int,
+    organizacao_id: UUID | None = None,
+    todas_as_organizacoes: bool = True,
 ) -> list[EmailOutbox]:
-    """Mais recentes primeiro; o id desempata para a ordem ser determinística."""
+    """Mais recentes primeiro; o id desempata para a ordem ser determinística. Fora de
+    `todas_as_organizacoes`, só os e-mails para contas da organização informada."""
     consulta = (
         select(EmailOutbox)
         .order_by(col(EmailOutbox.criado_em).desc(), col(EmailOutbox.id))
         .limit(limite)
         .offset(deslocamento)
     )
+    if not todas_as_organizacoes:
+        da_organizacao = col(EmailOutbox.usuario_id).in_(
+            select(Usuario.id).where(mesma_organizacao_sql(Usuario.organizacao_id, organizacao_id))
+        )
+        # E-mail sem conta ligada conta como "sem organização", como os demais dados antigos
+        if organizacao_id is None:
+            da_organizacao = or_(da_organizacao, col(EmailOutbox.usuario_id).is_(None))
+        consulta = consulta.where(da_organizacao)
     if status is not None:
         consulta = consulta.where(EmailOutbox.status == status)
     if tipo is not None:

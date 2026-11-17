@@ -9,8 +9,8 @@ tags = [
     {
         "name": "Autenticação",
         "description": (
-            "Cadastro de participante, login, recuperação de senha, confirmação de e-mail e "
-            "encerramento da sessão (RF01, RF02, RF04, RF09)"
+            "Cadastro de participante e de organização, login, recuperação de senha, "
+            "confirmação de e-mail e encerramento da sessão (RF01, RF02, RF04, RF09)"
         ),
     },
     {
@@ -29,6 +29,10 @@ tags = [
         "description": (
             "Cadastro, edição, desativação e reativação de usuários por perfil (RF07, RF08, RN24)"
         ),
+    },
+    {
+        "name": "Organizações",
+        "description": "Empresas e instituições de ensino que organizam hackathons",
     },
     {
         "name": "Hackathons",

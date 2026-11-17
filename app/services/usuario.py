@@ -24,6 +24,7 @@ from app.exceptions.auth import (
 from app.models import Usuario
 from app.schemas.auth import UsuarioAdminCreate
 from app.schemas.perfil import UsuarioAdminUpdate
+from app.security.organizacao import garantir_hackathon_da_organizacao, mesma_organizacao
 from app.security.permissoes import (
     perfis_cadastraveis,
     pode_cadastrar,
@@ -44,8 +45,12 @@ async def cadastrar_usuario_por_perfil(
         from app.schemas.mentor import MentorCreate
         from app.services.mentor import cadastrar
 
+        # O convite do mentor é para um hackathon da organização de quem cadastra
+        await garantir_hackathon_da_organizacao(db, quem_cadastra, dados.hackathon_id)
+
         return await cadastrar(
             db,
+            quem_cadastra,
             MentorCreate.model_validate(
                 dados.model_dump(
                     include={
@@ -60,11 +65,17 @@ async def cadastrar_usuario_por_perfil(
             ),
         )
 
+    # Quem é cadastrado por um gestor entra na equipe interna da organização dele. Participante
+    # não pertence a organização: ele se inscreve em hackathons de qualquer uma.
+    organizacao_id = (
+        None if dados.papel == PapelUsuario.PARTICIPANTE else quem_cadastra.organizacao_id
+    )
     usuario = await criar_usuario(
         db,
         Usuario(
             **dados.model_dump(exclude={"senha", "email", "hackathon_id"}),
             email=dados.email.lower(),
+            organizacao_id=organizacao_id,
             senha_hash=await asyncio.to_thread(gerar_hash, dados.senha),
         ),
     )
@@ -81,6 +92,9 @@ async def _alvo_da_gestao(
     """O usuário a gerenciar, se `quem_gerencia` tem alcance sobre o perfil dele (RN24)."""
     alvo = await get_usuario(db, usuario_id, bloquear=bloquear)
     if alvo is None:
+        usuario_nao_encontrado()
+    if not mesma_organizacao(quem_gerencia, alvo.organizacao_id):
+        # Conta de outra organização: responde como inexistente, sem confirmar que existe
         usuario_nao_encontrado()
     if not pode_gerenciar(quem_gerencia.papel, alvo.papel):
         acesso_negado()
@@ -107,6 +121,8 @@ async def listar(
         busca=busca.strip() if busca else None,
         limite=limite,
         deslocamento=deslocamento,
+        organizacao_id=quem_gerencia.organizacao_id,
+        todas_as_organizacoes=quem_gerencia.papel == PapelUsuario.DEV,
     )
 
 
@@ -135,7 +151,7 @@ async def atualizar(
         if (
             alvo.papel == PapelUsuario.ORGANIZADOR
             and alvo.ativo
-            and await contar_organizadores_ativos(db) <= 1
+            and await contar_organizadores_ativos(db, alvo.organizacao_id) <= 1
         ):
             ultimo_organizador()
         alvo.papel = novo_papel
@@ -159,7 +175,10 @@ async def desativar(db: AsyncSession, quem_gerencia: Usuario, usuario_id: UUID) 
         gestao_de_mentor_em_rota_propria()
     if not alvo.ativo:
         return alvo
-    if alvo.papel == PapelUsuario.ORGANIZADOR and await contar_organizadores_ativos(db) <= 1:
+    if (
+        alvo.papel == PapelUsuario.ORGANIZADOR
+        and await contar_organizadores_ativos(db, alvo.organizacao_id) <= 1
+    ):
         ultimo_organizador()
     agora = datetime.now(UTC)
     alvo.ativo = False

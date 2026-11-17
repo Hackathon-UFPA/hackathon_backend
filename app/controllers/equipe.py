@@ -1,5 +1,6 @@
 from uuid import UUID
 
+from sqlalchemy import func
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -78,3 +79,30 @@ async def listar_equipes_para_homologacao(db: AsyncSession, hackathon_id: UUID) 
         .with_for_update()
     )
     return list((await db.exec(consulta)).all())
+
+
+async def listar_homologadas_com_tamanho(
+    db: AsyncSession, hackathon_id: UUID
+) -> list[tuple[Equipe, int]]:
+    """Equipes homologadas da edição com a quantidade de integrantes, pela ordem de homologação."""
+    integrantes = (
+        select(MembroEquipe.equipe_id, func.count().label("total"))
+        .group_by(MembroEquipe.equipe_id)
+        .subquery()
+    )
+    consulta = (
+        select(Equipe, func.coalesce(integrantes.c.total, 0))
+        .join(integrantes, integrantes.c.equipe_id == Equipe.id, isouter=True)
+        .where(Equipe.hackathon_id == hackathon_id, Equipe.situacao == SituacaoEquipe.HOMOLOGADA)
+        .order_by(col(Equipe.homologada_em).nulls_last(), Equipe.nome)
+    )
+    return [(equipe, total) for equipe, total in (await db.exec(consulta)).all()]
+
+
+async def contar_por_situacao(db: AsyncSession, hackathon_id: UUID) -> dict[SituacaoEquipe, int]:
+    consulta = (
+        select(Equipe.situacao, func.count())
+        .where(Equipe.hackathon_id == hackathon_id)
+        .group_by(Equipe.situacao)
+    )
+    return {situacao: total for situacao, total in (await db.exec(consulta)).all()}

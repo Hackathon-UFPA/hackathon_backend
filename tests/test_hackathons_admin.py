@@ -238,7 +238,38 @@ def test_consulta_hackathon_por_id(client, hackathons):
     assert resposta.status_code == 404
 
 
-def test_listagem_exige_conta_ativa(client, hackathons):
-    assert client.get("/hackathons").status_code == 401
-    pendente = hackathons.usuario_no_banco(situacao_conta="PENDENTE")
-    assert client.get("/hackathons", headers=com_token(pendente["id"])).status_code == 403
+def test_vitrine_e_publica_e_esconde_rascunhos(client, hackathons):
+    publicado = hackathons.cadastrado(client, nome="Publicado")
+    rascunho = hackathons.cadastrado(client, nome="Rascunho", status="RASCUNHO")
+
+    resposta = client.get("/hackathons")
+
+    assert resposta.status_code == 200
+    ids = [h["id"] for h in resposta.json()]
+    assert publicado["id"] in ids
+    assert rascunho["id"] not in ids
+    assert client.get(f"/hackathons/{publicado['id']}").status_code == 200
+    # Rascunho: 404 para visitante e participante, visível para a equipe da organização
+    assert client.get(f"/hackathons/{rascunho['id']}").status_code == 404
+    participante = hackathons.usuario_no_banco()
+    assert (
+        client.get(
+            f"/hackathons/{rascunho['id']}", headers=com_token(participante["id"])
+        ).status_code
+        == 404
+    )
+    assert (
+        client.get(
+            f"/hackathons/{rascunho['id']}", headers=com_token(hackathons.organizador["id"])
+        ).status_code
+        == 200
+    )
+
+
+def test_hackathon_guarda_descricao_e_local(client, hackathons):
+    hackathon = hackathons.cadastrado(client, descricao="Sobre o evento", local="Belém, PA")
+
+    assert hackathon["descricao"] == "Sobre o evento"
+    assert hackathon["local"] == "Belém, PA"
+    editado = hackathons.editar(client, hackathon["id"], {"local": "On-line"})
+    assert editado.json()["local"] == "On-line"

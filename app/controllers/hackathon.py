@@ -4,7 +4,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.const.enums import StatusHackathon
-from app.models import Hackathon
+from app.models import Hackathon, Organizacao
 from app.validations.inscricao import inscricoes_abertas
 
 
@@ -43,7 +43,29 @@ async def excluir_hackathon(db: AsyncSession, hackathon: Hackathon) -> None:
     await db.flush()
 
 
-async def listar_hackathons(db: AsyncSession) -> list[Hackathon]:
-    """Mais recentes primeiro; edição sem data de início vai para o fim."""
-    consulta = select(Hackathon).order_by(Hackathon.data_inicio.desc().nulls_last(), Hackathon.nome)
-    return list((await db.exec(consulta)).all())
+async def listar_hackathons(
+    db: AsyncSession,
+    *,
+    publicos: bool = False,
+    filtrar_organizacao: bool = False,
+    organizacao_id: UUID | None = None,
+) -> list[tuple[Hackathon, str | None]]:
+    """Mais recentes primeiro; edição sem data de início vai para o fim. Cada item vem com o
+    nome da organização dona. `publicos` deixa de fora os rascunhos."""
+    consulta = (
+        select(Hackathon, Organizacao.nome)
+        .join(Organizacao, Organizacao.id == Hackathon.organizacao_id, isouter=True)
+        .order_by(Hackathon.data_inicio.desc().nulls_last(), Hackathon.nome)
+    )
+    if publicos:
+        consulta = consulta.where(Hackathon.status != StatusHackathon.RASCUNHO)
+    if filtrar_organizacao:
+        consulta = consulta.where(Hackathon.organizacao_id.is_not_distinct_from(organizacao_id))
+    return [(hackathon, nome) for hackathon, nome in (await db.exec(consulta)).all()]
+
+
+async def get_nome_da_organizacao(db: AsyncSession, organizacao_id: UUID | None) -> str | None:
+    if organizacao_id is None:
+        return None
+    organizacao = await db.get(Organizacao, organizacao_id)
+    return organizacao.nome if organizacao else None

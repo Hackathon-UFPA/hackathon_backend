@@ -806,3 +806,38 @@ def test_autenticacao_e_conta_ativa(client, avaliacao, acesso):
 
     assert [r.status_code for r in respostas] == [esperado] * 3
     assert avaliacao.designacoes() == []
+
+
+def test_distribuicao_usa_so_o_comite_da_organizacao_do_hackathon(client, avaliacao, sql):
+    """Plataforma multi-organização: avaliadores de outra organização não entram no sorteio."""
+    org = sql(
+        "INSERT INTO organizacoes (nome, tipo) VALUES ('Org designação', 'EMPRESA') RETURNING id"
+    )[0]["id"]
+    try:
+        sql(
+            "UPDATE hackathon SET organizacao_id = :o WHERE id = :h",
+            o=org,
+            h=avaliacao.hackathon_id,
+        )
+        sql(
+            "UPDATE usuarios SET organizacao_id = :o WHERE id = :u",
+            o=org,
+            u=avaliacao.organizador["id"],
+        )
+        avaliacao.configurar(2)
+        proposta = avaliacao.proposta()
+        da_org = [avaliacao.avaliador(), avaliacao.avaliador()]
+        for a in da_org:
+            sql("UPDATE usuarios SET organizacao_id = :o WHERE id = :u", o=org, u=a["id"])
+        de_fora = avaliacao.avaliador()  # sem organização: não é da dona do hackathon
+
+        resposta = avaliacao.distribuir(client)
+
+        assert resposta.status_code == 200, resposta.text
+        assert avaliacao.avaliadores_da(proposta) == {a["id"] for a in da_org}
+        troca = avaliacao.redistribuir(client, proposta, [da_org[0], de_fora])
+        assert troca.status_code == 409
+    finally:
+        sql("UPDATE usuarios SET organizacao_id = NULL WHERE organizacao_id = :o", o=org)
+        sql("UPDATE hackathon SET organizacao_id = NULL WHERE id = :h", h=avaliacao.hackathon_id)
+        sql("DELETE FROM organizacoes WHERE id = :o", o=org)

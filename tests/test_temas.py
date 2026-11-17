@@ -163,7 +163,9 @@ def test_tema_desativado_some_da_listagem_de_participantes(client, temas):
     resposta = temas.listar(client)
 
     assert resposta.status_code == 200
-    assert [t["id"] for t in resposta.json()] == [ativo["id"]]
+    ids = [t["id"] for t in resposta.json()]
+    assert ativo["id"] in ids
+    assert inativo["id"] not in ids
     detalhe = client.get(f"/temas/{inativo['id']}", headers=com_token(temas.participante["id"]))
     assert detalhe.status_code == 404
 
@@ -232,3 +234,21 @@ def test_nao_exclui_tema_com_propostas(client, temas, enviada):
 def test_participante_nao_exclui_tema(client, temas):
     tema = temas.cadastrado(client)
     assert temas.excluir(client, tema["id"], quem=temas.participante).status_code == 403
+
+
+def test_temas_ativos_sao_publicos(client, temas):
+    """A página pública do hackathon mostra os temas ativos sem login."""
+    ativo = temas.cadastrado(client, titulo="Tema ativo")
+    inativo = temas.cadastrado(client, titulo="Tema inativo")
+    temas.editar(client, inativo["id"], {"ativo": False})
+
+    resposta = client.get(f"/hackathons/{temas.hackathon_id}/temas")
+    todos_sem_login = client.get(
+        f"/hackathons/{temas.hackathon_id}/temas", params={"incluir_inativos": True}
+    )
+
+    assert resposta.status_code == 200
+    ids = [t["id"] for t in resposta.json()]
+    assert ativo["id"] in ids
+    assert inativo["id"] not in ids
+    assert todos_sem_login.status_code == 401  # incluir_inativos exige login
