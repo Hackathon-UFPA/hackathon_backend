@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     SENHA_RESET_MINUTOS: int = Field(default=30, gt=0)
     SENHA_RESET_INTERVALO_SEGUNDOS: int = Field(default=60, ge=0)
     EMAIL_CONFIRMACAO_MINUTOS: int = Field(default=1440, gt=0)
+    # BE-S5-02: validade do link de cadastro próprio enviado a quem é convidado sem ter conta
+    CONVITE_CADASTRO_MINUTOS: int = Field(default=10080, gt=0)
 
     # E-mail transacional (RNF28, RF60). As credenciais vêm só do ambiente.
     # `console` só registra no log (desenvolvimento); `smtp` envia de verdade.

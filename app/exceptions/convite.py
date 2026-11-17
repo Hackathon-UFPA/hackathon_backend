@@ -93,3 +93,19 @@ def aceite_incompleto():
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         detail="É preciso aceitar o regulamento e o termo de consentimento vigentes.",
     )
+
+
+def link_de_convite_invalido():
+    """Token inexistente, vencido, já usado ou de convite que não vale mais: sempre a mesma
+    resposta, para o link não revelar o que existe."""
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="Link de convite inválido, vencido ou já utilizado.",
+    )
+
+
+def conta_ja_existe_para_o_convite():
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail="Já existe uma conta com o e-mail deste convite. Entre com ela para responder.",
+    )

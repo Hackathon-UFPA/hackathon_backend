@@ -29,6 +29,10 @@ class Convite(SQLModel, table=True):
         nullable=False,
     )
     token: UUID = Field(default_factory=uuid4, unique=True, nullable=False)
+    # Link de cadastro próprio (BE-S5-02), só para e-mail sem conta: guarda o SHA-256 do token
+    token_hash: str | None = Field(default=None, max_length=64)
+    token_expira_em: datetime | None = Field(default=None)
+    token_utilizado_em: datetime | None = Field(default=None)
     enviado_em: datetime | None = Field(
         default=None, nullable=False, sa_column_kwargs={"server_default": AGORA_UTC}
     )

@@ -18,9 +18,18 @@ def _nome(usuario: Usuario) -> str:
 
 
 async def avisar_convite(
-    db: AsyncSession, convite: Convite, equipe: Equipe, lider: Usuario
+    db: AsyncSession,
+    convite: Convite,
+    equipe: Equipe,
+    lider: Usuario,
+    token_cadastro: str | None = None,
 ) -> None:
-    """RF18, RF19: o convidado recebe o aviso do convite, tenha ou não conta."""
+    """RF18, RF19: o convidado recebe o aviso do convite, tenha ou não conta. Quem não tem conta
+    recebe o link de cadastro próprio (BE-S5-02), com o token no fragmento para não ir a logs de
+    servidor; quem tem entra e responde em `/convites`."""
+    link = link_front("/convites")
+    if token_cadastro is not None:
+        link = link_front(f"/cadastro#convite={token_cadastro}")
     await enfileirar(
         db,
         TipoEmail.CONVITE_EQUIPE,
@@ -31,7 +40,8 @@ async def avisar_convite(
             "nome": convite.nome,
             "equipe_nome": equipe.nome,
             "lider_nome": lider.nome,
-            "link": link_front("/convites"),
+            "link": link,
+            "novo_usuario": token_cadastro is not None,
         },
         chave=f"convite:{convite.id}",
     )

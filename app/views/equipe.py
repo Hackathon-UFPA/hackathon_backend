@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Header, Response, status
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.const.enums import PapelUsuario
@@ -38,14 +38,19 @@ ERRO_403 = "Conta pendente, ou quem pede não tem permissão para esta rota"
         "pela edição, os tipos precisam formar a categoria (MISTA: ao menos um ESTUDANTE e um "
         "PROFISSIONAL) e os convites saem na mesma transação; qualquer falha não grava nada (422). "
         "Dados pessoais, aceite de termos e comprovante são de cada pessoa e não são aceitos "
-        "aqui. As pendências individuais ficam em `GET /equipes/{id}/composicao`."
+        "aqui. As pendências individuais ficam em `GET /equipes/{id}/composicao`. Quem convida "
+        "alguém sem conta não cria acesso nem define senha: o convidado recebe um link de uso "
+        "único para o próprio cadastro (BE-S5-02). Com o cabeçalho `Idempotency-Key`, repetir o "
+        "mesmo pedido do mesmo líder devolve a equipe já criada (200, sem novos convites nem "
+        "e-mails); a mesma chave com outro conteúdo dá 409."
     ),
     responses=respostas_de_erro(
         {
             401: ERRO_401,
             403: ERRO_403,
             404: "Hackathon não encontrado",
-            409: "Inscrições fechadas ou usuário já participa de equipe nesta edição",
+            409: "Inscrições fechadas, usuário já participa de equipe nesta edição ou "
+            "Idempotency-Key reutilizada com outro conteúdo",
             422: "Composição inválida: limites, e-mail repetido, categoria não aceita ou tipos "
             "incoerentes",
         }
@@ -53,10 +58,24 @@ ERRO_403 = "Conta pendente, ou quem pede não tem permissão para esta rota"
 )
 async def criar_uma_equipe(
     dados: EquipeCreate,
+    response: Response,
+    idempotency_key: str | None = Header(
+        default=None,
+        alias="Idempotency-Key",
+        min_length=1,
+        max_length=128,
+        description=(
+            "Opcional. Identifica o pedido: repeti-lo (retry de rede) devolve a equipe já criada "
+            "em vez de duplicar ou dar erro"
+        ),
+    ),
     db: AsyncSession = Depends(get_session),
     usuario: Usuario = Depends(exigir_papeis(PapelUsuario.PARTICIPANTE)),
 ):
-    return await criar(db, usuario, dados)
+    equipe, criada = await criar(db, usuario, dados, idempotency_key)
+    if not criada:
+        response.status_code = status.HTTP_200_OK
+    return equipe
 
 
 # A rota fixa precisa ser registrada antes de /{equipe_id}.

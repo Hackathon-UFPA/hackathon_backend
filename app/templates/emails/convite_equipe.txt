@@ -4,9 +4,11 @@ Olá, {{ nome }}.
 
 {{ lider_nome or 'O líder da equipe' }} convidou você para participar {{ 'da equipe ' ~ equipe_nome if equipe_nome else 'de uma equipe' }} no Hackathon UFPA.
 
-Entre na plataforma para confirmar ou recusar a participação.
+{% if novo_usuario is defined and novo_usuario %}Você ainda não tem acesso à plataforma. Crie o seu cadastro pelo endereço abaixo, com a sua própria senha, e depois confirme ou recuse a participação. O endereço é de uso único e temporário: não o compartilhe.
+{% else %}Entre na plataforma para confirmar ou recusar a participação.
+{% endif %}
 
-{% if link %}Ver convite: {{ link }}
+{% if link %}{{ 'Criar meu acesso' if novo_usuario is defined and novo_usuario else 'Ver convite' }}: {{ link }}
 
 {% endif %}--
 Mensagem automática do Hackathon UFPA. Não responda este e-mail.
