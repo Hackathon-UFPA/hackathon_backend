@@ -229,6 +229,38 @@ def test_cadastro_com_comprovante_opcional_registra_o_documento(client, fluxo, s
     )
     assert comprovante["status"] == "PENDENTE" and comprovante["arquivo_url"] == COMPROVANTE
     assert comprovante["hackathon_id"] == fluxo.hackathon_id
+    assert comprovante["tipo_vinculo"] == "ESTUDANTE"  # o tipo indicado no convite (padrão)
+
+
+def test_comprovante_do_cadastro_por_convite_vale_para_o_tipo_indicado_pelo_lider(client, fluxo):
+    """BE-S5-03: só vale na homologação o comprovante do tipo que o líder indicou."""
+    novo = fluxo.indicado("Paula Profissional")
+    equipe = fluxo.criar_ok(
+        client, categoria="PROFISSIONAIS", integrantes=[novo, fluxo.indicado("Outra")]
+    )
+    token = fluxo.token_do_email(novo["email"])
+
+    criada = fluxo.cadastrar(client, token, comprovante_url=COMPROVANTE).json()
+
+    [comprovante] = fluxo.sql(
+        "SELECT tipo_vinculo FROM comprovantes_vinculo WHERE usuario_id = :u", u=criada["id"]
+    )
+    assert comprovante["tipo_vinculo"] == "PROFISSIONAL"
+    # Depois de aprovado e de aceitar o convite, o vínculo conta como comprovado na composição
+    fluxo.sql(
+        "UPDATE comprovantes_vinculo SET status = 'APROVADO', validado_em = now()"
+        " WHERE usuario_id = :u",
+        u=criada["id"],
+    )
+    pessoa = {"id": criada["id"], "email": novo["email"]}
+    assert fluxo.aceitar_como(client, pessoa, equipe["id"], novo["email"]).status_code == 200
+    composicao = fluxo.composicao(client, equipe["id"]).json()
+    dela = next(
+        i["confirmado_pelo_integrante"]
+        for i in composicao["integrantes"]
+        if i["confirmado_pelo_integrante"]["usuario_id"] == str(criada["id"])
+    )
+    assert dela["vinculo_comprovado"] is True
 
 
 def test_o_link_serve_uma_vez_so(client, fluxo):

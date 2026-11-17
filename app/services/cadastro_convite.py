@@ -101,6 +101,10 @@ async def cadastrar(db: AsyncSession, dados: CadastroPorConviteRequest) -> Usuar
                     usuario_id=usuario.id,
                     hackathon_id=hackathon.id,
                     arquivo_url=str(dados.comprovante_url),
+                    # O vínculo que o líder indicou no convite é o que a homologação confere
+                    # (BE-S5-03): sem isto um convidado PROFISSIONAL entraria com comprovante
+                    # acadêmico e teria de reenviar
+                    tipo_vinculo=convite.tipo_integrante,
                 ),
             )
         convite.token_utilizado_em = agora

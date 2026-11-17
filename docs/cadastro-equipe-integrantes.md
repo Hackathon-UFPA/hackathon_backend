@@ -80,7 +80,7 @@ O tipo `CONVITE_EQUIPE` ganhou uma variante para quem não tem conta: o texto ex
 ## Pontos em aberto
 
 - **Comprovante opcional no cadastro por convite:** diverge do RF01, que o exige no cadastro. Foi escolhido para o convidado preencher o vínculo depois, junto com a autodeclaração (BE-S5-03). Se o grupo preferir exigi-lo já aqui, basta tornar `comprovante_url` obrigatório em `CadastroPorConviteRequest`.
-- **Tipo do comprovante no cadastro:** o comprovante enviado no cadastro entra sem tipo de vínculo; a tipagem por categoria é da BE-S5-03.
+- **Tipo do comprovante no cadastro:** no cadastro por convite, o comprovante opcional nasce com o tipo de vínculo que o líder indicou no convite (`ESTUDANTE` ou `PROFISSIONAL`), que é o que a homologação confere ([BE-S5-03](autodeclaracao-e-comprovantes.md)). O cadastro público continua registrando o comprovante como `ESTUDANTE`.
 - **Reenvio de link vencido:** não há rota de reenvio; o líder cancela e convida de novo ou substitui a composição.
 - **Notificação retroativa:** o convite vira aviso na central quando a conta passa a existir; a central em si continua exigindo conta ativa.
 
