@@ -17,6 +17,7 @@ from app.const.enums import (
     CategoriaEquipe,
     FuncaoMembro,
     PapelUsuario,
+    StatusComprovante,
     StatusConvite,
     TipoIntegrante,
 )
@@ -142,6 +143,8 @@ async def montar(db: AsyncSession, equipe: Equipe, hackathon: Hackathon) -> Comp
                     conta_ativa=usuario.ativo,
                     termos_aceitos=item.termos_aceitos,
                     comprovante=item.comprovante,
+                    tipo_declarado=item.autodeclaracao.tipo if item.autodeclaracao else None,
+                    vinculo_comprovado=item.comprovante == StatusComprovante.APROVADO,
                 ),
                 pendencias=[
                     _pendencia(p) for p in avaliacao.pendencias if p.usuario_id == usuario.id

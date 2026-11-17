@@ -4,7 +4,7 @@ from uuid import UUID, uuid4
 from sqlalchemy import Text
 from sqlmodel import Field, SQLModel
 
-from app.const.enums import StatusComprovante, pg_enum
+from app.const.enums import StatusComprovante, TipoIntegrante, pg_enum
 from app.db.defaults import AGORA_UTC
 
 
@@ -16,6 +16,14 @@ class ComprovanteVinculo(SQLModel, table=True):
     hackathon_id: UUID = Field(foreign_key="hackathon.id", nullable=False)
     # URL externa do PDF (ex: cloudinary)
     arquivo_url: str = Field(nullable=False)
+    # Vínculo que o documento comprova (BE-S5-03); os anteriores à tarefa eram acadêmicos
+    tipo_vinculo: TipoIntegrante = Field(
+        default=TipoIntegrante.ESTUDANTE,
+        sa_type=pg_enum(TipoIntegrante, "tipo_integrante"),
+        nullable=False,
+    )
+    # Declaração que o comprovante sustenta, quando a pessoa já tinha declarado
+    autodeclaracao_id: UUID | None = Field(default=None, foreign_key="autodeclaracoes_vinculo.id")
     status: StatusComprovante = Field(
         default=StatusComprovante.PENDENTE,
         sa_type=pg_enum(StatusComprovante, "status_comprovante"),

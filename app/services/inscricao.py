@@ -92,6 +92,7 @@ async def painel(db: AsyncSession, usuario: Usuario, equipe_id: UUID) -> PainelE
             convite=item.convite,
             termos_aceitos=item.termos_aceitos,
             comprovante=item.comprovante,
+            tipo_declarado=item.autodeclaracao.tipo if item.autodeclaracao else None,
         )
         for item in avaliacao.integrantes
     ] + [

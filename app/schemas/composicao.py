@@ -36,6 +36,14 @@ class ConfirmadoPeloIntegrante(BaseModel):
     comprovante: StatusComprovante | None = Field(
         default=None, description="Vazio quando nenhum comprovante foi enviado"
     )
+    tipo_declarado: TipoIntegrante | None = Field(
+        default=None,
+        description="Tipo que a própria pessoa autodeclarou (BE-S5-03); vazio se nunca declarou",
+    )
+    vinculo_comprovado: bool = Field(
+        default=False,
+        description="Comprovante do vínculo aplicável APROVADO; a autodeclaração não conta",
+    )
 
 
 class IntegranteComposicaoResponse(BaseModel):
