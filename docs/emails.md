@@ -28,7 +28,7 @@ ação do sistema (convite, inscrição, protocolo...)
 
 | Evento                                        | Tipo                  | Quem recebe                              | Requisitos          |
 |-----------------------------------------------|-----------------------|------------------------------------------|---------------------|
-| Líder convida um integrante                   | `CONVITE_EQUIPE`      | O convidado (tenha ou não conta)         | RF18, RF19, RF60    |
+| Líder convida um integrante                   | `CONVITE_EQUIPE`      | O convidado (tenha ou não conta); quem não tem conta recebe o link de cadastro próprio, de uso único (BE-S5-02) | RF18, RF19, RF60    |
 | Líder conclui a inscrição da equipe           | `INSCRICAO_CONCLUIDA` | Todos os integrantes, com o protocolo    | RF22, RF60          |
 | Equipe passa a homologada                     | `EQUIPE_HOMOLOGADA`   | Todos os integrantes                     | RF23, RF60          |
 | Proposta enviada                              | `PROTOCOLO_PROPOSTA`  | O líder da equipe, com o protocolo       | RF28                |

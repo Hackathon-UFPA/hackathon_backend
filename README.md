@@ -18,6 +18,7 @@ API do sistema de gestão de hackathons da UFPA, construída com **FastAPI**. Cu
 - [Autenticação e permissões](docs/autenticacao.md): cadastro, login, perfil, recuperação de senha, sessão, gestão de contas e guia para o front (BE-S5-07)
 - [Convites e termos](docs/convites-e-termos.md)
 - [Conteúdo institucional e treinamento](docs/conteudo-institucional.md): página pública, regulamento com versões, FAQ, cronograma, apoiadores e agenda do treinamento (BE-S5-12)
+- [Cadastro da equipe e dos integrantes em um fluxo](docs/cadastro-equipe-integrantes.md): cadastro próprio de quem é convidado sem conta, idempotência do `POST /equipes` e conta pendente respondendo ao convite (BE-S5-02)
 - [Equipes e membros](docs/equipes-e-membros.md): inclui categorias e composição informada pelo líder (BE-S5-01)
 - [Inscrição e homologação](docs/inscricao-e-homologacao.md)
 - [Propostas](docs/propostas.md): envio definitivo, protocolo, reenvio e histórico de versões (BE-S5-09)
@@ -45,6 +46,7 @@ Com a API no ar, a documentação interativa das rotas fica em `http://localhost
 | Convites, aceite de participação e termos | RF18 a RF20      | Concluído |
 | Equipes e membros                       | RF18, RF24         | Concluído |
 | Comprovantes, inscrição e homologação   | RF21 a RF23, RF25  | Concluído |
+| Cadastro da equipe e dos integrantes em um fluxo | RF01, RF18, RF19, RF22, RF23, RN01 a RN06, BE-S5-02 | Concluído (ver [Cadastro da equipe e dos integrantes](docs/cadastro-equipe-integrantes.md)) |
 | Equipes por categoria e composição informada pelo líder | RF01, RF18, RF21 a RF24, RN01 a RN03, RN05, RN25, BE-S5-01 | Concluído, com a elegibilidade de profissionais e mistos provisória até a validação do Squad 1 (ver [Equipes e membros](docs/equipes-e-membros.md#categorias-e-composição-informada-pelo-líder-be-s5-01)) |
 | Rascunho e envio da proposta            | RF26 a RF28        | Concluído |
 | Reenvio/versionamento da proposta e travas de homologação | RF26 a RF28, RF31, RN07, RN08, BE-S5-09 | Concluído (ver [Propostas](docs/propostas.md) e [Resultado](docs/resultado.md)) |
