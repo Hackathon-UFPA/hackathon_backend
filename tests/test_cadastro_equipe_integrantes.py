@@ -100,7 +100,7 @@ def test_equipe_com_conta_existente_e_pessoa_sem_conta(client, fluxo, sql):
     # Sem conta: convite individual, com link de uso único e validade
     assert sem_conta["usuario_id"] is None
     assert re.fullmatch(r"[0-9a-f]{64}", sem_conta["token_hash"])
-    assert sem_conta["token_expira_em"] > datetime.utcnow()
+    assert sem_conta["token_expira_em"] > datetime.now(UTC).replace(tzinfo=None)
     assert sem_conta["token_utilizado_em"] is None
     # O líder não criou conta nem definiu senha de ninguém
     assert fluxo.usuario_por_email(novo["email"]) is None
@@ -414,7 +414,7 @@ def test_cadastro_publico_associa_convites_pendentes(client, fluxo, hackathon_ab
 
     assert resposta.status_code == 201, resposta.text
     convite = fluxo.convite_de(equipe["id"], novo["email"])
-    assert convite["usuario_id"] == resposta.json()["id"]
+    assert str(convite["usuario_id"]) == resposta.json()["id"]
     avisos = fluxo.sql(
         "SELECT 1 FROM notificacoes WHERE usuario_id = :u AND tipo = 'CONVITE'",
         u=resposta.json()["id"],

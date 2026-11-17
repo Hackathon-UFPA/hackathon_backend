@@ -62,9 +62,11 @@ async def criar(
     """Cria a equipe e devolve `(equipe, criada)`. Com `chave` (Idempotency-Key), repetir o mesmo
     pedido do mesmo líder devolve a equipe já criada (`criada = False`), sem novos convites nem
     e-mails (BE-S5-02). Sem a chave, tudo vale como antes."""
+    # O rollback expira os objetos da sessão: guarda o id antes, para usá-lo depois dele
+    usuario_id = usuario.id
     hash_requisicao = _hash_da_requisicao(dados) if chave else None
     if chave:
-        existente = await get_equipe_por_chave(db, usuario.id, chave)
+        existente = await get_equipe_por_chave(db, usuario_id, chave)
         if existente is not None:
             return _repeticao(existente, hash_requisicao), False
 
@@ -73,10 +75,10 @@ async def criar(
         hackathon_nao_encontrado()
     if not inscricoes_abertas(hackathon):
         fora_do_periodo_de_inscricao()
-    if await get_membro_no_hackathon(db, hackathon.id, usuario.id) is not None:
+    if await get_membro_no_hackathon(db, hackathon.id, usuario_id) is not None:
         if chave:
             # Pode ser o mesmo pedido, confirmado por outra requisição depois da busca acima
-            existente = await get_equipe_por_chave(db, usuario.id, chave)
+            existente = await get_equipe_por_chave(db, usuario_id, chave)
             if existente is not None:
                 return _repeticao(existente, hash_requisicao), False
         ja_esta_em_outra_equipe()
@@ -102,7 +104,7 @@ async def criar(
         nome=dados.nome,
         categoria=categoria,
         criado_em=datetime.now(UTC),
-        criada_por=usuario.id,
+        criada_por=usuario_id,
         chave_idempotencia=chave,
         hash_requisicao=hash_requisicao,
     )
@@ -112,7 +114,7 @@ async def criar(
             db,
             MembroEquipe(
                 equipe_id=equipe.id,
-                usuario_id=usuario.id,
+                usuario_id=usuario_id,
                 hackathon_id=hackathon.id,
                 funcao=FuncaoMembro.LIDER,
                 tipo_integrante=tipo_lider,
@@ -128,7 +130,7 @@ async def criar(
         await db.rollback()
         # Dois pedidos simultâneos com a mesma chave: o que perdeu devolve a equipe do vencedor
         if chave:
-            existente = await get_equipe_por_chave(db, usuario.id, chave)
+            existente = await get_equipe_por_chave(db, usuario_id, chave)
             if existente is not None:
                 return _repeticao(existente, hash_requisicao), False
         # Também cobre a disputa com outra criação ou aceite de convite (RN02).
