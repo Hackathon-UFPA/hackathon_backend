@@ -47,13 +47,27 @@ async def usuario_opcional(
     return await usuario_atual(credenciais, db)
 
 
+def _exigir_mentor_ativado(usuario: Usuario) -> None:
+    if not usuario.mentor_ativado_em or not usuario.mentor_perfil_concluido_em:
+        raise HTTPException(403, "Mentor pendente: conclua o perfil e aceite os termos (RN33).")
+
+
 async def usuario_ativo(usuario: Usuario = Depends(usuario_atual)) -> Usuario:
     """Exige RN33 concluída para mentor e comprovante aprovado para participante pendente."""
     if usuario.papel == PapelUsuario.MENTOR:
-        if not usuario.mentor_ativado_em or not usuario.mentor_perfil_concluido_em:
-            raise HTTPException(403, "Mentor pendente: conclua o perfil e aceite os termos (RN33).")
+        _exigir_mentor_ativado(usuario)
     elif usuario.situacao_conta == SituacaoConta.PENDENTE:
         conta_pendente()
+    return usuario
+
+
+async def usuario_convidado(usuario: Usuario = Depends(usuario_atual)) -> Usuario:
+    """Para quem responde a um convite e aceita os termos (BE-S5-02). Quem se cadastrou pelo link do
+    convite ainda aguarda a conferência do comprovante (RN25), mas precisa aceitar a participação e
+    os termos com a própria conta: a conta pendente passa aqui. O vínculo comprovado continua
+    pesando na homologação da equipe (RF23), não neste aceite. Mentor segue a RN33."""
+    if usuario.papel == PapelUsuario.MENTOR:
+        _exigir_mentor_ativado(usuario)
     return usuario
 
 

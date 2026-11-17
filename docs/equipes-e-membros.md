@@ -53,6 +53,8 @@ Com `integrantes`, tudo é conferido **antes de gravar** e grava na mesma transa
 - **Tipos coerentes com a categoria:** `ESTUDANTES` só com `ESTUDANTE`; `PROFISSIONAIS` só com `PROFISSIONAL`; `MISTA` com ao menos um de cada. Nas duas primeiras o tipo pode ser omitido (vale o da categoria); na `MISTA` ele é obrigatório para todos.
 - **E-mails:** sem repetição (sem diferenciar maiúsculas) e sem o do próprio líder. No máximo 20 itens por pedido.
 
+O pedido aceita o cabeçalho opcional `Idempotency-Key`: repeti-lo devolve a equipe já criada (200), sem novos convites nem e-mails (BE-S5-02, veja [Cadastro da equipe e dos integrantes](cadastro-equipe-integrantes.md)). Convidados sem conta recebem um link para o próprio cadastro; o líder nunca cria conta nem define senha.
+
 A resposta continua sendo a `EquipeResponse` (agora com `categoria`). As pendências individuais ficam em `GET /equipes/{id}/composicao`.
 
 ### Consultar a composição

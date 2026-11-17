@@ -23,6 +23,7 @@ from app.models import ComprovanteVinculo, Usuario
 from app.schemas.auth import CadastroRequest
 from app.security.senha import gastar_tempo_de_verificacao, gerar_hash, senha_confere
 from app.services.confirmacao_email import enviar_confirmacao
+from app.services.convite import associar_convites_pendentes
 
 
 async def cadastrar_participante(db: AsyncSession, dados: CadastroRequest) -> Usuario:
@@ -53,6 +54,8 @@ async def cadastrar_participante(db: AsyncSession, dados: CadastroRequest) -> Us
             arquivo_url=str(dados.comprovante_url),
         ),
     )
+    # BE-S5-02: convites que já esperavam este e-mail passam a valer para a conta nova
+    await associar_convites_pendentes(db, usuario)
     # RF01: o e-mail de confirmação sai na mesma transação; falha de envio não derruba o cadastro
     await enviar_confirmacao(db, usuario, usuario.email)
     await db.commit()

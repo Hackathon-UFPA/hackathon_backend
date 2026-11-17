@@ -2,6 +2,8 @@
 
 # Banco de dados
 
+BE-S5-02: `V202611161500__cadastro_por_convite_idempotencia.sql` adiciona `convites.token_hash` (SHA-256 do token do link de cadastro próprio), `token_expira_em` e `token_utilizado_em`, e `equipes.criada_por`, `chave_idempotencia` e `hash_requisicao` (único por `criada_por` e chave, para o `POST /equipes` idempotente). Detalhes em [Cadastro da equipe e dos integrantes](cadastro-equipe-integrantes.md).
+
 BE-S5-03: `V202611161400__autodeclaracao_comprovantes.sql` adiciona `autodeclaracoes_vinculo` (declaração da própria pessoa por edição, só inserção: trigger barra `UPDATE`), `comprovantes_vinculo.tipo_vinculo` (legado = `ESTUDANTE`) e `autodeclaracao_id`, move o limite de comprovante em aberto ou aprovado para `(usuario, hackathon, tipo_vinculo)` e adiciona a política `hackathon.exige_autodeclaracao`, `exige_comprovante_estudante` e `exige_comprovante_profissional`. Detalhes em [Autodeclaração e comprovantes](autodeclaracao-e-comprovantes.md).
 
 BE-S5-01: `V202611161300__equipes_por_categoria.sql` adiciona os tipos `categoria_equipe` e `tipo_integrante`, `equipes.categoria`, `convites.tipo_integrante`, `membros_equipe.tipo_integrante` e a política de elegibilidade por edição (`hackathon.aceita_equipe_estudantes`, `aceita_equipe_profissionais` e `aceita_equipe_mista`, ao menos uma verdadeira: `ck_hackathon_categorias`). Equipes, convites e vínculos que já existiam entram como `ESTUDANTES`/`ESTUDANTE` (eram todos acadêmicos) e as três categorias nascem liberadas. Detalhes em [Equipes e membros](equipes-e-membros.md#categorias-e-composição-informada-pelo-líder-be-s5-01).

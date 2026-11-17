@@ -23,6 +23,10 @@ class Equipe(SQLModel, table=True):
         sa_type=pg_enum(CategoriaEquipe, "categoria_equipe"),
         nullable=False,
     )
+    # BE-S5-02: quem criou e a chave que torna o POST /equipes idempotente
+    criada_por: UUID | None = Field(default=None, foreign_key="usuarios.id")
+    chave_idempotencia: str | None = Field(default=None, max_length=128)
+    hash_requisicao: str | None = Field(default=None, max_length=64)
     inscricao_concluida_em: datetime | None = Field(default=None)
     homologada_em: datetime | None = Field(default=None)
     criado_em: datetime | None = Field(default=None)

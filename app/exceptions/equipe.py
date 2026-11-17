@@ -50,3 +50,10 @@ def reconvite_indisponivel(emails: list[str]):
         detail="Estas pessoas já aceitaram um convite desta equipe e foram removidas; "
         f"o reconvite à mesma equipe ainda não está disponível: {', '.join(emails)}.",
     )
+
+
+def chave_de_idempotencia_reutilizada():
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail="Esta Idempotency-Key já foi usada em um pedido com outro conteúdo.",
+    )

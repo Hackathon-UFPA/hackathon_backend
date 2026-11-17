@@ -7,6 +7,8 @@ O participante se cadastra, faz login e recebe um **token JWT**, que envia em to
 | Rota                  | Quem acessa                                   | O que faz                                                                 |
 |-----------------------|-----------------------------------------------|---------------------------------------------------------------------------|
 | `POST /auth/cadastro` | Qualquer pessoa                               | Cria um **Participante** com conta pendente e registra o comprovante (RF01) |
+| `POST /auth/cadastro/convite` | Público, com o token do link do convite | Cadastro próprio de quem foi convidado para uma equipe sem ter conta; e-mail e papel vêm do convite (BE-S5-02) |
+| `POST /auth/cadastro/convite/consulta` | Público, com o token do link do convite | Mostra o convite antes do cadastro, sem gastar o token (BE-S5-02) |
 | `POST /auth/login`    | Qualquer pessoa                               | Devolve o token de acesso e os dados do usuário (RF02)                    |
 | `GET /auth/me`        | Qualquer usuário logado, inclusive conta pendente | Dados de quem está logado                                             |
 | `POST /auth/recuperar-senha` | Qualquer pessoa                        | Envia o link de redefinição; a resposta é a mesma exista ou não a conta (RF04) |
@@ -25,6 +27,8 @@ O participante se cadastra, faz login e recebe um **token JWT**, que envia em to
 | `POST /admin/usuarios/{id}/desativar`, `.../reativar` | Organizador e Comitê Científico (e DEV) | Desativa ou reativa uma conta do seu alcance (RN24)        |
 
 **Cadastro.** Exige nome, e-mail, instituição, curso, período, senha e o link do comprovante de vínculo (`https`, terminando em `.pdf`, `.png`, `.jpg` ou `.jpeg`; o arquivo fica em um serviço externo como o Cloudinary). A senha precisa de 8 a 128 caracteres, com pelo menos uma letra e um número. O e-mail é guardado em minúsculas e não pode repetir. O perfil nunca vem do cliente. O comprovante é ligado ao hackathon com inscrições abertas (`status = INSCRICOES`); sem nenhum, o cadastro responde 409. A conta nasce `PENDENTE` e só passa a `ATIVA` quando o Comitê Científico aprovar o comprovante (RN25, tarefa futura).
+
+**Cadastro pelo convite (BE-S5-02).** Quem é convidado sem ter conta recebe um link de uso único e cria o próprio acesso com a própria senha: o e-mail vem do convite, o papel é sempre Participante e o e-mail já nasce confirmado, porque o token prova a posse. A conta continua `PENDENTE` até o comprovante ser aprovado (RN25), e a pessoa já pode aceitar o convite e os termos. Detalhes em [Cadastro da equipe e dos integrantes](cadastro-equipe-integrantes.md).
 
 **Login.** Credenciais inválidas (e-mail inexistente, senha errada ou conta desativada) dão sempre a mesma resposta 401, sem dizer qual dado errou. Depois de `LOGIN_MAX_TENTATIVAS` falhas seguidas a conta fica bloqueada por `LOGIN_BLOQUEIO_MINUTOS`: nesse período até a senha correta é recusada, com 429 e o cabeçalho `Retry-After`. Um login correto zera o contador. O token vale `JWT_EXPIRE_MINUTES` e não é renovado: passado o prazo, é preciso entrar de novo.
 

@@ -1,9 +1,11 @@
-from datetime import UTC, datetime
+import secrets
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from app.const.config import settings
 from app.const.enums import (
     FuncaoMembro,
     PapelUsuario,
@@ -46,12 +48,29 @@ from app.services.email_eventos import avisar_convite
 from app.services.notificacao_eventos import notificar_convite, notificar_resposta_convite
 from app.services.somente_leitura import exigir_equipe_editavel
 from app.services.termo import validar_termos_aceitos
+from app.services.token_usuario import hash_do_token
 from app.validations.categoria_equipe import resolver_tipo
 from app.validations.inscricao import inscricoes_abertas
 
 
 def _agora_utc() -> datetime:
     return datetime.now(UTC)
+
+
+async def associar_convites_pendentes(db: AsyncSession, usuario: Usuario) -> int:
+    """Liga à conta recém-criada os convites em aberto dirigidos ao e-mail dela (BE-S5-02) e os
+    mostra na central, como acontece com quem já tinha conta ao ser convidado. Sem commit. Só os
+    convites sem conta são tocados e a notificação é idempotente. Devolve quantos associou."""
+    associados = 0
+    for convite, equipe in await listar_pendentes_do_email(db, usuario.email):
+        if convite.usuario_id is not None:
+            continue
+        convite.usuario_id = usuario.id
+        db.add(convite)
+        lider = await db.get(Usuario, convite.convidado_por)
+        await notificar_convite(db, convite, equipe, lider)
+        associados += 1
+    return associados
 
 
 async def equipe_e_hackathon(
@@ -97,6 +116,9 @@ async def convidar(
     Sem commit e sem conferir regras de equipe: quem chama já travou a equipe e as validou.
     Usado pelo convite avulso e pela composição informada de uma vez (BE-S5-01)."""
     convidado = await get_usuario_by_email(db, email)
+    # Quem não tem conta ganha um link de cadastro próprio, de uso único e com validade: o líder
+    # nunca cria conta nem define senha de ninguém. O banco guarda só o hash do token.
+    token = secrets.token_urlsafe(32) if convidado is None else None
     convite = await criar_convite(
         db,
         Convite(
@@ -106,10 +128,16 @@ async def convidar(
             usuario_id=convidado.id if convidado else None,
             convidado_por=lider.id,
             tipo_integrante=tipo,
+            token_hash=hash_do_token(token) if token else None,
+            token_expira_em=(
+                _agora_utc() + timedelta(minutes=settings.CONVITE_CADASTRO_MINUTOS)
+                if token
+                else None
+            ),
         ),
     )
     # RF18: o aviso entra na fila junto com o convite; o envio acontece depois, no worker
-    await avisar_convite(db, convite, equipe, lider)
+    await avisar_convite(db, convite, equipe, lider, token)
     await notificar_convite(db, convite, equipe, lider)
     return convite
 

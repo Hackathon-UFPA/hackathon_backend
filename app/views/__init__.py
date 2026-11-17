@@ -5,6 +5,7 @@ from app.views.auth import router as auth
 from app.views.autodeclaracao import router as autodeclaracao
 from app.views.avaliacao import router_admin as avaliacao_admin
 from app.views.avaliacao import router_avaliador as avaliacao_avaliador
+from app.views.cadastro_convite import router as cadastro_convite
 from app.views.comprovantes import router as comprovantes
 from app.views.conteudo import router as conteudo
 from app.views.conteudo import router_publico as conteudo_publico
@@ -38,6 +39,7 @@ router = APIRouter()
 
 router.include_router(health)
 router.include_router(auth)
+router.include_router(cadastro_convite)
 router.include_router(perfil)
 router.include_router(autodeclaracao)
 router.include_router(atribuicoes_mentor)

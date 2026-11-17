@@ -21,6 +21,17 @@ async def get_convite_by_id(
     return (await db.exec(consulta)).first()
 
 
+async def get_convite_por_token_hash(
+    db: AsyncSession, token_hash: str, *, para_atualizar: bool = False
+) -> Convite | None:
+    """O convite do link de cadastro próprio (BE-S5-02). Com `para_atualizar`, trava a linha:
+    dois usos simultâneos do mesmo token não se misturam."""
+    consulta = select(Convite).where(Convite.token_hash == token_hash)
+    if para_atualizar:
+        consulta = consulta.with_for_update()
+    return (await db.exec(consulta)).first()
+
+
 async def listar_convites_da_equipe(db: AsyncSession, equipe_id: UUID) -> list[Convite]:
     consulta = (
         select(Convite).where(Convite.equipe_id == equipe_id).order_by(col(Convite.enviado_em))

@@ -55,7 +55,7 @@ O comprovante agora diz qual vínculo comprova (`tipo_vinculo`) e qual declaraç
 - Para a homologação **só vale o comprovante do tipo que o líder indicou**: um comprovante acadêmico aprovado não comprova o vínculo de quem é indicado como `PROFISSIONAL`.
 - Recusa e reenvio funcionam como antes, dentro do tipo: o comprovante recusado fica no histórico, o motivo aparece em `GET /comprovantes/meus` e a pessoa envia outro.
 - Os que já existiam eram acadêmicos e viram `ESTUDANTE`.
-- O cadastro público (`POST /auth/cadastro`) continua registrando o comprovante inicial como `ESTUDANTE`. Um profissional ativa a conta e depois envia o comprovante profissional por `POST /comprovantes`. Tornar o tipo explícito no cadastro cabe à BE-S5-02, que mexe no cadastro.
+- O cadastro público (`POST /auth/cadastro`) continua registrando o comprovante inicial como `ESTUDANTE`. Um profissional ativa a conta e depois envia o comprovante profissional por `POST /comprovantes`. No cadastro por convite ([BE-S5-02](cadastro-equipe-integrantes.md)) o comprovante opcional já nasce com o tipo que o líder indicou no convite.
 
 ## Documentos privados
 

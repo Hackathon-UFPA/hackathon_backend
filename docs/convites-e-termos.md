@@ -24,6 +24,8 @@ Rotas de RF18, RF19 e RF20. Todas exigem token e **conta ativa** (conta pendente
 - O `tipo_integrante` do convite é indicado pelo líder (BE-S5-01) e copiado para o vínculo no aceite: quem aceita não escolhe o próprio tipo. Para convidar a equipe inteira de uma vez, veja [Equipes e membros](equipes-e-membros.md#categorias-e-composição-informada-pelo-líder-be-s5-01).
 - Quem entra pelo convite fica com `funcao` vazia em `membros_equipe`; o líder define as funções depois.
 
+**Quem não tem conta (BE-S5-02).** O convite a um e-mail sem conta leva um link de cadastro próprio, de uso único, para a pessoa criar o acesso com a própria senha (`POST /auth/cadastro/convite`); o líder nunca define senha. A conta criada assim nasce pendente e **pode** aceitar ou recusar convites e aceitar os termos: `GET /convites/meus`, `POST /convites/{id}/aceitar`, `POST /convites/{id}/recusar` e as rotas de termos aceitam a conta pendente. Veja [Cadastro da equipe e dos integrantes](cadastro-equipe-integrantes.md).
+
 **Versões do regulamento (BE-S5-12).** Quem cria, edita e publica as versões é o Organizador, por `/admin/hackathons/{id}/termos` (rascunho, publicação e histórico); veja [Conteúdo institucional](conteudo-institucional.md). Publicar uma versão nova aposenta a vigente e passa a exigir novo aceite: rascunhos nunca aparecem em `termos/vigentes`.
 
 **Guia para a interface.** Painel do convidado: `GET /convites/meus`. Ao clicar em aceitar, buscar `GET /hackathons/{hackathon_id}/termos/vigentes` (o `hackathon_id` vem no próprio convite), mostrar `conteudo` ou `url` de cada documento e, quando a pessoa concordar, enviar os ids para `POST /convites/{id}/aceitar` com `{ "termos_ids": ["...", "..."] }`.

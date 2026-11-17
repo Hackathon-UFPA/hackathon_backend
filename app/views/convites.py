@@ -11,7 +11,7 @@ from app.schemas.convite import (
     ConviteRecebidoResponse,
     ConviteResponse,
 )
-from app.security.dependencias import usuario_ativo
+from app.security.dependencias import usuario_ativo, usuario_convidado
 from app.services.convite import (
     aceitar_convite,
     cancelar_convite,
@@ -26,6 +26,8 @@ router = APIRouter(tags=["Convites"])
 
 ERRO_401 = "Sem token, ou token inválido, vencido ou de conta desativada"
 ERRO_403 = "Conta pendente, ou quem pede não tem permissão para esta rota"
+# Quem responde a um convite pode ter a conta pendente (BE-S5-02); só mentor sem ativação é barrado
+ERRO_403_CONVIDADO = "Mentor que ainda não concluiu a ativação (RN33)"
 
 
 @router.post(
@@ -84,10 +86,10 @@ async def listar_da_equipe(
         "Convites `PENDENTE` dirigidos ao e-mail de quem está logado (RF19), para o painel. "
         "O e-mail é comparado sem diferenciar maiúsculas."
     ),
-    responses=respostas_de_erro({401: ERRO_401, 403: ERRO_403}),
+    responses=respostas_de_erro({401: ERRO_401, 403: ERRO_403_CONVIDADO}),
 )
 async def meus_convites(
-    db: AsyncSession = Depends(get_session), usuario: Usuario = Depends(usuario_ativo)
+    db: AsyncSession = Depends(get_session), usuario: Usuario = Depends(usuario_convidado)
 ):
     return await listar_convites_recebidos(db, usuario)
 
@@ -106,7 +108,7 @@ async def meus_convites(
     responses=respostas_de_erro(
         {
             401: ERRO_401,
-            403: ERRO_403,
+            403: ERRO_403_CONVIDADO,
             404: "Convite não existe, ou não é dirigido a quem está logado",
             409: "Convite já respondido, inscrições fechadas, já está em outra equipe, equipe "
             "sem vagas, termos não publicados ou desatualizados",
@@ -118,7 +120,7 @@ async def aceitar(
     convite_id: UUID,
     dados: ConviteAceite,
     db: AsyncSession = Depends(get_session),
-    usuario: Usuario = Depends(usuario_ativo),
+    usuario: Usuario = Depends(usuario_convidado),
 ):
     return await aceitar_convite(db, usuario, convite_id, dados.termos_ids)
 
@@ -134,7 +136,7 @@ async def aceitar(
     responses=respostas_de_erro(
         {
             401: ERRO_401,
-            403: ERRO_403,
+            403: ERRO_403_CONVIDADO,
             404: "Convite não existe, ou não é dirigido a quem está logado",
             409: "Convite já respondido, ou inscrições fechadas",
         }
@@ -143,7 +145,7 @@ async def aceitar(
 async def recusar(
     convite_id: UUID,
     db: AsyncSession = Depends(get_session),
-    usuario: Usuario = Depends(usuario_ativo),
+    usuario: Usuario = Depends(usuario_convidado),
 ):
     return await recusar_convite(db, usuario, convite_id)
 

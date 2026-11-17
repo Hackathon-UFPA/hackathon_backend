@@ -20,6 +20,14 @@ async def get_equipe_by_id(
     return (await db.exec(consulta)).first()
 
 
+async def get_equipe_por_chave(db: AsyncSession, criador_id: UUID, chave: str) -> Equipe | None:
+    """A equipe que este usuário criou com esta Idempotency-Key, se houver (BE-S5-02)."""
+    consulta = select(Equipe).where(
+        Equipe.criada_por == criador_id, Equipe.chave_idempotencia == chave
+    )
+    return (await db.exec(consulta)).first()
+
+
 async def get_hackathon_id_da_equipe(db: AsyncSession, equipe_id: UUID) -> UUID | None:
     """Só o id da edição, sem carregar a equipe: quem trava a edição antes da equipe não deixa
     um objeto Equipe antigo no identity map da sessão."""
