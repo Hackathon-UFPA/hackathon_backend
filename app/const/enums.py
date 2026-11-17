@@ -134,6 +134,12 @@ class TipoNotificacao(StrEnum):
     PRAZO = "PRAZO"
 
 
+class TipoOrganizacao(StrEnum):
+    EMPRESA = "EMPRESA"
+    INSTITUICAO_ENSINO = "INSTITUICAO_ENSINO"
+    OUTRO = "OUTRO"
+
+
 class SituacaoConta(StrEnum):
     PENDENTE = "PENDENTE"
     ATIVA = "ATIVA"

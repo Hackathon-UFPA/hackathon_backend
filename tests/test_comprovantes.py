@@ -230,7 +230,11 @@ def test_recusado_ve_o_motivo_com_a_conta_pendente_e_reenvia(client, fila):
         ("RECUSADO", "Documento ilegível")
     ]
 
-    novo = client.post("/comprovantes", json={"arquivo_url": LINK}, headers=cabecalho)
+    novo = client.post(
+        "/comprovantes",
+        json={"arquivo_url": LINK, "hackathon_id": str(fila.hackathon_id)},
+        headers=cabecalho,
+    )
 
     assert novo.status_code == 201, novo.text
     assert novo.json()["status"] == "PENDENTE"
@@ -246,43 +250,62 @@ def test_reenvio_aprovado_ativa_a_conta(client, fila):
     usuario, comprovante = fila.enviar()
     fila.decidir(client, comprovante, "recusar", motivo_recusa="Ilegível")
     cabecalho = com_token(usuario["id"])
-    novo = client.post("/comprovantes", json={"arquivo_url": LINK}, headers=cabecalho).json()
+    novo = client.post(
+        "/comprovantes",
+        json={"arquivo_url": LINK, "hackathon_id": str(fila.hackathon_id)},
+        headers=cabecalho,
+    ).json()
 
     assert fila.decidir(client, novo["id"], "aprovar").status_code == 200
     assert fila.conta(usuario) == "ATIVA"
 
 
-def test_reenvio_ignora_edicoes_mais_recentes_fora_do_periodo(
+def test_envio_para_hackathon_fora_do_periodo_preserva_historico(
     client, fila, edicoes_fora_do_periodo
 ):
     usuario, anterior = fila.enviar("RECUSADO")
 
-    resposta = client.post(
-        "/comprovantes", json={"arquivo_url": LINK}, headers=com_token(usuario["id"])
-    )
-
-    assert resposta.status_code == 201, resposta.text
-    assert resposta.json()["hackathon_id"] == str(fila.hackathon_id)
-    assert resposta.json()["id"] != anterior
-    assert resposta.json()["status"] == "PENDENTE"
-    assert fila.hackathon_id not in edicoes_fora_do_periodo
-
-
-def test_reenvio_sem_edicao_aberta_preserva_erro_e_historico(client, fila, monkeypatch):
-    usuario, anterior = fila.enviar("RECUSADO")
-
-    async def nenhum(db):
-        return None
-
-    monkeypatch.setattr("app.services.comprovante_vinculo.get_hackathon_com_inscricoes", nenhum)
-    resposta = client.post(
-        "/comprovantes", json={"arquivo_url": LINK}, headers=com_token(usuario["id"])
-    )
-
-    assert resposta.status_code == 409
-    assert resposta.json() == {"detail": "Não há hackathon com inscrições abertas no momento."}
+    for edicao in edicoes_fora_do_periodo:
+        resposta = client.post(
+            "/comprovantes",
+            json={"arquivo_url": LINK, "hackathon_id": str(edicao)},
+            headers=com_token(usuario["id"]),
+        )
+        assert resposta.status_code == 409
+        assert resposta.json() == {"detail": "As inscrições deste hackathon não estão abertas."}
     historico = client.get("/comprovantes/meus", headers=com_token(usuario["id"])).json()
     assert [c["id"] for c in historico] == [anterior]
+
+
+def test_envio_para_hackathon_inexistente(client, fila):
+    usuario = fila.usuario_no_banco()
+
+    inexistente = client.post(
+        "/comprovantes",
+        json={"arquivo_url": LINK, "hackathon_id": "00000000-0000-0000-0000-000000000000"},
+        headers=com_token(usuario["id"]),
+    )
+
+    assert inexistente.status_code == 404
+
+
+def test_comprovantes_de_hackathons_diferentes_sao_independentes(client, fila, sql):
+    """Cada hackathon pede o próprio comprovante: um aprovado em um não impede enviar a outro."""
+    usuario, _ = fila.enviar("APROVADO", conta="ATIVA")
+    outro = sql("INSERT INTO hackathon (nome, status) VALUES ('Outro', 'INSCRICOES') RETURNING id")[
+        0
+    ]["id"]
+    try:
+        resposta = client.post(
+            "/comprovantes",
+            json={"arquivo_url": LINK, "hackathon_id": str(outro)},
+            headers=com_token(usuario["id"]),
+        )
+        assert resposta.status_code == 201, resposta.text
+        assert resposta.json()["hackathon_id"] == str(outro)
+    finally:
+        sql("DELETE FROM comprovantes_vinculo WHERE hackathon_id = :h", h=outro)
+        sql("DELETE FROM hackathon WHERE id = :h", h=outro)
 
 
 def test_aprovacao_de_comprovante_continua_permitida_apos_prazo(client, fila, sql):
@@ -304,7 +327,9 @@ def test_nao_reenvia_com_comprovante_pendente_ou_aprovado(client, fila, status):
     usuario, _ = fila.enviar(status)
 
     resposta = client.post(
-        "/comprovantes", json={"arquivo_url": LINK}, headers=com_token(usuario["id"])
+        "/comprovantes",
+        json={"arquivo_url": LINK, "hackathon_id": str(fila.hackathon_id)},
+        headers=com_token(usuario["id"]),
     )
 
     assert resposta.status_code == 409
@@ -316,7 +341,9 @@ def test_quem_nunca_enviou_comprovante_pode_enviar(client, fila):
     usuario = fila.usuario_no_banco()
 
     resposta = client.post(
-        "/comprovantes", json={"arquivo_url": LINK}, headers=com_token(usuario["id"])
+        "/comprovantes",
+        json={"arquivo_url": LINK, "hackathon_id": str(fila.hackathon_id)},
+        headers=com_token(usuario["id"]),
     )
 
     assert resposta.status_code == 201
@@ -337,7 +364,9 @@ def test_reenvio_valida_o_link_como_no_cadastro(client, fila, link):
     fila.decidir(client, comprovante, "recusar", motivo_recusa="Ilegível")
 
     resposta = client.post(
-        "/comprovantes", json={"arquivo_url": link}, headers=com_token(usuario["id"])
+        "/comprovantes",
+        json={"arquivo_url": link, "hackathon_id": str(fila.hackathon_id)},
+        headers=com_token(usuario["id"]),
     )
 
     assert resposta.status_code == 422

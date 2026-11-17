@@ -19,8 +19,8 @@ from app.exceptions.auth import (
     inscricoes_indisponiveis,
     senha_atual_incorreta,
 )
-from app.models import ComprovanteVinculo, Usuario
-from app.schemas.auth import CadastroRequest
+from app.models import ComprovanteVinculo, Organizacao, Usuario
+from app.schemas.auth import CadastroOrganizacaoRequest, CadastroRequest
 from app.security.senha import gastar_tempo_de_verificacao, gerar_hash, senha_confere
 from app.services.confirmacao_email import enviar_confirmacao
 from app.services.convite import associar_convites_pendentes
@@ -59,6 +59,33 @@ async def cadastrar_participante(db: AsyncSession, dados: CadastroRequest) -> Us
     # RF01: o e-mail de confirmação sai na mesma transação; falha de envio não derruba o cadastro
     await enviar_confirmacao(db, usuario, usuario.email)
     await db.commit()
+    return usuario
+
+
+async def cadastrar_organizacao(db: AsyncSession, dados: CadastroOrganizacaoRequest) -> Usuario:
+    """Cria a organização e o primeiro Organizador dela na mesma transação. A conta já nasce
+    ativa: é por ela que a organização cadastra hackathons e a própria equipe interna."""
+    organizacao = Organizacao(
+        nome=dados.organizacao.nome,
+        tipo=dados.organizacao.tipo,
+        site=str(dados.organizacao.site) if dados.organizacao.site else None,
+        descricao=dados.organizacao.descricao,
+    )
+    db.add(organizacao)
+    await db.flush()
+    usuario = await criar_usuario(
+        db,
+        Usuario(
+            nome=dados.responsavel.nome,
+            email=dados.responsavel.email.lower(),
+            papel=PapelUsuario.ORGANIZADOR,
+            organizacao_id=organizacao.id,
+            senha_hash=await asyncio.to_thread(gerar_hash, dados.responsavel.senha),
+            situacao_conta=SituacaoConta.ATIVA,
+        ),
+    )
+    await db.commit()
+    await db.refresh(usuario)
     return usuario
 
 

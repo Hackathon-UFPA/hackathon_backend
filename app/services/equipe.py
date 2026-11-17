@@ -6,14 +6,22 @@ from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.const.enums import CategoriaEquipe, FuncaoMembro, PapelUsuario, SituacaoEquipe
+from app.const.enums import (
+    CategoriaEquipe,
+    FuncaoMembro,
+    PapelUsuario,
+    SituacaoEquipe,
+    StatusHackathon,
+)
 from app.controllers.equipe import (
     atualizar_equipe,
+    contar_por_situacao,
     criar_equipe,
     get_equipe_by_id,
     get_equipe_por_chave,
     get_hackathon_by_id,
     listar_equipes_do_usuario,
+    listar_homologadas_com_tamanho,
 )
 from app.controllers.membro_equipe import adicionar_membro, get_membro, get_membro_no_hackathon
 from app.exceptions.convite import (
@@ -30,7 +38,12 @@ from app.exceptions.equipe import (
     equipe_nao_editavel,
 )
 from app.models import Equipe, MembroEquipe, Usuario
-from app.schemas.equipe import EquipeCreate, EquipeUpdate
+from app.schemas.equipe import (
+    EquipeCreate,
+    EquipePublica,
+    EquipesDoHackathonResponse,
+    EquipeUpdate,
+)
 from app.services.composicao import validar_composicao
 from app.services.convite import convidar
 from app.services.somente_leitura import exigir_equipe_editavel
@@ -190,3 +203,25 @@ async def editar(
         raise
     await db.refresh(equipe)
     return equipe
+
+
+async def equipes_do_hackathon(db: AsyncSession, hackathon_id: UUID) -> EquipesDoHackathonResponse:
+    """Vitrine: equipes homologadas e quantas estão em cada etapa. Rascunho não é público."""
+    hackathon = await get_hackathon_by_id(db, hackathon_id)
+    if hackathon is None or hackathon.status == StatusHackathon.RASCUNHO:
+        hackathon_nao_encontrado()
+    homologadas = await listar_homologadas_com_tamanho(db, hackathon_id)
+    contagem = await contar_por_situacao(db, hackathon_id)
+    return EquipesDoHackathonResponse(
+        homologadas=[
+            EquipePublica(
+                nome=equipe.nome or "Equipe sem nome",
+                integrantes=total,
+                homologada_em=equipe.homologada_em,
+            )
+            for equipe, total in homologadas
+        ],
+        total_homologadas=len(homologadas),
+        total_aguardando_homologacao=contagem.get(SituacaoEquipe.AGUARDANDO_HOMOLOGACAO, 0),
+        total_em_formacao=contagem.get(SituacaoEquipe.EM_FORMACAO, 0),
+    )

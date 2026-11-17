@@ -35,6 +35,9 @@ class UsuarioUpdate(BaseModel):
 
 class UsuarioResponse(UsuarioCreate):
     id: UUID
+    organizacao_id: UUID | None = Field(
+        default=None, description="Organização da equipe interna; vazio para Participante"
+    )
     ativo: bool
     situacao_conta: SituacaoConta
     # BE-S5-07: NULL enquanto a posse do e-mail não foi confirmada (informativo)

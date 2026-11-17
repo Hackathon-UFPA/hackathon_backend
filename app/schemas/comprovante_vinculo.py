@@ -50,9 +50,15 @@ class ComprovanteVinculoResponse(ComprovanteVinculoCreate):
     model_config = ConfigDict(from_attributes=True)
 
 
-# O que a pessoa envia ao mandar o comprovante de novo (RF21). O usuário vem do token e o
-# hackathon é o das inscrições abertas, como no cadastro.
+# O que a pessoa envia com o comprovante (RF21). O usuário vem do token.
 class ComprovanteEnvio(BaseModel):
+    hackathon_id: UUID | None = Field(
+        default=None,
+        description=(
+            "Hackathon em que a pessoa quer participar. Sem ele, vale o hackathon com inscrições "
+            "abertas, como no cadastro"
+        ),
+    )
     arquivo_url: Annotated[HttpUrl, AfterValidator(validar_link_do_comprovante)] = Field(
         description=(
             "Link https de um PDF ou imagem (png, jpg, jpeg) do comprovante de vínculo, já "

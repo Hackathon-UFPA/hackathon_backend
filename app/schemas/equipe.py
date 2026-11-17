@@ -84,3 +84,22 @@ class EquipeResponse(EquipeBase):
     atualizado_em: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class EquipePublica(BaseModel):
+    """Equipe na página pública do hackathon. Sem dados dos integrantes (LGPD): só o tamanho."""
+
+    nome: str = Field(examples=["Guardiões da Floresta"])
+    integrantes: int = Field(description="Quantidade de integrantes", examples=[4])
+    homologada_em: datetime | None = None
+
+
+class EquipesDoHackathonResponse(BaseModel):
+    homologadas: list[EquipePublica] = Field(
+        description="Equipes aceitas e completas (situação HOMOLOGADA)"
+    )
+    total_homologadas: int
+    total_aguardando_homologacao: int = Field(
+        description="Inscrição concluída, aguardando a conferência da organização"
+    )
+    total_em_formacao: int = Field(description="Equipes que ainda não concluíram a inscrição")

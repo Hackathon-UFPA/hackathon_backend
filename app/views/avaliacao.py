@@ -16,6 +16,7 @@ from app.schemas.designacao_avaliacao import (
     RedistribuicaoCreate,
 )
 from app.security.dependencias import exigir_papeis
+from app.security.organizacao import gestor_da_proposta, gestor_do_hackathon
 from app.services.avaliacao import consultar as consultar_avaliacao
 from app.services.avaliacao import salvar as salvar_avaliacao
 from app.services.designacao_avaliacao import (
@@ -33,7 +34,8 @@ router_avaliador = APIRouter(prefix="/avaliador/propostas", tags=["Avaliação"]
 
 ERRO_401 = "Sem token, ou token inválido, vencido ou de conta desativada"
 ERRO_403 = "Conta pendente, ou quem pede não tem permissão para esta rota"
-ORGANIZADOR = exigir_papeis(PapelUsuario.ORGANIZADOR)
+ORGANIZADOR = gestor_do_hackathon(PapelUsuario.ORGANIZADOR)
+ORGANIZADOR_DA_PROPOSTA = gestor_da_proposta(PapelUsuario.ORGANIZADOR)
 AVALIADOR = exigir_papeis(PapelUsuario.COMITE_CIENTIFICO)
 
 
@@ -125,7 +127,7 @@ async def redistribuir_proposta(
     submissao_id: UUID,
     dados: RedistribuicaoCreate,
     db: AsyncSession = Depends(get_session),
-    organizador: Usuario = Depends(ORGANIZADOR),
+    organizador: Usuario = Depends(ORGANIZADOR_DA_PROPOSTA),
 ):
     return await redistribuir(db, organizador, submissao_id, dados.avaliador_ids)
 

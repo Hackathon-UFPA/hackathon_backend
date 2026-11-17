@@ -37,6 +37,7 @@ from .material_treinamento import MaterialTreinamento
 from .membro_equipe import MembroEquipe
 from .nota_criterio_avaliacao import NotaCriterioAvaliacao
 from .notificacao import Notificacao, NotificacaoResultado
+from .organizacao import Organizacao
 from .protocolo import Protocolo
 from .resultado import HomologacaoResultado, ResultadoProposta
 from .rubrica import Rubrica
@@ -72,6 +73,7 @@ __all__ = [
     "NotaCriterioAvaliacao",
     "Notificacao",
     "NotificacaoResultado",
+    "Organizacao",
     "Protocolo",
     "ResultadoProposta",
     "Rubrica",

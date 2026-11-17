@@ -60,11 +60,17 @@ async def cadastrar_usuario_por_perfil(
             ),
         )
 
+    # Quem é cadastrado por um gestor entra na equipe interna da organização dele. Participante
+    # não pertence a organização: ele se inscreve em hackathons de qualquer uma.
+    organizacao_id = (
+        None if dados.papel == PapelUsuario.PARTICIPANTE else quem_cadastra.organizacao_id
+    )
     usuario = await criar_usuario(
         db,
         Usuario(
             **dados.model_dump(exclude={"senha", "email", "hackathon_id"}),
             email=dados.email.lower(),
+            organizacao_id=organizacao_id,
             senha_hash=await asyncio.to_thread(gerar_hash, dados.senha),
         ),
     )

@@ -7,14 +7,17 @@ from app.const.enums import FaseRubrica
 from app.db.db import get_session
 from app.models import Usuario
 from app.schemas.rubrica import RubricaRascunhoResponse, RubricaResponse, RubricaUpdate
-from app.security.dependencias import exigir_papeis
-from app.security.permissoes import PERFIS_QUE_GERENCIAM_TEMAS_E_RUBRICAS
+from app.security.organizacao import gestor_do_hackathon
+from app.security.permissoes import (
+    PERFIS_QUE_GERENCIAM_TEMAS_E_RUBRICAS,
+)
 from app.services import rubrica as service
 from app.utils.openapi import respostas_de_erro
 
 router = APIRouter(prefix="/hackathons/{hackathon_id}/rubrica", tags=["Rubrica"])
 
-gerencia_rubricas = exigir_papeis(*PERFIS_QUE_GERENCIAM_TEMAS_E_RUBRICAS)
+# Só a equipe da organização dona do hackathon gerencia a rubrica dele.
+gerencia_rubricas = gestor_do_hackathon(*PERFIS_QUE_GERENCIAM_TEMAS_E_RUBRICAS)
 
 # Cada edição tem uma rubrica por fase (BE-S5-08). Sem o parâmetro, vale a da proposta, que é
 # a que já existia antes: os clientes atuais continuam funcionando sem mudança.

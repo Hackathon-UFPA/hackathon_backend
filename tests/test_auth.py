@@ -1,5 +1,5 @@
 """
-Cadastro de participante (RF01) e login (RF02).
+Cadastro de participante e de organização (RF01) e login (RF02).
 
 Estes testes gravam no banco de verdade; as fixtures de conftest.py apagam os dados no final.
 """
@@ -169,6 +169,94 @@ def test_cadastro_sem_hackathon_com_inscricoes(client, sql, novo_email, monkeypa
 
     assert cadastrar(client, email).status_code == 409
     assert sql("SELECT 1 FROM usuarios WHERE email = :e", e=email) == []
+
+
+# --- Cadastro de organização ---
+
+
+@pytest.fixture
+def organizacoes_criadas(sql):
+    """Ids de organizações criadas no teste. Ao final apaga os usuários e as organizações."""
+    ids: list = []
+    yield ids
+    for id_ in ids:
+        sql("DELETE FROM usuarios WHERE organizacao_id = :o", o=id_)
+        sql("DELETE FROM organizacoes WHERE id = :o", o=id_)
+
+
+def dados_de_organizacao(email: str, **mudancas) -> dict:
+    organizacao = {"nome": "Empresa Teste", "tipo": "EMPRESA", "site": "https://exemplo.com"}
+    responsavel = {"nome": "Maria Souza", "email": email, "senha": SENHA}
+    return {
+        "organizacao": {**organizacao, **mudancas.get("organizacao", {})},
+        "responsavel": {**responsavel, **mudancas.get("responsavel", {})},
+    }
+
+
+def test_cadastro_de_organizacao_cria_organizador_e_entra(
+    client, sql, novo_email, organizacoes_criadas
+):
+    email = novo_email()
+
+    resposta = client.post("/auth/cadastro-organizacao", json=dados_de_organizacao(email))
+
+    assert resposta.status_code == 201, resposta.text
+    corpo = resposta.json()
+    usuario = corpo["usuario"]
+    organizacoes_criadas.append(usuario["organizacao_id"])
+    assert usuario["papel"] == "ORGANIZADOR"
+    assert usuario["situacao_conta"] == "ATIVA"
+    assert usuario["organizacao_id"] is not None
+    assert str(ler_token(corpo["access_token"])) == usuario["id"]
+
+    organizacao = sql(
+        "SELECT nome, tipo::text AS tipo, site FROM organizacoes WHERE id = :o",
+        o=usuario["organizacao_id"],
+    )[0]
+    assert organizacao == {
+        "nome": "Empresa Teste",
+        "tipo": "EMPRESA",
+        "site": "https://exemplo.com/",
+    }
+
+    minha = client.get(
+        "/organizacoes/minha", headers={"Authorization": f"Bearer {corpo['access_token']}"}
+    )
+    assert minha.status_code == 200
+    assert minha.json()["nome"] == "Empresa Teste"
+
+
+def test_cadastro_de_organizacao_com_email_repetido_nao_cria_organizacao(
+    client, sql, hackathon_aberto, novo_email
+):
+    email = novo_email()
+    assert cadastrar(client, email).status_code == 201
+    nome = f"Org repetida {email}"
+
+    resposta = client.post(
+        "/auth/cadastro-organizacao",
+        json=dados_de_organizacao(email, organizacao={"nome": nome}),
+    )
+
+    assert resposta.status_code == 409
+    assert sql("SELECT 1 FROM organizacoes WHERE nome = :n", n=nome) == []
+
+
+@pytest.mark.parametrize(
+    "mudancas",
+    [
+        {"organizacao": {"tipo": "ONG_INEXISTENTE"}},
+        {"organizacao": {"nome": ""}},
+        {"organizacao": {"site": "nao-e-url"}},
+        {"responsavel": {"senha": "fraca"}},
+    ],
+)
+def test_cadastro_de_organizacao_com_dados_invalidos(client, novo_email, mudancas):
+    resposta = client.post(
+        "/auth/cadastro-organizacao", json=dados_de_organizacao(novo_email(), **mudancas)
+    )
+
+    assert resposta.status_code == 422
 
 
 # --- Login ---

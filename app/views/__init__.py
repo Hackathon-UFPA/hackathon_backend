@@ -12,6 +12,7 @@ from app.views.conteudo import router_publico as conteudo_publico
 from app.views.convites import router as convites
 from app.views.emails import router as emails
 from app.views.equipe import router as equipes
+from app.views.equipe import router_publico as equipes_publico
 from app.views.hackathons import router as hackathons
 from app.views.hackathons import router_publico as hackathons_publico
 from app.views.health import router as health
@@ -20,6 +21,7 @@ from app.views.membro_equipe import router as membros_equipe
 from app.views.mentores import router as mentores
 from app.views.mentores import router_publico as mentores_publico
 from app.views.notificacoes import router as notificacoes
+from app.views.organizacoes import router as organizacoes
 from app.views.perfil import router as perfil
 from app.views.regulamento import router as regulamento
 from app.views.resultado import router_admin as resultado_admin
@@ -46,6 +48,7 @@ router.include_router(atribuicoes_mentor)
 router.include_router(usuarios)
 router.include_router(mentores)
 router.include_router(mentores_publico)
+router.include_router(organizacoes)
 router.include_router(hackathons)
 router.include_router(hackathons_publico)
 router.include_router(conteudo)
@@ -54,6 +57,7 @@ router.include_router(regulamento)
 router.include_router(treinamento)
 router.include_router(treinamento_consulta)
 router.include_router(equipes)
+router.include_router(equipes_publico)
 router.include_router(membros_equipe)
 router.include_router(convites)
 router.include_router(termos)

@@ -112,3 +112,17 @@ def ultimo_organizador():
         status_code=status.HTTP_409_CONFLICT,
         detail="Esta é a única conta ativa de Organizador: o sistema não pode ficar sem uma.",
     )
+
+
+def outra_organizacao():
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Este hackathon pertence a outra organização.",
+    )
+
+
+def sem_organizacao():
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Sua conta não está ligada a uma organização.",
+    )

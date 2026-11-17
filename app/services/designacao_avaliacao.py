@@ -101,7 +101,10 @@ async def distribuir(
         for designacao in await listar_designacoes_do_hackathon(db, hackathon.id):
             existentes.setdefault(designacao.submissao_id, set()).add(designacao.avaliador_id)
 
-        elegiveis = [usuario.id for usuario in await listar_avaliadores_elegiveis(db)]
+        elegiveis = [
+            usuario.id
+            for usuario in await listar_avaliadores_elegiveis(db, hackathon.organizacao_id)
+        ]
         carga = await contar_carga_por_avaliador(db, hackathon.id)
 
         novas: list[DesignacaoAvaliacao] = []
@@ -170,7 +173,7 @@ async def redistribuir(
             proposta_com_nota()
         if len(set(avaliador_ids)) != len(avaliador_ids) or len(avaliador_ids) != n:
             quantidade_de_avaliadores_invalida(n)
-        if await contar_elegiveis_entre(db, avaliador_ids) != n:
+        if await contar_elegiveis_entre(db, avaliador_ids, hackathon.organizacao_id) != n:
             avaliadores_nao_elegiveis()
 
         atuais = {d.avaliador_id: d for d in await listar_designacoes_da_submissao(db, proposta.id)}

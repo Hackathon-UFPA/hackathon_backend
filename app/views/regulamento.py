@@ -7,7 +7,7 @@ from app.const.enums import TipoTermo
 from app.db.db import get_session
 from app.models import Usuario
 from app.schemas.conteudo import TermoAdminResponse, TermoRascunhoCreate, TermoRascunhoUpdate
-from app.security.dependencias import exigir_papeis
+from app.security.organizacao import gestor_do_hackathon
 from app.security.permissoes import PERFIS_QUE_GERENCIAM_EDITAL
 from app.services import regulamento as service
 from app.utils.openapi import respostas_de_erro
@@ -16,7 +16,8 @@ router = APIRouter(
     prefix="/admin/hackathons/{hackathon_id}/termos", tags=["Regulamento e termos (admin)"]
 )
 
-gerencia_regulamento = exigir_papeis(*PERFIS_QUE_GERENCIAM_EDITAL)
+# Só o Organizador da organização dona do hackathon (e DEV) mexe no regulamento dele.
+gerencia_regulamento = gestor_do_hackathon(*PERFIS_QUE_GERENCIAM_EDITAL)
 
 ERROS = {
     401: "Sem token, ou token inválido, vencido ou de conta desativada",

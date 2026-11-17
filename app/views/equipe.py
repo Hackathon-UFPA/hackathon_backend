@@ -7,13 +7,20 @@ from app.const.enums import PapelUsuario
 from app.db.db import get_session
 from app.models import Usuario
 from app.schemas.composicao import ComposicaoResponse
-from app.schemas.equipe import ComposicaoUpdate, EquipeCreate, EquipeResponse, EquipeUpdate
+from app.schemas.equipe import (
+    ComposicaoUpdate,
+    EquipeCreate,
+    EquipeResponse,
+    EquipesDoHackathonResponse,
+    EquipeUpdate,
+)
 from app.security.dependencias import exigir_papeis, usuario_ativo
 from app.services import composicao
-from app.services.equipe import consultar, criar, editar, listar_minhas
+from app.services.equipe import consultar, criar, editar, equipes_do_hackathon, listar_minhas
 from app.utils.openapi import respostas_de_erro
 
 router = APIRouter(prefix="/equipes", tags=["Equipes"])
+router_publico = APIRouter(prefix="/hackathons/{hackathon_id}/equipes", tags=["Equipes"])
 
 ERRO_401 = "Sem token, ou token inválido, vencido ou de conta desativada"
 ERRO_403 = "Conta pendente, ou quem pede não tem permissão para esta rota"
@@ -188,3 +195,19 @@ async def substituir_composicao(
     usuario: Usuario = Depends(usuario_ativo),
 ):
     return await composicao.editar(db, usuario, equipe_id, dados)
+
+
+@router_publico.get(
+    "",
+    response_model=EquipesDoHackathonResponse,
+    summary="Equipes do hackathon (público)",
+    description=(
+        "Público, sem login. Lista as equipes **homologadas** (aceitas e completas) com o nome, "
+        "a quantidade de integrantes e a data de homologação, e conta quantas ainda estão em "
+        "formação ou aguardando homologação. Não expõe quem são os integrantes (LGPD). "
+        "Hackathon em rascunho responde 404."
+    ),
+    responses=respostas_de_erro({404: "Hackathon não encontrado"}),
+)
+async def equipes_publicas(hackathon_id: UUID, db: AsyncSession = Depends(get_session)):
+    return await equipes_do_hackathon(db, hackathon_id)

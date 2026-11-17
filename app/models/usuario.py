@@ -32,6 +32,8 @@ class Usuario(SQLModel, table=True):
         sa_type=pg_enum(SituacaoConta, "situacao_conta"),
         nullable=False,
     )
+    # Equipe interna de uma organização; NULL para Participante e DEV
+    organizacao_id: UUID | None = Field(default=None, foreign_key="organizacoes.id")
     # Perfil Mentor (RF37)
     empresa_parceira: str | None = Field(default=None)
     area_atuacao: str | None = Field(default=None)

@@ -9,7 +9,10 @@ from app.const.enums import StatusHackathon
 class HackathonCreate(BaseModel):
     nome: str | None = Field(default=None, max_length=255, examples=["Hackathon UFPA 2026"])
     tema: str | None = Field(default=None, max_length=255, examples=["Cidades inteligentes"])
-    descricao: str | None = Field(default=None, max_length=20000, description="Página pública")
+    descricao: str | None = Field(
+        default=None, max_length=20000, description="Texto de apresentação da página pública"
+    )
+    local: str | None = Field(default=None, max_length=255, examples=["Belém, PA ou On-line"])
     data_inicio: datetime | None = None
     data_fim: datetime | None = None
     status: StatusHackathon = Field(default=StatusHackathon.INSCRICOES)
@@ -50,6 +53,7 @@ class HackathonUpdate(BaseModel):
     nome: str | None = Field(default=None, max_length=255)
     tema: str | None = Field(default=None, max_length=255)
     descricao: str | None = Field(default=None, max_length=20000)
+    local: str | None = Field(default=None, max_length=255)
     data_inicio: datetime | None = None
     data_fim: datetime | None = None
     status: StatusHackathon | None = None
@@ -90,5 +94,7 @@ class HackathonUpdate(BaseModel):
 class HackathonResponse(HackathonCreate):
     id: UUID
     status: StatusHackathon | None = None
+    organizacao_id: UUID | None = Field(default=None, description="Organização dona da edição")
+    organizacao_nome: str | None = None
 
     model_config = ConfigDict(from_attributes=True)

@@ -13,6 +13,7 @@ from app.schemas.comprovante_vinculo import (
     ComprovanteVinculoResponse,
 )
 from app.security.dependencias import exigir_papeis, usuario_atual
+from app.security.organizacao import conferente_do_comprovante
 from app.security.permissoes import PERFIS_QUE_VALIDAM_COMPROVANTE
 from app.services.comprovante_vinculo import aprovar, listar, listar_meus, recusar, reenviar
 from app.utils.openapi import respostas_de_erro
@@ -20,6 +21,7 @@ from app.utils.openapi import respostas_de_erro
 router = APIRouter(tags=["Comprovantes"])
 
 conferente = exigir_papeis(*PERFIS_QUE_VALIDAM_COMPROVANTE)
+conferente_do_item = conferente_do_comprovante(*PERFIS_QUE_VALIDAM_COMPROVANTE)
 
 ERRO_401 = "Sem token, ou token inválido, vencido ou de conta desativada"
 ERRO_403_ADMIN = "Perfil sem permissão para conferir comprovantes, ou conta pendente"
@@ -42,7 +44,7 @@ async def fila_de_comprovantes(
     limite: int = Query(default=50, ge=1, le=200),
     deslocamento: int = Query(default=0, ge=0),
     db: AsyncSession = Depends(get_session),
-    _: Usuario = Depends(conferente),
+    conferente_logado: Usuario = Depends(conferente),
 ):
     return await listar(
         db,
@@ -50,6 +52,7 @@ async def fila_de_comprovantes(
         hackathon_id=hackathon_id,
         limite=limite,
         deslocamento=deslocamento,
+        conferente=conferente_logado,
     )
 
 
@@ -74,7 +77,7 @@ async def fila_de_comprovantes(
 async def aprovar_comprovante(
     comprovante_id: UUID,
     db: AsyncSession = Depends(get_session),
-    validador: Usuario = Depends(conferente),
+    validador: Usuario = Depends(conferente_do_item),
 ):
     return await aprovar(db, validador, comprovante_id)
 
@@ -102,7 +105,7 @@ async def recusar_comprovante(
     comprovante_id: UUID,
     dados: ComprovanteRecusa,
     db: AsyncSession = Depends(get_session),
-    validador: Usuario = Depends(conferente),
+    validador: Usuario = Depends(conferente_do_item),
 ):
     return await recusar(db, validador, comprovante_id, dados.motivo_recusa)
 
@@ -129,17 +132,17 @@ async def meus_comprovantes(
     "/comprovantes",
     response_model=ComprovanteVinculoResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Enviar comprovante de novo",
+    summary="Enviar comprovante de vínculo",
     description=(
-        "Registra um novo comprovante `PENDENTE` depois de uma recusa (RF21, Q25). O anterior "
-        "fica no histórico. Vale para o hackathon com inscrições abertas. Também serve a "
-        "quem teve a conta criada por um gestor e ainda não enviou comprovante. Funciona com "
-        "a conta pendente."
+        "Envia o comprovante de vínculo para participar de um hackathon (RF21). A organização "
+        "dona do hackathon confere e aprova. Depois de uma recusa, serve para mandar outro; o "
+        "anterior fica no histórico. Exige inscrições abertas no hackathon informado."
     ),
     responses=respostas_de_erro(
         {
             401: ERRO_401,
-            409: "Já existe comprovante pendente ou aprovado, ou não há inscrições abertas",
+            404: "Hackathon não encontrado",
+            409: "Já existe comprovante pendente ou aprovado, ou as inscrições não estão abertas",
         }
     ),
 )
