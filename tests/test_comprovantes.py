@@ -413,7 +413,7 @@ def test_reenvio_sem_edicao_aberta_preserva_erro_e_historico(client, fila, monke
     async def nenhum(db):
         return None
 
-    monkeypatch.setattr("app.services.comprovante_vinculo.get_hackathon_com_inscricoes", nenhum)
+    monkeypatch.setattr("app.services.edicao_participante.get_hackathon_com_inscricoes", nenhum)
     resposta = client.post(
         "/comprovantes", json={"arquivo_url": LINK}, headers=com_token(usuario["id"])
     )

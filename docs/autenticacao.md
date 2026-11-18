@@ -27,7 +27,7 @@ A plataforma é **multi-organização**: empresas e instituições de ensino se 
 | `PATCH /admin/usuarios/{id}` | Organizador e Comitê Científico (e DEV) | Edita dados pessoais e, só entre perfis de gestão, o perfil (RN24)       |
 | `POST /admin/usuarios/{id}/desativar`, `.../reativar` | Organizador e Comitê Científico (e DEV) | Desativa ou reativa uma conta do seu alcance (RN24)        |
 
-**Cadastro de participante.** Exige nome, e-mail, instituição, curso, período, senha e o link do comprovante de vínculo (`https`, terminando em `.pdf`, `.png`, `.jpg` ou `.jpeg`; o arquivo fica em um serviço externo como o Cloudinary). A senha precisa de 8 a 128 caracteres, com pelo menos uma letra e um número. O e-mail é guardado em minúsculas e não pode repetir. O perfil nunca vem do cliente. O comprovante é ligado ao hackathon com inscrições abertas (`status = INSCRICOES`); sem nenhum, o cadastro responde 409. A conta nasce `PENDENTE` e só passa a `ATIVA` quando o Comitê Científico aprovar o comprovante (RN25, tarefa futura). Para participar de outro hackathon, a pessoa envia um novo comprovante em `POST /comprovantes`, informando o `hackathon_id` (sem ele, vale o hackathon com inscrições abertas, como no cadastro).
+**Cadastro de participante.** Exige nome, e-mail, instituição, curso, período, senha e o link do comprovante de vínculo (`https`, terminando em `.pdf`, `.png`, `.jpg` ou `.jpeg`; o arquivo fica em um serviço externo como o Cloudinary). A senha precisa de 8 a 128 caracteres, com pelo menos uma letra e um número. O e-mail é guardado em minúsculas e não pode repetir, inclusive entre edições. O perfil nunca vem do cliente. O corpo aceita `hackathon_id`: o comprovante inicial fica somente nessa edição, que precisa existir (404), ter status `INSCRICOES` e estar dentro do período de inscrições (409). Sem ID, mantém o legado apenas quando há uma única edição elegível; nenhuma ou várias retornam 409. A conta nasce `PENDENTE` e passa a `ATIVA` na aprovação do comprovante (RN25); isso não comprova vínculo em outras edições. Conta, comprovante, associação de convites e confirmação de e-mail gravam juntos ou sofrem rollback. Para participar de outro hackathon, a pessoa usa a mesma conta e envia um novo comprovante em `POST /comprovantes`, informando `hackathon_id`. Veja os [contratos por hackathon e ajustes do frontend](cadastro-por-hackathon.md).
 
 **Cadastro de organização.** Recebe `organizacao` (`nome`, `tipo` = `EMPRESA`, `INSTITUICAO_ENSINO` ou `OUTRO`, `site` e `descricao` opcionais) e `responsavel` (`nome`, `email`, `senha`). Cria as duas coisas na mesma transação e já devolve o token, como o login.
 
@@ -125,7 +125,8 @@ O Swagger em `/docs` descreve cada rota, os campos e os erros possíveis e serve
 
 ```
 POST /auth/cadastro
-{ "nome": "Ana Souza", "email": "ana@ufpa.br", "senha": "segredo123",
+{ "hackathon_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "nome": "Ana Souza", "email": "ana@ufpa.br", "senha": "segredo123",
   "instituicao": "UFPA", "curso": "Sistemas de Informação", "periodo": 5,
   "comprovante_url": "https://res.cloudinary.com/.../comprovante.pdf" }
 → 201  { "id": "...", "email": "ana@ufpa.br", "papel": "PARTICIPANTE", "situacao_conta": "PENDENTE", ... }

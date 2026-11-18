@@ -3,6 +3,7 @@
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from fastapi import HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.const.enums import StatusHackathon
@@ -52,7 +53,7 @@ def test_selecao_respeita_periodo_do_edital(hackathon_aberto, periodo_inscricoes
     rodar(verificar)
 
 
-def test_selecao_preserva_ordem_e_ignora_edicoes_fora_do_periodo():
+def test_selecao_recusa_ambiguidade_e_ignora_edicoes_fora_do_periodo():
     async def verificar(conn):
         await sql_na_transacao(conn, "UPDATE hackathon SET status = 'INSCRICOES_ENCERRADAS'")
         agora = datetime.now(UTC)
@@ -78,13 +79,18 @@ def test_selecao_preserva_ordem_e_ignora_edicoes_fora_do_periodo():
         async with AsyncSession(bind=conn) as db:
             db.add_all([sem_inicio, antiga, recente, encerrada, futura])
             await db.flush()
-            for esperada in [recente, antiga, sem_inicio]:
-                escolhida = await get_hackathon_com_inscricoes(db)
-                assert escolhida is not None
-                assert escolhida.id == esperada.id
-                esperada.status = StatusHackathon.INSCRICOES_ENCERRADAS
-                db.add(esperada)
+            for removida in [recente, antiga]:
+                with pytest.raises(HTTPException) as erro:
+                    await get_hackathon_com_inscricoes(db)
+                assert erro.value.status_code == 409
+                assert "hackathon_id" in erro.value.detail
+                removida.status = StatusHackathon.INSCRICOES_ENCERRADAS
+                db.add(removida)
                 await db.flush()
+            assert (await get_hackathon_com_inscricoes(db)).id == sem_inicio.id
+            sem_inicio.status = StatusHackathon.INSCRICOES_ENCERRADAS
+            db.add(sem_inicio)
+            await db.flush()
             assert await get_hackathon_com_inscricoes(db) is None
 
     rodar(verificar)

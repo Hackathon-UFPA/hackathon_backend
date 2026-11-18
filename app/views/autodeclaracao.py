@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, Query
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.db.db import get_session
@@ -16,7 +18,8 @@ router = APIRouter(prefix="/me/autodeclaracao", tags=["Autodeclaração"])
 
 ERRO_401 = "Sem token, ou token inválido, vencido ou de conta desativada"
 ERRO_403 = "Só participantes declaram o próprio vínculo"
-ERRO_409 = "Não há hackathon com inscrições abertas no momento"
+ERRO_409 = "Inscrições indisponíveis ou várias edições elegíveis: informe hackathon_id"
+EDICAO = "Edição solicitada. Sem ID, só aceita uma única edição com inscrições abertas."
 
 # As duas rotas aceitam conta pendente: quem ainda espera a conferência do comprovante já pode e
 # precisa declarar o próprio vínculo.
@@ -27,18 +30,23 @@ ERRO_409 = "Não há hackathon com inscrições abertas no momento"
     response_model=AutodeclaracaoSituacaoResponse,
     summary="Minha autodeclaração e a comprovação do vínculo",
     description=(
-        "Mostra, para a edição com inscrições abertas, a declaração mais recente e o histórico de "
+        "Mostra, para o hackathon_id da consulta, a declaração mais recente e o histórico de "
         "declarações de quem está logado, ao lado do comprovante do vínculo que vale para a "
         "pessoa (BE-S5-03). `vinculo_comprovado` só é verdadeiro com comprovante `APROVADO`: "
         "declarar não comprova nada. Não traz o link do documento. Funciona com a conta "
-        "pendente."
+        "pendente. Com ID explícito permite consultar edições históricas, sem reabrir o prazo "
+        "para alterações. Rascunhos não são públicos. Sem ID, só aceita uma edição elegível."
     ),
-    responses=respostas_de_erro({401: ERRO_401, 403: ERRO_403, 409: ERRO_409}),
+    responses=respostas_de_erro(
+        {401: ERRO_401, 403: ERRO_403, 404: "Hackathon não encontrado", 409: ERRO_409}
+    ),
 )
 async def minha_autodeclaracao(
-    db: AsyncSession = Depends(get_session), usuario: Usuario = Depends(usuario_atual)
+    hackathon_id: UUID | None = Query(default=None, description=EDICAO),
+    db: AsyncSession = Depends(get_session),
+    usuario: Usuario = Depends(usuario_atual),
 ):
-    return await situacao(db, usuario)
+    return await situacao(db, usuario, hackathon_id)
 
 
 @router.put(
@@ -52,13 +60,15 @@ async def minha_autodeclaracao(
         "nem o líder. Cada mudança grava uma declaração nova, sem apagar as anteriores "
         "(auditoria); repetir a declaração atual não grava nada. A equipe é reavaliada: se o tipo "
         "declarado contradiz o que o líder indicou, a equipe sai da homologação (pendência "
-        "`TIPO_DIVERGENTE`) até alguém corrigir. Vale para a edição com inscrições abertas. "
+        "`TIPO_DIVERGENTE`) até alguém corrigir. Usa hackathon_id na consulta, com o corpo "
+        "original da declaração. Exige inscrições abertas na edição selecionada. "
         "Funciona com a conta pendente."
     ),
     responses=respostas_de_erro(
         {
             401: ERRO_401,
             403: ERRO_403,
+            404: "Hackathon não encontrado",
             409: ERRO_409,
             422: "Campos obrigatórios do tipo ausentes, campos do outro tipo ou valores inválidos",
         }
@@ -66,7 +76,8 @@ async def minha_autodeclaracao(
 )
 async def declarar_vinculo(
     dados: AutodeclaracaoEnvio,
+    hackathon_id: UUID | None = Query(default=None, description=EDICAO),
     db: AsyncSession = Depends(get_session),
     usuario: Usuario = Depends(usuario_atual),
 ):
-    return await declarar(db, usuario, dados)
+    return await declarar(db, usuario, dados, hackathon_id)

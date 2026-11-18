@@ -81,6 +81,7 @@ O tipo `CONVITE_EQUIPE` ganhou uma variante para quem não tem conta: o texto ex
 
 - **Comprovante opcional no cadastro por convite:** diverge do RF01, que o exige no cadastro. Foi escolhido para o convidado preencher o vínculo depois, junto com a autodeclaração (BE-S5-03). Se o grupo preferir exigi-lo já aqui, basta tornar `comprovante_url` obrigatório em `CadastroPorConviteRequest`.
 - **Tipo do comprovante no cadastro:** no cadastro por convite, o comprovante opcional nasce com o tipo de vínculo que o líder indicou no convite (`ESTUDANTE` ou `PROFISSIONAL`), que é o que a homologação confere ([BE-S5-03](autodeclaracao-e-comprovantes.md)). O cadastro público continua registrando o comprovante como `ESTUDANTE`.
+- **Edição do cadastro (BE-S6-14):** no link de convite, o hackathon vem sempre da equipe, mesmo com outras edições abertas. O corpo continua recusando `hackathon_id` (422). Quem optar pelo cadastro público informa o ID da edição no corpo; para declarar depois ou enviar comprovante, deve selecionar a mesma edição explicitamente. Veja [contratos por hackathon](cadastro-por-hackathon.md).
 - **Reenvio de link vencido:** não há rota de reenvio; o líder cancela e convida de novo ou substitui a composição.
 - **Notificação retroativa:** o convite vira aviso na central quando a conta passa a existir; a central em si continua exigindo conta ativa.
 

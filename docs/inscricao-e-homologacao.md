@@ -23,6 +23,8 @@ BE-S4-05 (RF21, RF22, RF23, RF25).
 
 **Autodeclaração e comprovante por tipo (BE-S5-03).** A homologação confere, de cada pessoa, o comprovante do tipo que o líder indicou (um acadêmico aprovado não vale para quem é `PROFISSIONAL`), e a edição pode dispensar o comprovante de um tipo ou exigir a autodeclaração de todos. Pendências novas: `AUTODECLARACAO_PENDENTE` e `TIPO_DIVERGENTE`, que só pesam na homologação. Veja [Autodeclaração e comprovantes](autodeclaracao-e-comprovantes.md).
 
+**Isolamento por edição (BE-S6-14).** Cadastro, declaração e envio de comprovante aceitam seleção explícita de hackathon. Sem ID, só há compatibilidade quando existe uma única edição com inscrições abertas. Aprovar um comprovante ativa a conta global, mas só comprova o vínculo e reavalia a equipe da edição do documento; a aprovação não homologa equipes de outras edições. Conferentes continuam restritos à organização dona do evento, com a exceção DEV. Veja [contratos e exemplos](cadastro-por-hackathon.md).
+
 **Categoria (BE-S5-01).** O painel traz a `categoria` da equipe e o `tipo_integrante` de cada pessoa. Duas pendências novas bloqueiam a conclusão: `CATEGORIA_NAO_PERMITIDA` (a edição não aceita a categoria) e `CATEGORIA_INCOERENTE` (os tipos dos integrantes não formam a categoria). Veja [Equipes e membros](equipes-e-membros.md#categorias-e-composição-informada-pelo-líder-be-s5-01).
 
 **Painel.** `pendencias` lista cada coisa que falta, com `codigo`, `mensagem`, a pessoa responsável (`usuario_id`) e `bloqueia_conclusao`. `pode_concluir` é a flag para a interface mostrar o botão de concluir: só é verdadeira para o líder, com a equipe em formação e nenhum bloqueio. Convites sem resposta ou recusados aparecem na lista de `integrantes` com `integrante = false`.
@@ -33,7 +35,7 @@ BE-S4-05 (RF21, RF22, RF23, RF25).
 - **Quem não tem comprovante.** "Vínculo validado" significa ter comprovante `APROVADO` no hackathon. Participante cadastrado por um gestor (conta ativa, sem comprovante) segura a homologação até enviar um com `POST /comprovantes` e ser aprovado.
 - **Recusa.** Só comprovantes `PENDENTE` são decididos; um comprovante aprovado não é revogado por esta API.
 - **Avisos.** Ao concluir a inscrição, todos os integrantes recebem por e-mail o protocolo (`INSCRICAO_CONCLUIDA`), e quando a equipe passa a homologada recebem `EQUIPE_HOMOLOGADA` (RF22, RF23, RF60; veja [E-mails](emails.md)). O resultado da conferência do comprovante (RF21) ainda não tem e-mail: continua disponível por consulta em `GET /comprovantes/meus` e `GET /equipes/{id}/painel`.
-- **Prazo.** A conclusão confere também as datas do edital quando existem, ao contrário das demais rotas, que olham só o `status`.
+- **Prazo.** Cadastro, convite, aceite, conclusão, alteração da declaração e envio de comprovante conferem status e datas de inscrições quando definidas. Consultar o próprio histórico por ID explícito não reabre o prazo de alteração.
 
 ---
 

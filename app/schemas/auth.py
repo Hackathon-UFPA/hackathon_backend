@@ -43,6 +43,13 @@ def validar_link_do_comprovante(url: HttpUrl) -> HttpUrl:
 class CadastroRequest(BaseModel):
     """Cadastro público de participante (RF01). O perfil nunca vem do cliente."""
 
+    hackathon_id: UUID | None = Field(
+        default=None,
+        description=(
+            "Edição escolhida para o comprovante inicial. Sem ID, aceita somente uma edição "
+            "com inscrições abertas; várias edições elegíveis retornam 409."
+        ),
+    )
     nome: Texto = Field(description="Nome completo", examples=["João da Silva"])
     email: EmailStr = Field(
         description="Não pode repetir, mesmo com letras maiúsculas diferentes",

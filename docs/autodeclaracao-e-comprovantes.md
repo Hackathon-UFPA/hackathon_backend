@@ -2,7 +2,7 @@
 
 # Autodeclaração e comprovantes individuais por tipo — BE-S5-03
 
-RF01, RF18, RF20 a RF23; RN01, RN05, RN25. Depende da [BE-S5-01](equipes-e-membros.md#categorias-e-composição-informada-pelo-líder-be-s5-01) (categoria da equipe e tipo de cada integrante). A BE-S5-02 (cadastro da equipe e dos integrantes em um fluxo, com ativação própria de quem não tem conta) é de outra entrega: aqui o convidado usa o cadastro que já existe (`POST /auth/cadastro`) e esta tarefa cuida do que vem depois.
+RF01, RF18, RF20 a RF23; RN01, RN05, RN25. Depende da [BE-S5-01](equipes-e-membros.md#categorias-e-composição-informada-pelo-líder-be-s5-01) (categoria da equipe e tipo de cada integrante). O cadastro próprio por convite está na [BE-S5-02](cadastro-equipe-integrantes.md). A seleção explícita da edição e a compatibilidade segura estão na [BE-S6-14](cadastro-por-hackathon.md).
 
 Decisões da reunião de 05/11/2026 têm precedência operacional provisória sobre o documento da Sprint 2. A regra de elegibilidade de profissionais e mistos **ainda precisa de validação formal com o Squad 1** (veja "Política da edição").
 
@@ -19,39 +19,39 @@ A resposta de `GET /me/autodeclaracao` mostra as duas coisas lado a lado e nunca
 
 | Rota | Quem acessa | O que faz |
 |------|-------------|-----------|
-| `PUT /me/autodeclaracao` | Participante (e DEV), inclusive com a conta pendente | A pessoa declara o próprio vínculo na edição com inscrições abertas |
-| `GET /me/autodeclaracao` | Participante (e DEV), inclusive com a conta pendente | Declaração atual, histórico e o comprovante que vale para a pessoa, com `vinculo_comprovado` |
+| `PUT /me/autodeclaracao?hackathon_id={id}` | Participante (e DEV), inclusive com a conta pendente | Declara o próprio vínculo na edição solicitada, com inscrições abertas |
+| `GET /me/autodeclaracao?hackathon_id={id}` | Participante (e DEV), inclusive com a conta pendente | Declaração atual, histórico e comprovante na edição solicitada, inclusive histórica, com `vinculo_comprovado` |
 | `POST /comprovantes` | Qualquer usuário logado (como antes) | Passa a registrar o **tipo** do vínculo (veja abaixo) |
 | `GET /admin/comprovantes` e `POST /admin/comprovantes/{id}/aprovar` e `/recusar` | Organizador e Comitê Científico (e DEV, Q25) | Como antes; a fila traz `tipo_vinculo` e a `autodeclaracao` ligada, para comparar com o documento |
 
 ### Autorização estrita
 
-- O usuário vem **sempre do token**. Não existe rota nem campo para declarar, enviar comprovante ou aceitar termos em nome de outra pessoa; o líder também não. Campos extras (`usuario_id`, `hackathon_id`, `status`, `termos_ids`...) dão 422.
+- O usuário vem **sempre do token**. Não existe rota nem campo para declarar, enviar comprovante ou aceitar termos em nome de outra pessoa; o líder também não. Na autodeclaração, campos extras no corpo (`usuario_id`, `hackathon_id`, `status`, `termos_ids`...) dão 422; `hackathon_id` é aceito somente na consulta. O comprovante aceita `hackathon_id` no corpo e preserva o comportamento anterior de ignorar campos extras, sem usá-los para escolher o dono.
 - Os aceites de termos continuam individuais (`POST /convites/{id}/aceitar` e `POST /hackathons/{id}/termos/aceites` usam o usuário logado).
 - Só participantes declaram: Organizador, Comitê e Mentor recebem 403. DEV segue a exceção do time.
 - O líder indica o tipo de cada pessoa (BE-S5-01) e a pessoa **confirma com a própria conta**. Os dois podem divergir, e isso aparece como pendência (abaixo); nada é sobrescrito.
 
 ### Declarar
 
-`PUT /me/autodeclaracao` aceita `tipo` e os campos desse tipo:
+`PUT /me/autodeclaracao?hackathon_id={id}` aceita `tipo` e os campos desse tipo no corpo:
 
 ```json
 {"tipo": "ESTUDANTE", "instituicao": "UFPA", "curso": "Sistemas de Informação", "periodo": 5}
 {"tipo": "PROFISSIONAL", "organizacao": "Açaí Valley", "cargo": "Engenheira"}
 ```
 
-Campos obrigatórios do tipo ausentes, campos do outro tipo ou valores em branco dão 422. Vale para a edição com inscrições abertas (a mesma do cadastro e do reenvio do comprovante); sem ela, 409.
+Campos obrigatórios do tipo ausentes, campos do outro tipo ou valores em branco dão 422. Alterar exige inscrições abertas na edição solicitada; fora do status ou período, 409. ID inexistente dá 404. GET com ID explícito permite consultar o próprio histórico após o encerramento, inclusive em edição finalizada ou cancelada; rascunho retorna 404. Sem ID, GET e PUT usam somente uma única edição com inscrições abertas; nenhuma ou várias dão 409. A omissão nunca escolhe uma edição histórica.
 
 **Auditoria.** Cada mudança grava uma linha nova com a data, e a anterior continua no histórico. Repetir a declaração atual não grava nada. Um trigger do banco impede alterar uma declaração gravada, mesmo fora da API (excluir segue possível, como na remoção de uma edição). Declarações simultâneas da mesma pessoa são serializadas: duas iguais viram uma só.
 
-**Efeito na equipe.** Declarar reavalia a homologação da equipe da pessoa. Se o tipo declarado contradiz o que o líder indicou, a equipe sai da homologação (`TIPO_DIVERGENTE`) até o líder corrigir a composição (`PUT /equipes/{id}/composicao`) ou a pessoa rever a declaração. Como a pessoa pode se declarar a qualquer momento, isso é intencional: quem confirma é ela.
+**Efeito na equipe.** Declarar reavalia somente a equipe da pessoa na edição solicitada. Se o tipo declarado contradiz o que o líder indicou, a equipe sai da homologação (`TIPO_DIVERGENTE`) até o líder corrigir a composição (`PUT /equipes/{id}/composicao`) ou a pessoa rever a declaração. A alteração continua limitada ao prazo de inscrições; equipes de outras edições não são reavaliadas.
 
 ## Comprovante por tipo
 
 O comprovante agora diz qual vínculo comprova (`tipo_vinculo`) e qual declaração ele sustenta (`autodeclaracao_id`, quando houver):
 
-- **Quem decide o tipo é o servidor, não o pedido.** `POST /comprovantes` usa o tipo que o líder indicou, se a pessoa já está em uma equipe da edição; senão o que ela declarou; senão `ESTUDANTE`, como antes da tarefa. O pedido só traz o link.
-- O limite de **um comprovante em aberto ou aprovado** passou a valer **por tipo** (`uq_comprovantes_vinculo_ativo` inclui `tipo_vinculo`). Quem muda de tipo precisa de um comprovante do tipo novo, mesmo com um aprovado do outro.
+- **Quem decide o tipo é o servidor, não o pedido.** `POST /comprovantes` usa o tipo que o líder indicou, se a pessoa já está em uma equipe da edição; senão o que ela declarou nessa edição; senão `ESTUDANTE`, como antes da tarefa. O pedido traz o link e `hackathon_id`. Sem ID, só aceita uma única edição elegível, como no cadastro.
+- O limite de **um comprovante em aberto ou aprovado** vale **por usuário, edição e tipo** (`uq_comprovantes_vinculo_ativo` inclui `tipo_vinculo`). Quem muda de tipo ou edição precisa de um comprovante correspondente, mesmo com um aprovado em outro contexto.
 - Para a homologação **só vale o comprovante do tipo que o líder indicou**: um comprovante acadêmico aprovado não comprova o vínculo de quem é indicado como `PROFISSIONAL`.
 - Recusa e reenvio funcionam como antes, dentro do tipo: o comprovante recusado fica no histórico, o motivo aparece em `GET /comprovantes/meus` e a pessoa envia outro.
 - Os que já existiam eram acadêmicos e viram `ESTUDANTE`.

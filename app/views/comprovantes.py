@@ -137,12 +137,14 @@ async def meus_comprovantes(
         "Envia o comprovante de vínculo para participar de um hackathon (RF21). A organização "
         "dona do hackathon confere e aprova. Depois de uma recusa, serve para mandar outro; o "
         "anterior fica no histórico. Exige inscrições abertas no hackathon informado."
+        " Sem hackathon_id no corpo, só aceita uma edição elegível; várias retornam 409."
     ),
     responses=respostas_de_erro(
         {
             401: ERRO_401,
             404: "Hackathon não encontrado",
-            409: "Já existe comprovante pendente ou aprovado, ou as inscrições não estão abertas",
+            409: "Comprovante ativo existente, inscrições indisponíveis ou edição ambígua",
+            422: "Campos inválidos, inclusive hackathon_id fora do formato UUID",
         }
     ),
 )

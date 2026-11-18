@@ -38,12 +38,18 @@ router = APIRouter(prefix="/auth", tags=["Autenticação"])
     summary="Cadastrar participante",
     description=(
         "Cadastro público (RF01), sem login. Cria sempre um **Participante** com a conta "
-        "**pendente** e registra o comprovante de vínculo no hackathon com inscrições abertas. "
+        "**pendente** e registra o comprovante de vínculo no `hackathon_id` informado no corpo. "
+        "Exige status INSCRICOES e período aberto. Sem ID, só aceita uma única edição elegível; "
+        "se houver várias, retorna 409 pedindo hackathon_id. "
         "A conta só fica ativa quando o Comitê Científico aprovar o comprovante. Um e-mail de "
         "confirmação do endereço é enviado (informativo: não bloqueia o acesso)."
     ),
     responses=respostas_de_erro(
-        {409: "E-mail já cadastrado, ou nenhum hackathon com inscrições abertas no momento"}
+        {
+            404: "Hackathon não encontrado",
+            409: "E-mail já cadastrado, inscrições indisponíveis ou seleção de edição ambígua",
+            422: "Campos inválidos, inclusive hackathon_id fora do formato UUID",
+        }
     ),
 )
 async def cadastrar(dados: CadastroRequest, db: AsyncSession = Depends(get_session)):

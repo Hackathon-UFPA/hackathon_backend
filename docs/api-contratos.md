@@ -36,6 +36,8 @@ Authorization: Bearer <access_token>
 
 O fluxo completo (cadastro, login, conta pendente, perfis) está em [Autenticação e permissões](autenticacao.md).
 
+Os contratos de cadastro, autodeclaração e comprovantes com seleção explícita de edição, os erros e os ajustes necessários no frontend estão em [Cadastro por hackathon — BE-S6-14](cadastro-por-hackathon.md).
+
 O cadastro e gerenciamento em `/admin/mentores`, os contratos de onboarding e a separação entre ativação do mentor e pendência acadêmica estão em [Mentores](mentores.md).
 
 ## Formato dos erros

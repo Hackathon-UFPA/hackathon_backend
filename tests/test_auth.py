@@ -164,7 +164,7 @@ def test_cadastro_sem_hackathon_com_inscricoes(client, sql, novo_email, monkeypa
     async def nenhum(db):
         return None
 
-    monkeypatch.setattr("app.services.auth.get_hackathon_com_inscricoes", nenhum)
+    monkeypatch.setattr("app.services.edicao_participante.get_hackathon_com_inscricoes", nenhum)
     email = novo_email()
 
     assert cadastrar(client, email).status_code == 409
