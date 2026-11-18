@@ -11,7 +11,7 @@ from pydantic import (
     model_validator,
 )
 
-from app.const.enums import PapelUsuario, TipoOrganizacao
+from app.const.enums import PapelUsuario, TipoIntegrante, TipoOrganizacao
 from app.schemas.usuario import UsuarioCreate, UsuarioResponse
 from app.security.senha import SENHA_MAX_CARACTERES, SENHA_MIN_CARACTERES, validar_forca_da_senha
 
@@ -40,8 +40,16 @@ def validar_link_do_comprovante(url: HttpUrl) -> HttpUrl:
     return url
 
 
+# RF01: o que cada tipo de participante informa no cadastro público
+CAMPOS_DO_ESTUDANTE = ("instituicao", "curso", "periodo")
+CAMPOS_DO_PROFISSIONAL = ("organizacao", "cargo")
+
+
 class CadastroRequest(BaseModel):
-    """Cadastro público de participante (RF01). O perfil nunca vem do cliente."""
+    """Cadastro público de participante (RF01). O perfil nunca vem do cliente.
+
+    Estudante informa instituição, curso e período; profissional, organização e cargo.
+    Campos do outro tipo dão 422. Sem `tipo`, vale ESTUDANTE (contrato anterior)."""
 
     hackathon_id: UUID | None = Field(
         default=None,
@@ -56,9 +64,23 @@ class CadastroRequest(BaseModel):
         examples=["joao@ufpa.br"],
     )
     senha: SenhaNova = Field(description=DESCRICAO_DA_SENHA, examples=["segredo123"])
-    instituicao: Texto = Field(examples=["UFPA"])
-    curso: Texto = Field(examples=["Sistemas de Informação"])
-    periodo: int = Field(gt=0, examples=[5])
+    tipo: TipoIntegrante = Field(
+        default=TipoIntegrante.ESTUDANTE,
+        description=(
+            "Vínculo de quem se cadastra. Também é o tipo do comprovante inicial. Profissional "
+            "já fica com a autodeclaração registrada na edição escolhida"
+        ),
+        examples=["ESTUDANTE"],
+    )
+    instituicao: Texto | None = Field(default=None, examples=["UFPA"])
+    curso: Texto | None = Field(default=None, examples=["Sistemas de Informação"])
+    periodo: int | None = Field(default=None, gt=0, le=32767, examples=[5])
+    organizacao: Texto | None = Field(
+        default=None, description="Profissional: empresa ou instituição", examples=["Açaí Labs"]
+    )
+    cargo: Texto | None = Field(
+        default=None, description="Profissional: cargo ou função", examples=["Desenvolvedora"]
+    )
     comprovante_url: Annotated[HttpUrl, AfterValidator(validar_link_do_comprovante)] = Field(
         description=(
             "Link https de um PDF ou imagem (png, jpg, jpeg) do comprovante de vínculo, já "
@@ -66,6 +88,20 @@ class CadastroRequest(BaseModel):
         ),
         examples=["https://res.cloudinary.com/.../comprovante.pdf"],
     )
+
+    @model_validator(mode="after")
+    def campos_do_tipo(self):
+        if self.tipo == TipoIntegrante.ESTUDANTE:
+            obrigatorios, proibidos = CAMPOS_DO_ESTUDANTE, CAMPOS_DO_PROFISSIONAL
+        else:
+            obrigatorios, proibidos = CAMPOS_DO_PROFISSIONAL, CAMPOS_DO_ESTUDANTE
+        faltando = [c for c in obrigatorios if getattr(self, c) is None]
+        sobrando = [c for c in proibidos if getattr(self, c) is not None]
+        if faltando:
+            raise ValueError(f"Para o tipo {self.tipo}, informe: {', '.join(faltando)}")
+        if sobrando:
+            raise ValueError(f"Para o tipo {self.tipo}, não informe: {', '.join(sobrando)}")
+        return self
 
 
 class LoginRequest(BaseModel):

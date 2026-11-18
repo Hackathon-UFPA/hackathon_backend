@@ -72,3 +72,24 @@ class TreinamentoResponse(BaseModel):
     id: UUID
     treinamento_concluido_em: datetime | None
     treinamento_concluido_por: UUID | None
+
+
+class EquipeAprovadaParaMentoria(BaseModel):
+    """Equipe com proposta aprovada no resultado homologado: pode receber mentor (RF38)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    equipe_id: UUID
+    equipe_nome: str | None = None
+    titulo: str | None = None
+    tema_titulo: str | None = None
+
+
+class EquipesAprovadasParaMentoriaResponse(BaseModel):
+    hackathon_id: UUID
+    homologado: bool = Field(
+        description="Falso enquanto o resultado não for homologado; a lista vem vazia"
+    )
+    equipes: list[EquipeAprovadaParaMentoria] = Field(
+        description="Em ordem alfabética pela equipe, sem notas nem classificação"
+    )
