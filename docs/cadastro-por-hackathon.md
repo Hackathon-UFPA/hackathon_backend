@@ -156,6 +156,21 @@ Referências inspecionadas: [cliente HTTP](https://github.com/Hackathon-UFPA/hac
 [perfil](https://github.com/Hackathon-UFPA/hackathon_frontend/blob/441cfdbd82bfc24228236228c077e852372be65e/app/perfil/page.tsx) e
 [formulário de comprovante](https://github.com/Hackathon-UFPA/hackathon_frontend/blob/441cfdbd82bfc24228236228c077e852372be65e/components/modulo-c/ComprovanteCard.tsx).
 
+## Cadastro público de profissionais (RF01)
+
+`POST /auth/cadastro` aceita `tipo`: `ESTUDANTE` (padrão, contrato anterior) ou `PROFISSIONAL`.
+
+| Tipo | Campos obrigatórios | O que é gravado |
+|---|---|---|
+| `ESTUDANTE` | `instituicao`, `curso`, `periodo` | Dados na conta, como antes; comprovante `ESTUDANTE`; nenhuma autodeclaração |
+| `PROFISSIONAL` | `organizacao`, `cargo` | Autodeclaração `PROFISSIONAL` na edição escolhida e comprovante `PROFISSIONAL` ligado a ela (`autodeclaracao_id`); instituição, curso e período ficam nulos na conta |
+
+Campos do outro tipo dão 422, com a mesma regra de `PUT /me/autodeclaracao`. Organização e
+cargo não vão para a conta porque, como na autodeclaração, pertencem à edição. A conta nasce
+pendente nos dois casos e tudo fica na mesma transação: uma falha não deixa conta, declaração
+nem comprovante. A elegibilidade de profissionais em cada categoria continua sendo a regra
+provisória da BE-S5-01, pendente de validação do Squad 1.
+
 ## Banco e decisões de produto
 
 **Não é necessária migration.** As tabelas já têm `hackathon_id`; os índices existentes cobrem

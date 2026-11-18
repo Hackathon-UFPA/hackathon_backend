@@ -12,6 +12,7 @@ from app.schemas.atribuicao_mentor import (
     AtribuicaoResponse,
     AtribuicaoSubstituir,
     EquipeAcompanhadaResponse,
+    EquipesAprovadasParaMentoriaResponse,
     MentorDaEquipeResponse,
     TreinamentoResponse,
 )
@@ -161,6 +162,24 @@ async def treinamento(
     _: Usuario = Depends(gestor_deste_hackathon),
 ):
     return await service.treinamento(db, hackathon_id)
+
+
+@router.get(
+    "/admin/hackathons/{hackathon_id}/mentoria/equipes-aprovadas",
+    response_model=EquipesAprovadasParaMentoriaResponse,
+)
+async def equipes_aprovadas(
+    hackathon_id: UUID,
+    db: AsyncSession = Depends(get_session),
+    _: Usuario = Depends(gestor_deste_hackathon),
+):
+    """RF38. Comitê Científico, Organizador e DEV, da organização dona do hackathon.
+
+    Equipes com proposta aprovada no resultado homologado, que podem receber mentor, com
+    `equipe_id`. Antes da homologação responde `homologado = false` e lista vazia. Não traz
+    médias, notas nem classificação (essas continuam só em `GET .../resultado`, do Organizador).
+    """
+    return await service.equipes_aprovadas(db, hackathon_id)
 
 
 @router.post(

@@ -8,7 +8,7 @@ from app.const.enums import StatusHackathon
 from app.controllers import atribuicao_mentor as controller
 from app.controllers.equipe import get_equipe_by_id, get_hackathon_by_id
 from app.controllers.hackathon import get_hackathon_para_atualizar
-from app.controllers.resultado import get_homologacao
+from app.controllers.resultado import get_homologacao, listar_aprovadas
 from app.exceptions.atribuicao_mentor import atribuicao_nao_encontrada, conflito_mentoria
 from app.exceptions.convite import equipe_nao_encontrada, hackathon_nao_encontrado
 from app.exceptions.db import erro_de_integridade_sql
@@ -17,6 +17,8 @@ from app.schemas.atribuicao_mentor import (
     AtribuicaoCreate,
     AtribuicaoEncerrar,
     EquipeAcompanhadaResponse,
+    EquipeAprovadaParaMentoria,
+    EquipesAprovadasParaMentoriaResponse,
     MentorContato,
     MentorDaEquipeResponse,
 )
@@ -36,6 +38,30 @@ async def treinamento(db: AsyncSession, hackathon_id: UUID) -> Hackathon:
     if hackathon is None:
         hackathon_nao_encontrado()
     return hackathon
+
+
+async def equipes_aprovadas(
+    db: AsyncSession, hackathon_id: UUID
+) -> EquipesAprovadasParaMentoriaResponse:
+    """RF38: equipes que podem receber mentor. Só depois da homologação, e só as aprovadas,
+    com o ID que a atribuição precisa. Não expõe médias, notas nem classificação: o Comitê
+    Científico atribui mentores sem precisar do resultado consolidado do Organizador."""
+    hackathon = await get_hackathon_by_id(db, hackathon_id)
+    if hackathon is None:
+        hackathon_nao_encontrado()
+    homologacao = await get_homologacao(db, hackathon_id)
+    if homologacao is None:
+        return EquipesAprovadasParaMentoriaResponse(
+            hackathon_id=hackathon.id, homologado=False, equipes=[]
+        )
+    return EquipesAprovadasParaMentoriaResponse(
+        hackathon_id=hackathon.id,
+        homologado=True,
+        equipes=[
+            EquipeAprovadaParaMentoria.model_validate(r)
+            for r in await listar_aprovadas(db, homologacao.id)
+        ],
+    )
 
 
 async def concluir_treinamento(db: AsyncSession, usuario: Usuario, hackathon_id: UUID) -> Hackathon:

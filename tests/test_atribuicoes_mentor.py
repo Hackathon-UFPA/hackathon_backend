@@ -723,3 +723,63 @@ def test_eventos_pendentes_para_a_central_so_quando_a_publicacao_falha(client, s
         assert await eventos_pendentes_plataforma(db) == []
 
     com_sessao(consumir)
+
+
+# --- Equipes aprovadas para a mentoria (RF38: o Comitê Científico atribui) ---
+
+
+def aprovadas(client, h, quem):
+    return client.get(f"/admin/hackathons/{h}/mentoria/equipes-aprovadas", headers=headers(quem))
+
+
+@pytest.mark.parametrize("perfil", ["cientifico", "organizador"])
+def test_equipes_aprovadas_para_comite_e_organizador(client, s, perfil):
+    resposta = aprovadas(client, s.h, getattr(s, perfil))
+
+    assert resposta.status_code == 200
+    corpo = resposta.json()
+    assert corpo["homologado"] is True
+    # Só as aprovadas (as duas primeiras do cenário), com o ID que a atribuição precisa
+    assert {e["equipe_id"] for e in corpo["equipes"]} == {str(e) for e in s.equipes[:2]}
+    # Nada do resultado consolidado: nem média, nem classificação, nem recomendações
+    for equipe in corpo["equipes"]:
+        assert set(equipe) == {"equipe_id", "equipe_nome", "titulo", "tema_titulo"}
+
+
+def test_equipes_aprovadas_antes_da_homologacao_vem_vazia(client, s, sql):
+    sql("DELETE FROM resultados_proposta WHERE hackathon_id=:h", h=s.h)
+    sql("DELETE FROM homologacoes_resultado WHERE hackathon_id=:h", h=s.h)
+
+    corpo = aprovadas(client, s.h, s.cientifico).json()
+
+    assert corpo == {"hackathon_id": str(s.h), "homologado": False, "equipes": []}
+
+
+def test_equipes_aprovadas_negadas_a_participante_e_mentor(client, s):
+    assert aprovadas(client, s.h, s.membro()).status_code == 403
+    assert aprovadas(client, s.h, s.mentor()).status_code == 403
+
+
+def test_equipes_aprovadas_de_hackathon_inexistente(client, s):
+    assert aprovadas(client, uuid4(), s.cientifico).status_code == 404
+
+
+def test_comite_de_outra_organizacao_nao_ve_as_aprovadas(client, sql, usuario_no_banco):
+    from tests.test_organizacoes import DuasOrganizacoes
+
+    c = DuasOrganizacoes(sql, usuario_no_banco)
+    try:
+        assert aprovadas(client, c.hackathon_a, c.org_b_comite).status_code == 403
+        assert aprovadas(client, c.hackathon_a, c.org_a_comite).status_code == 200
+    finally:
+        c.limpar()
+
+
+def test_comite_atribui_mentor_a_equipe_da_lista(client, s):
+    """O fluxo da tela: listar as aprovadas e atribuir, tudo pelo Comitê Científico."""
+    equipe = aprovadas(client, s.h, s.cientifico).json()["equipes"][0]["equipe_id"]
+
+    resposta = atribuir(client, s, s.mentor(), equipe=equipe, quem=s.cientifico)
+
+    assert resposta.status_code == 201
+    assert resposta.json()["equipe_id"] == equipe

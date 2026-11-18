@@ -4,7 +4,8 @@ from datetime import UTC, datetime, timedelta
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.const.config import settings
-from app.const.enums import PapelUsuario, SituacaoConta
+from app.const.enums import PapelUsuario, SituacaoConta, TipoIntegrante
+from app.controllers.autodeclaracao import criar_autodeclaracao
 from app.controllers.comprovante_vinculo import criar_comprovante
 from app.controllers.usuario import (
     criar_usuario,
@@ -17,7 +18,7 @@ from app.exceptions.auth import (
     credenciais_invalidas,
     senha_atual_incorreta,
 )
-from app.models import ComprovanteVinculo, Organizacao, Usuario
+from app.models import AutodeclaracaoVinculo, ComprovanteVinculo, Organizacao, Usuario
 from app.schemas.auth import CadastroOrganizacaoRequest, CadastroRequest
 from app.security.senha import gastar_tempo_de_verificacao, gerar_hash, senha_confere
 from app.services.confirmacao_email import enviar_confirmacao
@@ -27,7 +28,11 @@ from app.services.edicao_participante import resolver_edicao
 
 async def cadastrar_participante(db: AsyncSession, dados: CadastroRequest) -> Usuario:
     """Cria a conta pendente e registra o comprovante de vínculo na mesma transação (RF01, RN25).
-    A conta só fica ativa quando o Comitê Científico aprovar o comprovante."""
+    A conta só fica ativa quando o Comitê Científico aprovar o comprovante.
+
+    Estudante: instituição, curso e período ficam na conta, como antes. Profissional: organização
+    e cargo não pertencem à conta, e sim à edição, então viram a autodeclaração dele na edição
+    escolhida, e o comprovante inicial é do tipo PROFISSIONAL, ligado a essa declaração."""
     try:
         hackathon = await resolver_edicao(db, dados.hackathon_id)
         usuario = await criar_usuario(
@@ -43,12 +48,25 @@ async def cadastrar_participante(db: AsyncSession, dados: CadastroRequest) -> Us
                 situacao_conta=SituacaoConta.PENDENTE,
             ),
         )
+        declaracao = None
+        if dados.tipo == TipoIntegrante.PROFISSIONAL:
+            declaracao = AutodeclaracaoVinculo(
+                usuario_id=usuario.id,
+                hackathon_id=hackathon.id,
+                tipo=TipoIntegrante.PROFISSIONAL,
+                organizacao=dados.organizacao,
+                cargo=dados.cargo,
+            )
+            criar_autodeclaracao(db, declaracao)
+            await db.flush()
         await criar_comprovante(
             db,
             ComprovanteVinculo(
                 usuario_id=usuario.id,
                 hackathon_id=hackathon.id,
                 arquivo_url=str(dados.comprovante_url),
+                tipo_vinculo=dados.tipo,
+                autodeclaracao_id=declaracao.id if declaracao else None,
             ),
         )
         # BE-S5-02: associa os convites pendentes à conta, sem aceitar participação ou termos.

@@ -33,6 +33,7 @@ Todas as rotas exigem conta ativa e JWT. As rotas administrativas exigem Comitê
 
 | Método | Endpoint | Operação |
 |---|---|---|
+| GET | `/admin/hackathons/{hackathon_id}/mentoria/equipes-aprovadas` | Equipes com proposta aprovada no resultado homologado, com `equipe_id`, para escolher quem recebe mentor. Comitê Científico, Organizador e DEV da organização dona. Antes da homologação: `homologado=false` e lista vazia. Sem médias, notas nem classificação |
 | POST | `/admin/equipes/{equipe_id}/mentoria` | Primeira atribuição ou nova atribuição depois de um encerramento; 201 |
 | PUT | `/admin/equipes/{equipe_id}/mentoria` | Substitui o vínculo esperado, mantendo histórico; 200 |
 | POST | `/admin/equipes/{equipe_id}/mentoria/encerrar` | Encerra logicamente o vínculo esperado; 200 |
