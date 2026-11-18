@@ -6,6 +6,8 @@ em tabelas separadas e a resposta nunca mistura uma com a outra. Só o próprio 
 existe rota, nem campo, para declarar em nome de outra pessoa.
 """
 
+from uuid import UUID
+
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.const.enums import PapelUsuario, StatusComprovante, TipoIntegrante
@@ -15,16 +17,16 @@ from app.controllers.autodeclaracao import (
     travar_usuario,
 )
 from app.controllers.comprovante_vinculo import get_ultimo_comprovante
-from app.controllers.hackathon import get_hackathon_com_inscricoes
 from app.controllers.membro_equipe import get_membro_no_hackathon
-from app.exceptions.auth import acesso_negado, inscricoes_indisponiveis
-from app.models import AutodeclaracaoVinculo, Hackathon, Usuario
+from app.exceptions.auth import acesso_negado
+from app.models import AutodeclaracaoVinculo, Usuario
 from app.schemas.autodeclaracao import (
     AutodeclaracaoEnvio,
     AutodeclaracaoResponse,
     AutodeclaracaoSituacaoResponse,
     ComprovacaoResumo,
 )
+from app.services.edicao_participante import resolver_edicao
 from app.services.inscricao import reavaliar_equipe_do_usuario
 
 # Quem declara vínculo é quem participa. DEV segue a exceção do time de desenvolvimento.
@@ -38,26 +40,18 @@ def _exigir_participante(usuario: Usuario) -> None:
         acesso_negado()
 
 
-async def _edicao(db: AsyncSession) -> Hackathon:
-    """A edição com inscrições abertas, a mesma do cadastro e do reenvio do comprovante."""
-    hackathon = await get_hackathon_com_inscricoes(db)
-    if hackathon is None:
-        inscricoes_indisponiveis()
-    return hackathon
-
-
 def _igual(declaracao: AutodeclaracaoVinculo, dados: AutodeclaracaoEnvio) -> bool:
     return all(getattr(declaracao, campo) == getattr(dados, campo) for campo in CAMPOS)
 
 
 async def declarar(
-    db: AsyncSession, usuario: Usuario, dados: AutodeclaracaoEnvio
+    db: AsyncSession, usuario: Usuario, dados: AutodeclaracaoEnvio, hackathon_id: UUID | None = None
 ) -> AutodeclaracaoVinculo:
     """Registra a declaração de quem está logado. Cada mudança é uma linha nova (auditoria); repetir
     a declaração atual não grava nada. A equipe da pessoa é reavaliada: uma declaração que
     contradiz o tipo indicado pelo líder tira a equipe da homologação até alguém corrigir."""
     _exigir_participante(usuario)
-    hackathon = await _edicao(db)
+    hackathon = await resolver_edicao(db, hackathon_id, usuario=usuario)
     try:
         # Declarações simultâneas da mesma pessoa se serializam, e duas iguais viram uma só
         await travar_usuario(db, usuario.id)
@@ -78,11 +72,13 @@ async def declarar(
     return declaracao
 
 
-async def situacao(db: AsyncSession, usuario: Usuario) -> AutodeclaracaoSituacaoResponse:
+async def situacao(
+    db: AsyncSession, usuario: Usuario, hackathon_id: UUID | None = None
+) -> AutodeclaracaoSituacaoResponse:
     """A declaração atual e o histórico, ao lado da comprovação: o que a pessoa afirma e o que
     foi verificado. Não traz o link do documento, que é privado."""
     _exigir_participante(usuario)
-    hackathon = await _edicao(db)
+    hackathon = await resolver_edicao(db, hackathon_id, exigir_inscricoes=False, usuario=usuario)
     historico = await listar_autodeclaracoes(db, usuario.id, hackathon.id)
     atual = historico[0] if historico else None
     membro = await get_membro_no_hackathon(db, hackathon.id, usuario.id)

@@ -63,7 +63,9 @@ async def fila_de_comprovantes(
     description=(
         "Aprova o vínculo (RN25). A conta de quem enviou passa a `ATIVA` e a equipe dele é "
         "reavaliada: se todos os integrantes já têm vínculo aprovado e termos aceitos, ela é "
-        "homologada na hora (RF23). Só comprovantes `PENDENTE` podem ser decididos."
+        "homologada na hora (RF23). Só comprovantes `PENDENTE` podem ser decididos. "
+        "A aprovação não envia e-mail específico sobre o comprovante; se a reavaliação "
+        "homologar a equipe, o aviso de equipe homologada entra na fila de e-mails."
     ),
     responses=respostas_de_erro(
         {
@@ -89,8 +91,8 @@ async def aprovar_comprovante(
     description=(
         "Recusa o comprovante e registra o motivo (obrigatório). Quem enviou vê o motivo em "
         "`GET /comprovantes/meus` e pode mandar outro com `POST /comprovantes`. A conta "
-        "continua `PENDENTE`. O aviso por e-mail depende da infraestrutura de e-mail, que "
-        "ainda não existe."
+        "continua `PENDENTE`. A recusa não dispara notificação por e-mail; o motivo fica "
+        "disponível para consulta."
     ),
     responses=respostas_de_erro(
         {
@@ -137,12 +139,14 @@ async def meus_comprovantes(
         "Envia o comprovante de vínculo para participar de um hackathon (RF21). A organização "
         "dona do hackathon confere e aprova. Depois de uma recusa, serve para mandar outro; o "
         "anterior fica no histórico. Exige inscrições abertas no hackathon informado."
+        " Sem hackathon_id no corpo, só aceita uma edição elegível; várias retornam 409."
     ),
     responses=respostas_de_erro(
         {
             401: ERRO_401,
             404: "Hackathon não encontrado",
-            409: "Já existe comprovante pendente ou aprovado, ou as inscrições não estão abertas",
+            409: "Comprovante ativo existente, inscrições indisponíveis ou edição ambígua",
+            422: "Campos inválidos, inclusive hackathon_id fora do formato UUID",
         }
     ),
 )

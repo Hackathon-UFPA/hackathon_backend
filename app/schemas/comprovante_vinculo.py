@@ -55,8 +55,8 @@ class ComprovanteEnvio(BaseModel):
     hackathon_id: UUID | None = Field(
         default=None,
         description=(
-            "Hackathon em que a pessoa quer participar. Sem ele, vale o hackathon com inscrições "
-            "abertas, como no cadastro"
+            "Hackathon em que a pessoa quer participar. Sem ID, aceita somente uma edição "
+            "com inscrições abertas; várias edições elegíveis retornam 409."
         ),
     )
     arquivo_url: Annotated[HttpUrl, AfterValidator(validar_link_do_comprovante)] = Field(

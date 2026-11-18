@@ -22,6 +22,7 @@ API de uma plataforma multi-organização de hackathons, construída com **FastA
 - [Equipes e membros](docs/equipes-e-membros.md): inclui categorias e composição informada pelo líder (BE-S5-01)
 - [Inscrição e homologação](docs/inscricao-e-homologacao.md)
 - [Autodeclaração e comprovantes por tipo](docs/autodeclaracao-e-comprovantes.md): declaração do próprio vínculo, comprovante por tipo e homologação por categoria (BE-S5-03)
+- [Cadastro por hackathon](docs/cadastro-por-hackathon.md): seleção explícita de edição, compatibilidade legada segura e ajustes do frontend (BE-S6-14)
 - [Propostas](docs/propostas.md): envio definitivo, protocolo, reenvio e histórico de versões (BE-S5-09)
 - [Temas e rubrica](docs/temas-e-rubrica.md): catálogo público, Comitê Científico e uma rubrica por fase (BE-S5-08)
 - [Avaliação](docs/avaliacao.md): distribuição e registro da avaliação científica pela rubrica

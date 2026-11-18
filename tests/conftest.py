@@ -75,9 +75,22 @@ def periodo_inscricoes(request, sql):
 
 
 @pytest.fixture
-def hackathon_aberto():
-    """Hackathon com inscrições abertas. A data de início distante faz dele o escolhido no
-    cadastro, mesmo que o banco de desenvolvimento já tenha outros em inscrições."""
+def sem_edicoes_abertas(sql):
+    """Isola cenários legados no banco exclusivo de testes, restaurando dados preexistentes."""
+    anteriores = sql(
+        "UPDATE hackathon SET status = 'INSCRICOES_ENCERRADAS'"
+        " WHERE status = 'INSCRICOES' RETURNING id"
+    )
+    try:
+        yield
+    finally:
+        for edicao in anteriores:
+            sql("UPDATE hackathon SET status = 'INSCRICOES' WHERE id = :h", h=edicao["id"])
+
+
+@pytest.fixture
+def hackathon_aberto(sem_edicoes_abertas):
+    """Única edição aberta do cenário legado, sem depender de ordenação por data."""
     id_ = executar_sql(
         "INSERT INTO hackathon (nome, status, data_inicio)"
         " VALUES ('Teste de autenticação', 'INSCRICOES', '2099-01-01') RETURNING id"

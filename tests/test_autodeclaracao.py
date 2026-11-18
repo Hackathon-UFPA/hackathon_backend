@@ -27,8 +27,7 @@ PROFISSIONAL = {"tipo": "PROFISSIONAL", "organizacao": "Açaí Valley", "cargo":
 
 
 class CenarioDeclaracao(CenarioInscricao):
-    """Equipe de três integrantes em uma edição que é sempre a de inscrições abertas escolhida
-    pelas rotas (início em 2099-06-01, depois de qualquer outra edição dos testes)."""
+    """Equipe de três integrantes na única edição aberta do cenário legado."""
 
     def criar_hackathon(self, **campos):
         id_ = self.sql(
@@ -120,7 +119,7 @@ class CenarioDeclaracao(CenarioInscricao):
 
 
 @pytest.fixture
-def decl(sql, usuario_no_banco, novo_email):
+def decl(sql, usuario_no_banco, novo_email, sem_edicoes_abertas):
     cenario = CenarioDeclaracao(sql, usuario_no_banco, novo_email)
     cenario.organizador = usuario_no_banco(papel="ORGANIZADOR")
     yield cenario
@@ -294,7 +293,7 @@ def test_sem_edicao_aberta_nao_declara(client, decl, monkeypatch):
         return None
 
     # O banco de testes pode ter outras edições abertas: a busca é que não encontra nenhuma
-    monkeypatch.setattr("app.services.autodeclaracao.get_hackathon_com_inscricoes", nenhuma)
+    monkeypatch.setattr("app.services.edicao_participante.get_hackathon_com_inscricoes", nenhuma)
 
     assert decl.declarar(client, pessoa, **ESTUDANTE).status_code == 409
     assert decl.situacao(client, pessoa).status_code == 409

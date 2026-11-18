@@ -396,12 +396,13 @@ def test_dois_cadastros_simultaneos_com_o_mesmo_link_criam_uma_conta(client, flu
 # --- Cadastro público também associa convites pendentes ---
 
 
-def test_cadastro_publico_associa_convites_pendentes(client, fluxo, hackathon_aberto):
+def test_cadastro_publico_associa_convites_pendentes(client, fluxo):
     equipe, novo, _ = fluxo.equipe_com_novato(client)
 
     resposta = client.post(
         "/auth/cadastro",
         json={
+            "hackathon_id": str(fluxo.hackathon_id),
             "nome": "Nina Nova",
             "email": novo["email"],
             "senha": SENHA_NOVA,

@@ -18,11 +18,7 @@ from app.controllers.comprovante_vinculo import (
     listar_comprovantes,
     listar_comprovantes_do_usuario,
 )
-from app.controllers.equipe import get_hackathon_by_id
-from app.controllers.hackathon import get_hackathon_com_inscricoes
 from app.controllers.membro_equipe import get_membro_no_hackathon
-from app.exceptions.auth import inscricoes_indisponiveis
-from app.exceptions.convite import fora_do_periodo_de_inscricao, hackathon_nao_encontrado
 from app.exceptions.db import erro_de_integridade_sql
 from app.exceptions.inscricao import (
     comprovante_ativo_existente,
@@ -37,8 +33,8 @@ from app.schemas.comprovante_vinculo import (
     ComprovanteVinculoResponse,
     UsuarioResumo,
 )
+from app.services.edicao_participante import resolver_edicao
 from app.services.inscricao import reavaliar_equipe_do_usuario
-from app.validations.inscricao import inscricoes_abertas
 
 
 def _resposta(
@@ -172,17 +168,8 @@ async def reenviar(
 ) -> ComprovanteVinculo:
     """Comprovante de vínculo para participar de um hackathon (RF21). Também serve para mandar
     outro depois de uma recusa; o anterior fica no histórico. Exige inscrições abertas. Sem
-    `hackathon_id`, vale o hackathon com inscrições abertas, como no cadastro."""
-    if dados.hackathon_id is None:
-        hackathon = await get_hackathon_com_inscricoes(db)
-        if hackathon is None:
-            inscricoes_indisponiveis()
-    else:
-        hackathon = await get_hackathon_by_id(db, dados.hackathon_id)
-        if hackathon is None:
-            hackathon_nao_encontrado()
-        if not inscricoes_abertas(hackathon):
-            fora_do_periodo_de_inscricao()
+    `hackathon_id`, só resolve automaticamente uma única edição elegível."""
+    hackathon = await resolver_edicao(db, dados.hackathon_id, usuario=usuario)
 
     # Quem é o dono do documento e qual vínculo ele comprova vêm do servidor, nunca do pedido
     tipo, declaracao = await _tipo_e_declaracao(db, usuario, hackathon.id)

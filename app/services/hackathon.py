@@ -170,9 +170,9 @@ async def listar_da_organizacao(db: AsyncSession, gestor: Usuario) -> list[Hacka
     return [_resposta(hackathon, nome) for hackathon, nome in pares]
 
 
-async def consultar(
+async def obter_acessivel(
     db: AsyncSession, hackathon_id: UUID, usuario: Usuario | None = None
-) -> HackathonResponse:
+) -> Hackathon:
     """Rascunho só aparece para a equipe interna da organização dona (e DEV)."""
     hackathon = await get_hackathon_by_id(db, hackathon_id)
     if hackathon is None:
@@ -183,4 +183,11 @@ async def consultar(
         and mesma_organizacao(usuario, hackathon.organizacao_id)
     ):
         hackathon_nao_encontrado()
+    return hackathon
+
+
+async def consultar(
+    db: AsyncSession, hackathon_id: UUID, usuario: Usuario | None = None
+) -> HackathonResponse:
+    hackathon = await obter_acessivel(db, hackathon_id, usuario)
     return await _com_organizacao(db, hackathon)

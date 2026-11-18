@@ -6,7 +6,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.const.config import settings
 from app.const.enums import PapelUsuario, SituacaoConta
 from app.controllers.comprovante_vinculo import criar_comprovante
-from app.controllers.hackathon import get_hackathon_com_inscricoes
 from app.controllers.usuario import (
     criar_usuario,
     get_usuario_by_email,
@@ -16,7 +15,6 @@ from app.controllers.usuario import (
 from app.exceptions.auth import (
     conta_bloqueada,
     credenciais_invalidas,
-    inscricoes_indisponiveis,
     senha_atual_incorreta,
 )
 from app.models import ComprovanteVinculo, Organizacao, Usuario
@@ -24,41 +22,43 @@ from app.schemas.auth import CadastroOrganizacaoRequest, CadastroRequest
 from app.security.senha import gastar_tempo_de_verificacao, gerar_hash, senha_confere
 from app.services.confirmacao_email import enviar_confirmacao
 from app.services.convite import associar_convites_pendentes
+from app.services.edicao_participante import resolver_edicao
 
 
 async def cadastrar_participante(db: AsyncSession, dados: CadastroRequest) -> Usuario:
     """Cria a conta pendente e registra o comprovante de vínculo na mesma transação (RF01, RN25).
     A conta só fica ativa quando o Comitê Científico aprovar o comprovante."""
-    hackathon = await get_hackathon_com_inscricoes(db)
-    if hackathon is None:
-        inscricoes_indisponiveis()
-
-    usuario = await criar_usuario(
-        db,
-        Usuario(
-            nome=dados.nome,
-            email=dados.email.lower(),
-            papel=PapelUsuario.PARTICIPANTE,
-            instituicao=dados.instituicao,
-            curso=dados.curso,
-            periodo=dados.periodo,
-            senha_hash=await asyncio.to_thread(gerar_hash, dados.senha),
-            situacao_conta=SituacaoConta.PENDENTE,
-        ),
-    )
-    await criar_comprovante(
-        db,
-        ComprovanteVinculo(
-            usuario_id=usuario.id,
-            hackathon_id=hackathon.id,
-            arquivo_url=str(dados.comprovante_url),
-        ),
-    )
-    # BE-S5-02: convites que já esperavam este e-mail passam a valer para a conta nova
-    await associar_convites_pendentes(db, usuario)
-    # RF01: o e-mail de confirmação sai na mesma transação; falha de envio não derruba o cadastro
-    await enviar_confirmacao(db, usuario, usuario.email)
-    await db.commit()
+    try:
+        hackathon = await resolver_edicao(db, dados.hackathon_id)
+        usuario = await criar_usuario(
+            db,
+            Usuario(
+                nome=dados.nome,
+                email=dados.email.lower(),
+                papel=PapelUsuario.PARTICIPANTE,
+                instituicao=dados.instituicao,
+                curso=dados.curso,
+                periodo=dados.periodo,
+                senha_hash=await asyncio.to_thread(gerar_hash, dados.senha),
+                situacao_conta=SituacaoConta.PENDENTE,
+            ),
+        )
+        await criar_comprovante(
+            db,
+            ComprovanteVinculo(
+                usuario_id=usuario.id,
+                hackathon_id=hackathon.id,
+                arquivo_url=str(dados.comprovante_url),
+            ),
+        )
+        # BE-S5-02: associa os convites pendentes à conta, sem aceitar participação ou termos.
+        await associar_convites_pendentes(db, usuario)
+        # A confirmação entra na fila na mesma transação; o envio ocorre depois do commit.
+        await enviar_confirmacao(db, usuario, usuario.email)
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
     return usuario
 
 

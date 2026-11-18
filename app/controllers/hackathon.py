@@ -4,19 +4,19 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.const.enums import StatusHackathon
+from app.exceptions.hackathon import selecao_de_hackathon_ambigua
 from app.models import Hackathon, Organizacao
 from app.validations.inscricao import inscricoes_abertas
 
 
 async def get_hackathon_com_inscricoes(db: AsyncSession) -> Hackathon | None:
-    """Hackathon com inscrições abertas; se houver mais de um, o de início mais recente."""
-    consulta = (
-        select(Hackathon)
-        .where(Hackathon.status == StatusHackathon.INSCRICOES)
-        .order_by(Hackathon.data_inicio.desc().nulls_last())
-    )
+    """Compatibilidade legada: só resolve automaticamente uma única edição elegível."""
+    consulta = select(Hackathon).where(Hackathon.status == StatusHackathon.INSCRICOES)
     hackathons = (await db.exec(consulta)).all()
-    return next((hackathon for hackathon in hackathons if inscricoes_abertas(hackathon)), None)
+    elegiveis = [hackathon for hackathon in hackathons if inscricoes_abertas(hackathon)]
+    if len(elegiveis) > 1:
+        selecao_de_hackathon_ambigua()
+    return elegiveis[0] if elegiveis else None
 
 
 async def get_hackathon_para_atualizar(db: AsyncSession, hackathon_id: UUID) -> Hackathon | None:
