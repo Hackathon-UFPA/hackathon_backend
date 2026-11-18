@@ -169,7 +169,7 @@ async def reenviar(
     """Comprovante de vínculo para participar de um hackathon (RF21). Também serve para mandar
     outro depois de uma recusa; o anterior fica no histórico. Exige inscrições abertas. Sem
     `hackathon_id`, só resolve automaticamente uma única edição elegível."""
-    hackathon = await resolver_edicao(db, dados.hackathon_id)
+    hackathon = await resolver_edicao(db, dados.hackathon_id, usuario=usuario)
 
     # Quem é o dono do documento e qual vínculo ele comprova vêm do servidor, nunca do pedido
     tipo, declaracao = await _tipo_e_declaracao(db, usuario, hackathon.id)

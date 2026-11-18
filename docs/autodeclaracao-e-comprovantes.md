@@ -40,7 +40,7 @@ A resposta de `GET /me/autodeclaracao` mostra as duas coisas lado a lado e nunca
 {"tipo": "PROFISSIONAL", "organizacao": "Açaí Valley", "cargo": "Engenheira"}
 ```
 
-Campos obrigatórios do tipo ausentes, campos do outro tipo ou valores em branco dão 422. Alterar exige inscrições abertas na edição solicitada; fora do status ou período, 409. ID inexistente dá 404. GET com ID explícito permite consultar o próprio histórico após o encerramento, inclusive em edição finalizada ou cancelada; rascunho retorna 404. Sem ID, GET e PUT usam somente uma única edição com inscrições abertas; nenhuma ou várias dão 409. A omissão nunca escolhe uma edição histórica.
+Campos obrigatórios do tipo ausentes, campos do outro tipo ou valores em branco dão 422. Alterar exige inscrições abertas na edição solicitada; fora do status ou período, 409 para edição acessível. ID inexistente ou rascunho sem permissão de acesso dá 404, no GET e nas escritas, conforme `GET /hackathons/{id}`. GET com ID explícito permite consultar o próprio histórico após o encerramento, inclusive em edição finalizada ou cancelada. DEV mantém a exceção de acesso a rascunhos, sem dispensar inscrições abertas nas escritas. Sem ID, GET e PUT usam somente uma única edição com inscrições abertas; nenhuma ou várias dão 409. A omissão nunca escolhe uma edição histórica.
 
 **Auditoria.** Cada mudança grava uma linha nova com a data, e a anterior continua no histórico. Repetir a declaração atual não grava nada. Um trigger do banco impede alterar uma declaração gravada, mesmo fora da API (excluir segue possível, como na remoção de uma edição). Declarações simultâneas da mesma pessoa são serializadas: duas iguais viram uma só.
 

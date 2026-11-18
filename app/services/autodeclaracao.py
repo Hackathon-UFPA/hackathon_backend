@@ -51,7 +51,7 @@ async def declarar(
     a declaração atual não grava nada. A equipe da pessoa é reavaliada: uma declaração que
     contradiz o tipo indicado pelo líder tira a equipe da homologação até alguém corrigir."""
     _exigir_participante(usuario)
-    hackathon = await resolver_edicao(db, hackathon_id)
+    hackathon = await resolver_edicao(db, hackathon_id, usuario=usuario)
     try:
         # Declarações simultâneas da mesma pessoa se serializam, e duas iguais viram uma só
         await travar_usuario(db, usuario.id)
@@ -78,7 +78,7 @@ async def situacao(
     """A declaração atual e o histórico, ao lado da comprovação: o que a pessoa afirma e o que
     foi verificado. Não traz o link do documento, que é privado."""
     _exigir_participante(usuario)
-    hackathon = await resolver_edicao(db, hackathon_id, exigir_inscricoes=False)
+    hackathon = await resolver_edicao(db, hackathon_id, exigir_inscricoes=False, usuario=usuario)
     historico = await listar_autodeclaracoes(db, usuario.id, hackathon.id)
     atual = historico[0] if historico else None
     membro = await get_membro_no_hackathon(db, hackathon.id, usuario.id)

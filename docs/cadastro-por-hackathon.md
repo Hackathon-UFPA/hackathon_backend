@@ -97,12 +97,17 @@ inclusive mudando maiúsculas ou edição, continua retornando 409. Não se cria
 |---|---|
 | 401 | Token ausente/inválido nas operações autenticadas |
 | 403 | Papel sem permissão para declarar ou validar; conferente de outra organização |
-| 404 | ID de hackathon inexistente; rascunho na consulta da declaração; comprovante inexistente na decisão administrativa |
-| 409 | Edição explícita fora do status `INSCRICOES` (inclusive rascunho/cancelada), período futuro/encerrado nas escritas; nenhuma ou várias edições elegíveis sem ID; e-mail duplicado; comprovante ativo do mesmo usuário/edição/tipo ou já decidido |
+| 404 | ID de hackathon inexistente ou rascunho sem permissão de acesso, tanto na consulta quanto nas escritas; comprovante inexistente na decisão administrativa |
+| 409 | Edição explícita existente e acessível fora do status `INSCRICOES` (inclusive cancelada), período futuro/encerrado nas escritas; nenhuma ou várias edições elegíveis sem ID; e-mail duplicado; comprovante ativo do mesmo usuário/edição/tipo ou já decidido |
 | 422 | ID sem formato UUID, corpo inválido ou campo extra no corpo da autodeclaração |
 
 O usuário sempre vem do token. O ID da edição não permite consultar declarações ou documentos de
-terceiros. Rascunhos continuam privados na consulta. A declaração só aceita `hackathon_id` na
+terceiros. Cadastro público, declaração e comprovante reutilizam a política de visibilidade de
+`GET /hackathons/{id}`: rascunho retorna o mesmo 404 de um ID inexistente para visitantes,
+participantes e equipe de outra organização, antes de verificar status ou prazo. A equipe interna
+da organização dona e DEV preservam o acesso ao rascunho; uma escrita autenticada que dependa de
+inscrições abertas retorna 409 nesse caso. Cadastro público não usa o token para conceder acesso
+a rascunhos. A declaração só aceita `hackathon_id` na
 query; enviá-lo no corpo continua dando 422. O comprovante preserva o comportamento anterior de
 ignorar campos extras; nenhum campo extra altera o dono do documento.
 
@@ -111,6 +116,12 @@ DEV mantém sua exceção técnica. `GET /comprovantes/meus` traz só os documen
 O resumo da declaração não expõe a URL privada do arquivo. Uma aprovação ativa a conta global,
 mas só comprova o vínculo na edição e no tipo do documento, reavaliando somente a equipe dessa
 edição. Uma declaração divergente também só afeta a equipe da edição solicitada.
+
+**E-mail da conferência:** a infraestrutura existe desde a BE-S5-05, mas não há mensagem específica
+de aprovação ou recusa de comprovante. A recusa apenas registra o motivo, disponível em
+`GET /comprovantes/meus`. A aprovação pode, indiretamente, enfileirar `EQUIPE_HOMOLOGADA` quando a
+reavaliação muda a equipe para `HOMOLOGADA`; isso é o aviso da homologação, não da conferência do
+documento. Nenhum novo disparo foi implementado nesta revisão.
 
 ## Transações e concorrência
 
@@ -163,7 +174,7 @@ líder. A consulta histórica permite ler, sem ampliar o prazo de alteração.
 ## Validação direcionada
 
 A política atual exige testes com caminhos específicos e Ruff somente nos arquivos Python
-modificados. As rodadas finais concluídas foram:
+modificados. As rodadas concluídas na implementação inicial foram:
 
 | Seleção | Motivo | Aprovados | Reprovados |
 |---|---|---:|---:|
@@ -193,7 +204,8 @@ Nenhuma regra de autenticação, categoria, termo ou política de homologação 
 - Resolução e erro de ambiguidade: `app/controllers/hackathon.py`,
   `app/exceptions/hackathon.py` e o novo `app/services/edicao_participante.py`.
 - Serviços dos fluxos: `app/services/auth.py`, `app/services/autodeclaracao.py` e
-  `app/services/comprovante_vinculo.py`.
+  `app/services/comprovante_vinculo.py`; a revisão de privacidade também compartilha a consulta de
+  `app/services/hackathon.py`.
 - Schemas e OpenAPI: `app/schemas/auth.py`, `app/schemas/comprovante_vinculo.py`,
   `app/views/auth.py`, `app/views/autodeclaracao.py` e `app/views/comprovantes.py`.
 - Testes: novo `tests/test_cadastro_por_hackathon.py`, `tests/conftest.py`,
@@ -202,5 +214,37 @@ Nenhuma regra de autenticação, categoria, termo ou política de homologação 
 - Documentação: `README.md`, este documento, `docs/api-contratos.md`, `docs/autenticacao.md`,
   `docs/autodeclaracao-e-comprovantes.md`, `docs/inscricao-e-homologacao.md` e
   `docs/cadastro-equipe-integrantes.md`.
+
+## Seleção automática: avaliação da otimização
+
+A otimização foi adiada nesta revisão para manter pequena a alteração de privacidade e preservar
+`inscricoes_abertas()` como única implementação da RN06. O seletor atual continua filtrando status
+no PostgreSQL e validando os períodos em Python, sem escolher arbitrariamente entre elegíveis.
+
+Uma melhoria futura pode filtrar também `(inscricoes_inicio IS NULL OR inscricoes_inicio <= :agora)`
+e `(inscricoes_fim IS NULL OR inscricoes_fim >= :agora)`, capturando um único instante em UTC e
+trazendo no máximo duas linhas para distinguir zero, uma ou múltiplas edições. Deve validar a
+paridade com a regra Python nos limites inclusivos, datas nulas e representação de `timestamp`
+sem fuso. Não depende de `data_inicio` do evento nem exige migration. Essa duplicação da regra e
+sua validação ficam para uma alteração própria, sem atrasar este PR.
+
+## Validação da revisão final antes do PR
+
+Foram executados somente estes casos diretamente afetados pela privacidade e pela extração da
+verificação de visibilidade compartilhada:
+
+- `tests/test_cadastro_por_hackathon.py::test_escritas_validam_id_status_e_periodo_sem_fallback`
+  (seis casos: inexistente, rascunho, cancelado, inscrições encerradas, prazo encerrado e futuro).
+- `tests/test_cadastro_por_hackathon.py::test_consulta_id_inexistente_e_rascunho`.
+- `tests/test_cadastro_por_hackathon.py::test_privacidade_do_rascunho_reutiliza_autorizacao_publica`
+  (cinco casos: participante, conta pendente, outra organização, organização dona e DEV).
+- `tests/test_hackathons_admin.py::test_vitrine_e_publica_e_esconde_rascunhos`
+  (regressão da consulta pública cuja lógica passou a ser reutilizada).
+
+Resultado: **13 aprovados, 0 reprovados**, em 20,19 segundos, com um aviso de depreciação já existente
+de Starlette/httpx. Ruff lint e formatação passaram nos **seis arquivos Python alterados nesta
+revisão**, assim como `git diff --check`. O seletor não foi modificado e seus testes não foram
+reexecutados. A suíte completa não foi executada nesta revisão; a validação global fica para o CI.
+Nenhum commit, push ou PR foi feito por esta revisão.
 
 [← Voltar ao README](../README.md)

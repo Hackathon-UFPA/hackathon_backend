@@ -227,7 +227,7 @@ def test_fluxos_sem_id_recusam_ambiguidade_sem_gravar(
     [
         ("inexistente", 404),
         ("CANCELADO", 409),
-        ("RASCUNHO", 409),
+        ("RASCUNHO", 404),
         ("INSCRICOES_ENCERRADAS", 409),
         ("prazo-encerrado", 409),
         ("inicio-futuro", 409),
@@ -263,6 +263,8 @@ def test_escritas_validam_id_status_e_periodo_sem_fallback(
         enviar(client, pessoa, h),
     ):
         assert resposta.status_code == codigo, resposta.text
+        if codigo == 404:
+            assert resposta.json() == client.get(f"/hackathons/{h}").json()
     assert sql("SELECT id FROM usuarios WHERE email = :e", e=email) == []
     assert sql("SELECT id FROM comprovantes_vinculo WHERE usuario_id = :u", u=pessoa["id"]) == []
     assert sql("SELECT id FROM autodeclaracoes_vinculo WHERE usuario_id = :u", u=pessoa["id"]) == []
@@ -313,6 +315,37 @@ def test_consulta_id_inexistente_e_rascunho(client, sql, edicoes, usuario_no_ban
     assert consultar(client, pessoa, uuid4()).status_code == 404
     sql("UPDATE hackathon SET status = 'RASCUNHO' WHERE id = :h", h=edicoes.hackathon_a)
     assert consultar(client, pessoa, edicoes.hackathon_a).status_code == 404
+
+
+@pytest.mark.parametrize("conta", ["PARTICIPANTE", "PENDENTE", "OUTRA_ORGANIZACAO", "DONO", "DEV"])
+def test_privacidade_do_rascunho_reutiliza_autorizacao_publica(
+    client, sql, edicoes, usuario_no_banco, conta
+):
+    h = edicoes.hackathon_a
+    sql("UPDATE hackathon SET status = 'RASCUNHO' WHERE id = :h", h=h)
+    if conta == "DONO":
+        pessoa = edicoes.org_a_organizador
+    elif conta == "OUTRA_ORGANIZACAO":
+        pessoa = edicoes.org_b_organizador
+    else:
+        pessoa = usuario_no_banco(
+            papel="DEV" if conta == "DEV" else "PARTICIPANTE",
+            situacao_conta="PENDENTE" if conta == "PENDENTE" else "ATIVA",
+        )
+    permitido = conta in ("DONO", "DEV")
+    publica = client.get(f"/hackathons/{h}", headers=com_token(pessoa["id"]))
+    assert publica.status_code == (200 if permitido else 404)
+    envio = enviar(client, pessoa, h)
+    assert envio.status_code == (409 if permitido else 404)
+    if not permitido:
+        assert envio.json() == publica.json()
+    if conta in ("PARTICIPANTE", "PENDENTE", "DEV"):
+        consulta = consultar(client, pessoa, h)
+        assert consulta.status_code == (200 if permitido else 404)
+        escrita = declarar(client, pessoa, h)
+        assert escrita.status_code == (409 if permitido else 404)
+        if not permitido:
+            assert consulta.json() == escrita.json() == publica.json()
 
 
 def test_id_da_edicao_nao_da_acesso_a_dados_de_terceiros(client, edicoes, usuario_no_banco):
