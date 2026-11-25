@@ -20,6 +20,7 @@ from app.views.inscricao import router as inscricao
 from app.views.membro_equipe import router as membros_equipe
 from app.views.mentores import router as mentores
 from app.views.mentores import router_publico as mentores_publico
+from app.views.mentoria import router as mentoria
 from app.views.notificacoes import router as notificacoes
 from app.views.organizacoes import router as organizacoes
 from app.views.perfil import router as perfil
@@ -45,6 +46,7 @@ router.include_router(cadastro_convite)
 router.include_router(perfil)
 router.include_router(autodeclaracao)
 router.include_router(atribuicoes_mentor)
+router.include_router(mentoria)
 router.include_router(usuarios)
 router.include_router(mentores)
 router.include_router(mentores_publico)

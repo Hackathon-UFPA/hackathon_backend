@@ -87,6 +87,11 @@ class StatusProposta(StrEnum):
     ENVIADA = "ENVIADA"
 
 
+class TipoMarcoMentoria(StrEnum):
+    PARCIAL = "PARCIAL"
+    FINAL = "FINAL"
+
+
 class TipoProtocolo(StrEnum):
     INSCRICAO_EQUIPE = "INSCRICAO_EQUIPE"
     PROPOSTA = "PROPOSTA"
