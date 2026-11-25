@@ -28,7 +28,7 @@ from app.services.mentor import validar_elegibilidade
 from app.services.notificacao_mentoria import registrar as notificar
 
 
-def _edicao_aberta(hackathon: Hackathon) -> None:
+def exigir_edicao_nao_encerrada(hackathon: Hackathon) -> None:
     if hackathon.status in (StatusHackathon.FINALIZADO, StatusHackathon.CANCELADO):
         conflito_mentoria("A edição está finalizada ou cancelada.")
 
@@ -68,7 +68,7 @@ async def concluir_treinamento(db: AsyncSession, usuario: Usuario, hackathon_id:
     hackathon = await get_hackathon_para_atualizar(db, hackathon_id)
     if hackathon is None:
         hackathon_nao_encontrado()
-    _edicao_aberta(hackathon)
+    exigir_edicao_nao_encerrada(hackathon)
     if await get_homologacao(db, hackathon_id) is None:
         conflito_mentoria("Homologue o resultado antes de concluir o treinamento.")
     if hackathon.treinamento_concluido_em is None:
@@ -92,7 +92,7 @@ async def atribuir(
         if equipe is None:
             equipe_nao_encontrada()
         hackathon = await treinamento(db, equipe.hackathon_id)
-        _edicao_aberta(hackathon)
+        exigir_edicao_nao_encerrada(hackathon)
         if hackathon.treinamento_concluido_em is None:
             conflito_mentoria("A atribuição só é permitida após a conclusão do treinamento.")
         if not await controller.equipe_aprovada(db, equipe.id, equipe.hackathon_id):

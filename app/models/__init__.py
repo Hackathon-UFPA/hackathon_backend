@@ -28,11 +28,13 @@ from .convite_mentor import ConviteMentor
 from .criterio_rubrica import CriterioRubrica
 from .designacao_avaliacao import DesignacaoAvaliacao
 from .email_outbox import EmailOutbox
+from .entrega_mentoria import EntregaMentoria
 from .equipe import Equipe
 from .evento_mentoria import EventoNotificacaoMentoria
 from .faq_item import FaqItem
 from .fase_cronograma import FaseCronograma
 from .hackathon import Hackathon
+from .marco_mentoria import MarcoMentoria
 from .material_treinamento import MaterialTreinamento
 from .membro_equipe import MembroEquipe
 from .nota_criterio_avaliacao import NotaCriterioAvaliacao
@@ -62,12 +64,14 @@ __all__ = [
     "CriterioRubrica",
     "DesignacaoAvaliacao",
     "EmailOutbox",
+    "EntregaMentoria",
     "Equipe",
     "FaqItem",
     "FaseCronograma",
     "EventoNotificacaoMentoria",
     "Hackathon",
     "HomologacaoResultado",
+    "MarcoMentoria",
     "MaterialTreinamento",
     "MembroEquipe",
     "NotaCriterioAvaliacao",
