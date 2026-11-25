@@ -63,6 +63,7 @@ Com a API no ar, a documentação interativa das rotas fica em `http://localhost
 | E-mails transacionais (fila, worker e templates) | RNF28, RF60, BE-S5-05 | Concluído (ver [E-mails](docs/emails.md)) |
 | Central de notificações in-app | RF19, RF22, RF28, RF33, RF38, RF53, RF60, RF61, BE-S5-04 | Concluído (produtores de chat e prazo: BE-S6-06 e BE-S7-06/07) |
 | Atribuição de mentores | RF38, RN16, RN24, RN33, BE-S5-11 | Concluído (publicado na central in-app) |
+| Painel do mentor | RF41, RF39, RF42, RN16, BE-S6-04 | Concluído, com visibilidade restrita até a Q24 e sem sessões individuais, ainda não modeladas (ver [Painel do mentor](docs/painel-mentor.md)) |
 
 ### Notificação do resultado e somente leitura (BE-S4-12)
 
