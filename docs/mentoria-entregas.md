@@ -37,10 +37,13 @@ As rotas ficam na seção **Entregas da mentoria** do `/docs` e exigem JWT de co
 As listagens aceitam `limite` de 1 a 100 (padrão 50) e `deslocamento` a partir de 0 (padrão 0).
 Os erros seguem o campo `detail` da API. `401` indica autenticação inválida ou conta
 desativada, `403` indica conta pendente ou autorização insuficiente, `404` indica recurso
-ausente no caminho ou edição privada, `409` indica conflito de calendário, elegibilidade,
-prazo, tipo ou registro duplicado e `422` indica dados inválidos.
+ausente no caminho ou edição privada, `409` indica edição encerrada, conflito de calendário,
+elegibilidade, prazo, tipo ou registro duplicado e `422` indica dados inválidos.
 
 ## Cadastro e consulta de marcos
+
+Em edições `FINALIZADO` ou `CANCELADO`, as operações de criação, edição e exclusão retornam `409`.
+Marcos e entregas anteriores continuam disponíveis aos usuários autorizados.
 
 1. O gestor envia título, descrição, prazo e, opcionalmente, ordem e tipo.
 2. O prazo deve estar entre o início e o fim da edição, quando definidos. Também deve ser
@@ -50,9 +53,12 @@ prazo, tipo ou registro duplicado e `422` indica dados inválidos.
 3. O calendário ordena pelo prazo, depois pela ordem configurada e, em caso de empate,
    pelo UUID. Se houver um marco `FINAL`, a combinação prazo e ordem dele precisa vir após
    todos os parciais. No mesmo prazo, o final precisa de uma ordem maior.
-4. O gestor pode aplicar um PATCH com os campos que deseja alterar. O prazo registrado
-   em cada envio permanece disponível após ajustes de calendário. Marcos com entregas já
-   registradas mantêm seu tipo e ficam protegidos contra exclusão.
+4. O gestor pode alterar título, descrição e ordem via PATCH. A ordem continua sujeita à
+   posição do marco `FINAL`. Marcos sem entregas aceitam antecipação e prorrogação de prazo,
+   dentro do calendário. Depois do primeiro envio, o prazo pode ser prorrogado. Antecipar o
+   prazo vigente, mudar o tipo ou excluir um marco com entregas retorna `409`.
+5. Prorrogações preservam `enviado_em` e `data_limite_no_envio` de cada entrega anterior.
+   Novos envios usam o prazo em vigor no momento do registro.
 
 Exemplo de criação de um marco parcial
 
@@ -95,6 +101,9 @@ Exemplo de envio de uma entrega parcial
 
 ## Decisões pendentes e integração
 
+- **Responsável e estado por marco.** O RF65 atribui o cadastro ao Comitê Científico e
+  especifica título, descrição e prazo. A necessidade de registrar um responsável
+  individual ou um estado próprio por marco fica pendente de definição.
 - **Reenvio parcial.** Até existir uma política de substituição, vale um registro
   imutável por equipe e marco. Uma segunda tentativa dentro do prazo retorna `409`.
 - **Cronograma (Q11).** Cada edição define a quantidade e as datas. O backend usa os

@@ -45,7 +45,7 @@ Deslocamento = Annotated[int, Query(ge=0)]
     responses=respostas_de_erro(
         {
             404: "Edição inexistente.",
-            409: "Prazo incompatível com a edição ou conflito com o marco final.",
+            409: "Edição encerrada, prazo incompatível ou conflito com o marco final.",
         }
     ),
 )
@@ -88,7 +88,10 @@ async def consultar_marco_admin(hackathon_id: UUID, marco_id: UUID, db: Db, gest
     responses=respostas_de_erro(
         {
             404: "Edição inexistente ou marco ausente na edição.",
-            409: "Calendário incompatível ou alteração de tipo de marco com entregas.",
+            409: (
+                "Edição finalizada ou cancelada, calendário incompatível, "
+                "mudança de tipo ou antecipação de prazo em marco com entregas."
+            ),
         }
     ),
 )
@@ -108,7 +111,7 @@ async def editar_marco(
     responses=respostas_de_erro(
         {
             404: "Edição inexistente ou marco ausente na edição.",
-            409: "Marco com histórico de entregas.",
+            409: "Edição finalizada ou cancelada, ou marco com histórico de entregas.",
         }
     ),
 )

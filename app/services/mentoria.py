@@ -19,6 +19,7 @@ from app.exceptions.db import erro_de_integridade_sql
 from app.models import EntregaMentoria, Equipe, Hackathon, MarcoMentoria, Usuario
 from app.schemas.mentoria import EntregaMentoriaCreate, MarcoMentoriaCreate, MarcoMentoriaUpdate
 from app.security.organizacao import mesma_organizacao
+from app.services.atribuicao_mentor import exigir_edicao_nao_encerrada
 from app.services.conteudo import agora_utc, edicao
 from app.services.convite import exigir_lider
 from app.services.hackathon import obter_acessivel
@@ -84,11 +85,17 @@ async def _marco(db: AsyncSession, hackathon_id: UUID, marco_id: UUID) -> MarcoM
     return marco
 
 
+async def _edicao_para_alterar_marcos(db: AsyncSession, hackathon_id: UUID) -> Hackathon:
+    # O FOR UPDATE espera os envios com FOR SHARE antes de consultar marcos ou entregas.
+    hackathon = await edicao(db, hackathon_id, travar=True)
+    exigir_edicao_nao_encerrada(hackathon)
+    return hackathon
+
+
 async def criar_marco(
     db: AsyncSession, hackathon_id: UUID, dados: MarcoMentoriaCreate
 ) -> MarcoMentoria:
-    # As mudanças de calendário se serializam na edição. Envios usam a mesma trava em FOR SHARE.
-    hackathon = await edicao(db, hackathon_id, travar=True)
+    hackathon = await _edicao_para_alterar_marcos(db, hackathon_id)
     marco = MarcoMentoria(hackathon_id=hackathon.id, **dados.model_dump())
     await _validar_calendario(db, hackathon, marco)
     db.add(marco)
@@ -99,14 +106,16 @@ async def criar_marco(
 async def editar_marco(
     db: AsyncSession, hackathon_id: UUID, marco_id: UUID, dados: MarcoMentoriaUpdate
 ) -> MarcoMentoria:
-    hackathon = await edicao(db, hackathon_id, travar=True)
+    hackathon = await _edicao_para_alterar_marcos(db, hackathon_id)
     marco = await _marco(db, hackathon_id, marco_id)
     valores = dados.model_dump(exclude_unset=True)
     if valores:
-        if valores.get("tipo", marco.tipo) != marco.tipo and await controller.marco_tem_entregas(
-            db, marco.id
-        ):
-            conflito_mentoria("O tipo de um marco com entregas registradas não pode mudar.")
+        mudou_tipo = valores.get("tipo", marco.tipo) != marco.tipo
+        antecipou_prazo = valores.get("data_limite", marco.data_limite) < marco.data_limite
+        if (mudou_tipo or antecipou_prazo) and await controller.marco_tem_entregas(db, marco.id):
+            if mudou_tipo:
+                conflito_mentoria("O tipo de um marco com entregas registradas não pode mudar.")
+            conflito_mentoria("O prazo de um marco com entregas não pode ser antecipado.")
         marco.sqlmodel_update(valores)
         with db.no_autoflush:
             await _validar_calendario(db, hackathon, marco)
@@ -116,7 +125,7 @@ async def editar_marco(
 
 
 async def excluir_marco(db: AsyncSession, hackathon_id: UUID, marco_id: UUID) -> None:
-    await edicao(db, hackathon_id, travar=True)
+    await _edicao_para_alterar_marcos(db, hackathon_id)
     marco = await _marco(db, hackathon_id, marco_id)
     if await controller.marco_tem_entregas(db, marco.id):
         conflito_mentoria("Um marco com entregas registradas não pode ser excluído.")
