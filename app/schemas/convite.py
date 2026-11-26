@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
 
 from app.const.enums import StatusConvite, TipoIntegrante
 
@@ -26,6 +26,11 @@ class ConviteResponse(ConviteCreate):
     status: StatusConvite
     enviado_em: datetime | None = None
     respondido_em: datetime | None = None
+    # BE-S5-06: quantas vezes o aviso foi renovado e quando o líder pode reenviar de novo.
+    # `proximo_reenvio_em` considera só o intervalo mínimo e é nulo quando o limite se esgotou
+    # (ou o convite já não está pendente); uma data passada significa que já pode reenviar
+    reenvios: int = 0
+    proximo_reenvio_em: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -43,6 +48,21 @@ class ConviteEnvio(BaseModel):
             "obrigatório na categoria MISTA"
         ),
     )
+
+
+# Correção de um convite pendente (BE-S5-06): nome e/ou e-mail. Trocar o e-mail invalida o link
+# anterior e envia um novo ao endereço corrigido
+class ConviteCorrecao(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    nome: str | None = Field(default=None, min_length=1, max_length=255, examples=["Maria Souza"])
+    email: EmailStr | None = Field(default=None, examples=["maria@example.com"])
+
+    @model_validator(mode="after")
+    def exigir_algum_campo(self):
+        if self.nome is None and self.email is None:
+            raise ValueError("Informe o nome e/ou o e-mail a corrigir.")
+        return self
 
 
 # Ids das versões de termo que a pessoa leu e aceita (GET /hackathons/{id}/termos/vigentes)
