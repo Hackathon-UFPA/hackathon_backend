@@ -11,6 +11,7 @@ from uuid import UUID
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.const.enums import StatusHackathon, TipoMarcoMentoria
+from app.controllers import feedback_mentoria as feedbacks
 from app.controllers import painel_mentor as controller
 from app.controllers.membro_equipe import listar_membros_com_usuario
 from app.exceptions.convite import equipe_nao_encontrada
@@ -18,6 +19,7 @@ from app.models import (
     AtribuicaoMentor,
     EntregaMentoria,
     Equipe,
+    FeedbackMentoria,
     Hackathon,
     MarcoMentoria,
     Usuario,
@@ -26,6 +28,7 @@ from app.schemas.painel_mentor import (
     DetalheEquipeNoPainel,
     EntregaNoPainel,
     EquipeNoPainel,
+    FeedbackRecenteNoPainel,
     IntegranteNoPainel,
     MarcoNoPainel,
     PainelMentorResponse,
@@ -33,9 +36,12 @@ from app.schemas.painel_mentor import (
     ProximoMarco,
     ResumoPainel,
     SituacaoMarcoEquipe,
+    UltimoFeedback,
 )
 from app.services.conteudo import agora_utc
 
+FEEDBACKS_RECENTES = 5
+TAMANHO_TRECHO = 140
 EDICOES_ENCERRADAS = (StatusHackathon.FINALIZADO, StatusHackathon.CANCELADO)
 
 
@@ -54,6 +60,7 @@ class Acompanhamento:
     equipe: Equipe
     hackathon: Hackathon
     marcos: list[AndamentoMarco]
+    ultimo_feedback: FeedbackMentoria | None = None
 
 
 def situacao_do_marco(
@@ -81,7 +88,8 @@ async def _acompanhamentos(
     hackathon_id: UUID | None = None,
     equipe_id: UUID | None = None,
 ) -> list[Acompanhamento]:
-    """Carrega equipes, marcos e entregas em três consultas, qualquer que seja a quantidade."""
+    """Carrega equipes, marcos, entregas e últimos feedbacks em quatro consultas, qualquer que
+    seja a quantidade de equipes."""
     vinculos = await controller.equipes_acompanhadas(
         db, mentor.id, mentor.organizacao_id, hackathon_id=hackathon_id, equipe_id=equipe_id
     )
@@ -94,6 +102,7 @@ async def _acompanhamentos(
         (entrega.equipe_id, entrega.marco_id): entrega
         for entrega in await controller.entregas_das_equipes(db, {e.id for _, e, _ in vinculos})
     }
+    ultimos = await feedbacks.ultimos_feedbacks(db, {e.id for _, e, _ in vinculos})
     agora = agora_utc()
 
     def andamento(equipe: Equipe, hackathon: Hackathon, marco: MarcoMentoria) -> AndamentoMarco:
@@ -112,6 +121,7 @@ async def _acompanhamentos(
             equipe,
             hackathon,
             [andamento(equipe, hackathon, marco) for marco in marcos_por_edicao[hackathon.id]],
+            ultimos.get(equipe.id),
         )
         for atribuicao, equipe, hackathon in vinculos
     ]
@@ -125,6 +135,10 @@ def _progresso(marcos: list[AndamentoMarco]) -> ProgressoMarcos:
         pendentes=contagem[SituacaoMarcoEquipe.PENDENTE],
         nao_entregues=contagem[SituacaoMarcoEquipe.NAO_ENTREGUE],
     )
+
+
+def _dias_sem_feedback(feedback: FeedbackMentoria | None) -> int | None:
+    return None if feedback is None else (agora_utc() - feedback.criado_em).days
 
 
 def _equipe_no_painel(item: Acompanhamento) -> EquipeNoPainel:
@@ -143,6 +157,10 @@ def _equipe_no_painel(item: Acompanhamento) -> EquipeNoPainel:
         atribuido_em=item.atribuicao.atribuido_em,
         progresso=_progresso(item.marcos),
         proximo_marco=ProximoMarco.model_validate(proximo) if proximo else None,
+        ultimo_feedback=(
+            UltimoFeedback.model_validate(item.ultimo_feedback) if item.ultimo_feedback else None
+        ),
+        dias_sem_feedback=_dias_sem_feedback(item.ultimo_feedback),
     )
 
 
@@ -153,6 +171,7 @@ def _resumo(equipes: list[EquipeNoPainel]) -> ResumoPainel:
             for campo in ProgressoMarcos.model_fields
         },
         equipes_com_nao_entregues=sum(equipe.progresso.nao_entregues > 0 for equipe in equipes),
+        equipes_sem_feedback=sum(equipe.ultimo_feedback is None for equipe in equipes),
     )
 
 
@@ -207,4 +226,16 @@ async def detalhar_equipe(
             for membro, usuario in await listar_membros_com_usuario(db, equipe_id)
         ],
         marcos=[_marco_no_painel(marco) for marco in item.marcos],
+        feedbacks_recentes=[
+            FeedbackRecenteNoPainel(
+                id=fb.id,
+                criado_em=fb.criado_em,
+                status_acompanhamento=fb.status_acompanhamento,
+                autor_nome=autor,
+                marco_id=fb.marco_id,
+                entrega_id=fb.entrega_id,
+                trecho=fb.texto[:TAMANHO_TRECHO],
+            )
+            for fb, autor in await feedbacks.recentes(db, equipe_id, FEEDBACKS_RECENTES)
+        ],
     )

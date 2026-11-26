@@ -137,6 +137,7 @@ def test_painel_agrega_progresso_e_pendencias(client, s, calendario):
         "pendentes": 4,
         "nao_entregues": 3,
         "equipes_com_nao_entregues": 2,
+        "equipes_sem_feedback": 2,
     }
     assert ids_das_equipes(corpo) == [str(e) for e in s.equipes[:2]]  # ordem por nome
     primeira, segunda = corpo["equipes"]
