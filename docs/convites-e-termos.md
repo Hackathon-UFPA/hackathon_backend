@@ -9,6 +9,8 @@ Rotas de RF18, RF19 e RF20. Todas exigem token e **conta ativa** (conta pendente
 | `POST /equipes/{id}/convites` | Líder da equipe (`membros_equipe.funcao = LIDER`) | Convida por `nome`, `email` e `tipo_integrante` (opcional: herda o da categoria; obrigatório na `MISTA`); o convite nasce `PENDENTE` |
 | `GET /equipes/{id}/convites` | Integrantes da equipe | Lista os convites e o estado de cada um (o líder vê quem recusou) |
 | `POST /convites/{id}/cancelar` | Líder da equipe | Retira um convite `PENDENTE` |
+| `POST /convites/{id}/reenviar` | Líder da equipe | Reenvia um convite `PENDENTE` com token novo (BE-S5-06), com intervalo mínimo e máximo por convite |
+| `PATCH /convites/{id}` | Líder da equipe | Corrige nome e/ou e-mail de um convite `PENDENTE`; trocar o e-mail invalida o link antigo (BE-S5-06) |
 | `GET /convites/meus` | Qualquer usuário | Convites `PENDENTE` dirigidos ao e-mail de quem está logado (painel) |
 | `POST /convites/{id}/aceitar` | Destinatário do convite | Entra na equipe e aceita os termos vigentes |
 | `POST /convites/{id}/recusar` | Destinatário do convite | Recusa; a vaga volta a ficar livre |
@@ -25,6 +27,8 @@ Rotas de RF18, RF19 e RF20. Todas exigem token e **conta ativa** (conta pendente
 - Quem entra pelo convite fica com `funcao` vazia em `membros_equipe`; o líder define as funções depois.
 
 **Quem não tem conta (BE-S5-02).** O convite a um e-mail sem conta leva um link de cadastro próprio, de uso único, para a pessoa criar o acesso com a própria senha (`POST /auth/cadastro/convite`); o líder nunca define senha. A conta criada assim nasce pendente e **pode** aceitar ou recusar convites e aceitar os termos: `GET /convites/meus`, `POST /convites/{id}/aceitar`, `POST /convites/{id}/recusar` e as rotas de termos aceitam a conta pendente. Veja [Cadastro da equipe e dos integrantes](cadastro-equipe-integrantes.md).
+
+**Reenvio e correção (BE-S5-06).** Regras, erros, política anti-abuso e contrato em [Cadastro da equipe e dos integrantes](cadastro-equipe-integrantes.md#reenvio-e-correção-de-convite-pendente--be-s5-06). O `ConviteResponse` traz `reenvios` e `proximo_reenvio_em`.
 
 **Versões do regulamento (BE-S5-12).** Quem cria, edita e publica as versões é o Organizador, por `/admin/hackathons/{id}/termos` (rascunho, publicação e histórico); veja [Conteúdo institucional](conteudo-institucional.md). Publicar uma versão nova aposenta a vigente e passa a exigir novo aceite: rascunhos nunca aparecem em `termos/vigentes`.
 
