@@ -1,3 +1,4 @@
+from collections.abc import AsyncIterable
 from datetime import datetime
 from uuid import UUID
 
@@ -16,14 +17,23 @@ from app.exceptions.auth import acesso_negado
 from app.exceptions.conteudo import item_nao_encontrado
 from app.exceptions.convite import equipe_nao_encontrada, hackathon_nao_encontrado
 from app.exceptions.db import erro_de_integridade_sql
-from app.models import EntregaMentoria, Equipe, Hackathon, MarcoMentoria, Usuario
-from app.schemas.mentoria import EntregaMentoriaCreate, MarcoMentoriaCreate, MarcoMentoriaUpdate
+from app.models import EntregaMentoria, Equipe, Hackathon, MarcoMentoria, SubmissaoFinal, Usuario
+from app.schemas.mentoria import (
+    ArtefatosSubmissaoFinalResponse,
+    EntregaMentoriaCreate,
+    MarcoMentoriaCreate,
+    MarcoMentoriaUpdate,
+    RelatorioFinalResponse,
+    RepositorioFinalResponse,
+    SubmissaoFinalResponse,
+)
 from app.security.organizacao import mesma_organizacao
 from app.services.atribuicao_mentor import exigir_edicao_nao_encerrada
 from app.services.conteudo import agora_utc, edicao
 from app.services.convite import exigir_lider
 from app.services.hackathon import obter_acessivel
 from app.validations.inscricao import como_utc
+from app.validations.submissao_final import ler_relatorio_pdf, validar_repositorio
 
 GESTORES_MENTORIA = (PapelUsuario.COMITE_CIENTIFICO, PapelUsuario.ORGANIZADOR)
 
@@ -63,8 +73,11 @@ async def _validar_calendario(db: AsyncSession, hackathon: Hackathon, marco: Mar
         conflito_mentoria("Um marco parcial deve vir antes do marco final.")
 
 
-async def _confirmar(db: AsyncSession) -> None:
+async def _confirmar(db: AsyncSession, *, submissao_final: SubmissaoFinal | None = None) -> None:
     try:
+        if submissao_final is not None:
+            await db.flush()
+            db.add(submissao_final)
         await db.commit()
     except IntegrityError as erro:
         await db.rollback()
@@ -73,6 +86,8 @@ async def _confirmar(db: AsyncSession) -> None:
             conflito_mentoria("A edição já possui um marco de entrega final.")
         if "uq_entregas_mentoria_marco_equipe" in mensagem:
             conflito_mentoria("A equipe já registrou uma entrega para este marco.")
+        if "uq_submissoes_finais_proposta" in mensagem:
+            conflito_mentoria("A equipe já registrou sua submissão final.")
         if "fk_entregas_mentoria_marco_edicao" in mensagem:
             conflito_mentoria("A operação conflita com entregas vinculadas ao marco.")
         erro_de_integridade_sql(erro)
@@ -175,9 +190,9 @@ async def listar_marcos(
     )
 
 
-async def registrar_entrega(
-    db: AsyncSession, usuario: Usuario, equipe_id: UUID, dados: EntregaMentoriaCreate
-) -> EntregaMentoria:
+async def _equipe_para_envio(
+    db: AsyncSession, usuario: Usuario, equipe_id: UUID
+) -> tuple[Hackathon, Equipe]:
     # A edição vem antes da equipe, como no envio de proposta e na homologação de resultado.
     hackathon_id = await get_hackathon_id_da_equipe(db, equipe_id)
     if hackathon_id is None:
@@ -189,17 +204,19 @@ async def registrar_entrega(
     if equipe is None:
         equipe_nao_encontrada()
     await exigir_lider(db, equipe.id, usuario)
-    if not await _equipe_autorizada(db, equipe):
-        conflito_mentoria("A equipe precisa estar homologada e ter proposta aprovada.")
+    return hackathon, equipe
+
+
+def _validar_edicao_mentoria(hackathon: Hackathon) -> None:
     if (
         hackathon.status
         in (StatusHackathon.RASCUNHO, StatusHackathon.FINALIZADO, StatusHackathon.CANCELADO)
         or hackathon.treinamento_concluido_em is None
     ):
         conflito_mentoria("A mentoria exige treinamento concluído em uma edição aberta.")
-    marco = await _marco(db, equipe.hackathon_id, dados.marco_id)
-    if marco.tipo != TipoMarcoMentoria.PARCIAL:
-        conflito_mentoria("Este endpoint aceita apenas marcos parciais.")
+
+
+def _instante_de_envio(hackathon: Hackathon, marco: MarcoMentoria) -> datetime:
     _validar_prazo_edicao(hackathon, marco.data_limite)
     agora = agora_utc()
     inicio = _inicio_mentoria(hackathon)
@@ -207,6 +224,20 @@ async def registrar_entrega(
         conflito_mentoria("O período de mentoria ainda não começou.")
     if agora > marco.data_limite:
         conflito_mentoria("O prazo de entrega deste marco foi encerrado.")
+    return agora
+
+
+async def registrar_entrega(
+    db: AsyncSession, usuario: Usuario, equipe_id: UUID, dados: EntregaMentoriaCreate
+) -> EntregaMentoria:
+    hackathon, equipe = await _equipe_para_envio(db, usuario, equipe_id)
+    if not await _equipe_autorizada(db, equipe):
+        conflito_mentoria("A equipe precisa estar homologada e ter proposta aprovada.")
+    _validar_edicao_mentoria(hackathon)
+    marco = await _marco(db, equipe.hackathon_id, dados.marco_id)
+    if marco.tipo != TipoMarcoMentoria.PARCIAL:
+        conflito_mentoria("Este endpoint aceita apenas marcos parciais.")
+    agora = _instante_de_envio(hackathon, marco)
     entrega = EntregaMentoria(
         marco_id=marco.id,
         equipe_id=equipe.id,
@@ -220,6 +251,89 @@ async def registrar_entrega(
     db.add(entrega)
     await _confirmar(db)
     return entrega
+
+
+def artefatos_submissao_final(
+    submissao: SubmissaoFinal, relatorio_url: str
+) -> ArtefatosSubmissaoFinalResponse:
+    return ArtefatosSubmissaoFinalResponse(
+        repositorio=RepositorioFinalResponse(
+            url=submissao.repositorio_url, validado_em=submissao.repositorio_validado_em
+        ),
+        relatorio=RelatorioFinalResponse(
+            url=relatorio_url, tamanho_bytes=submissao.relatorio_tamanho_bytes
+        ),
+    )
+
+
+def _resposta_submissao_final(
+    entrega: EntregaMentoria, submissao: SubmissaoFinal
+) -> SubmissaoFinalResponse:
+    artefatos = artefatos_submissao_final(
+        submissao, f"/equipes/{entrega.equipe_id}/mentoria/submissao-final/relatorio"
+    )
+    return SubmissaoFinalResponse(
+        **artefatos.model_dump(),
+        id=entrega.id,
+        submissao_id=submissao.submissao_id,
+        marco_id=entrega.marco_id,
+        equipe_id=entrega.equipe_id,
+        hackathon_id=entrega.hackathon_id,
+        enviado_por=entrega.enviado_por,
+        enviado_em=entrega.enviado_em,
+        data_limite_no_envio=entrega.data_limite_no_envio,
+    )
+
+
+async def registrar_submissao_final(
+    db: AsyncSession,
+    usuario: Usuario,
+    equipe_id: UUID,
+    repositorio_url: str,
+    relatorio: AsyncIterable[bytes],
+    content_type: str,
+) -> SubmissaoFinalResponse:
+    if await get_hackathon_id_da_equipe(db, equipe_id) is None:
+        equipe_nao_encontrada()
+    await exigir_lider(db, equipe_id, usuario)
+    # O upload pode ser lento. Só adquirir as travas depois de receber e validar o arquivo.
+    pdf = await ler_relatorio_pdf(relatorio, content_type)
+
+    hackathon, equipe = await _equipe_para_envio(db, usuario, equipe_id)
+    proposta_id = await controller.proposta_aprovada_da_equipe(db, equipe.id, hackathon.id)
+    if equipe.situacao != SituacaoEquipe.HOMOLOGADA or proposta_id is None:
+        conflito_mentoria("A equipe precisa estar homologada e ter proposta aprovada.")
+    _validar_edicao_mentoria(hackathon)
+    marco = await controller.ultimo_marco(db, hackathon.id, TipoMarcoMentoria.FINAL)
+    if marco is None:
+        item_nao_encontrado("Marco final")
+    _instante_de_envio(hackathon, marco)
+    if await controller.get_submissao_final(db, equipe.id) is not None:
+        conflito_mentoria("A equipe já registrou sua submissão final.")
+    await validar_repositorio(repositorio_url)
+    agora = _instante_de_envio(hackathon, marco)
+    entrega = EntregaMentoria(
+        marco_id=marco.id,
+        equipe_id=equipe.id,
+        hackathon_id=hackathon.id,
+        enviado_por=usuario.id,
+        enviado_em=agora,
+        data_limite_no_envio=marco.data_limite,
+        descricao=marco.titulo,
+    )
+    submissao = SubmissaoFinal(
+        entrega_id=entrega.id,
+        marco_id=marco.id,
+        equipe_id=equipe.id,
+        hackathon_id=hackathon.id,
+        submissao_id=proposta_id,
+        repositorio_url=repositorio_url,
+        repositorio_validado_em=agora,
+        relatorio_pdf=pdf,
+    )
+    db.add(entrega)
+    await _confirmar(db, submissao_final=submissao)
+    return _resposta_submissao_final(entrega, submissao)
 
 
 async def _autorizar_consulta_entregas(db: AsyncSession, usuario: Usuario, equipe_id: UUID) -> None:
@@ -256,3 +370,21 @@ async def consultar_entrega(
     if entrega is None:
         item_nao_encontrado("Registro de entrega")
     return entrega
+
+
+async def consultar_submissao_final(
+    db: AsyncSession, usuario: Usuario, equipe_id: UUID
+) -> SubmissaoFinalResponse:
+    await _autorizar_consulta_entregas(db, usuario, equipe_id)
+    resultado = await controller.get_submissao_final(db, equipe_id)
+    if resultado is None:
+        item_nao_encontrado("Submissão final")
+    return _resposta_submissao_final(*resultado)
+
+
+async def baixar_relatorio_final(db: AsyncSession, usuario: Usuario, equipe_id: UUID) -> bytes:
+    await _autorizar_consulta_entregas(db, usuario, equipe_id)
+    relatorio = await controller.get_relatorio_final(db, equipe_id)
+    if relatorio is None:
+        item_nao_encontrado("Relatório final")
+    return relatorio

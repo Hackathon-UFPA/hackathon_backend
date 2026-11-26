@@ -1,12 +1,14 @@
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 
 from app.const.enums import TipoMarcoMentoria
 from app.schemas.conteudo import DataUtc, LinkHttps, Parcial, TextoLongo, Titulo
+from app.validations.submissao_final import normalizar_repositorio
 
 OrdemMarco = Annotated[int, Field(ge=0, le=2147483647, strict=True)]
+UrlRepositorio = Annotated[str, AfterValidator(normalizar_repositorio)]
 
 
 class MarcoMentoriaCreate(BaseModel):
@@ -21,7 +23,7 @@ class MarcoMentoriaCreate(BaseModel):
     ordem: OrdemMarco = Field(default=0, description="Desempate entre marcos com o mesmo prazo.")
     tipo: TipoMarcoMentoria = Field(
         default=TipoMarcoMentoria.PARCIAL,
-        description="FINAL reserva o último marco da edição para a futura submissão final.",
+        description="FINAL é o último marco da edição e recebe a submissão final.",
     )
 
 
@@ -71,3 +73,30 @@ class EntregaMentoriaResponse(BaseModel):
     data_limite_no_envio: DataUtc
     descricao: str
     referencias: list[str]
+
+
+class RepositorioFinalResponse(BaseModel):
+    url: str
+    validado_em: DataUtc
+
+
+class RelatorioFinalResponse(BaseModel):
+    url: str = Field(description="Caminho na API para baixar o PDF com autenticação.")
+    tipo: Literal["application/pdf"] = "application/pdf"
+    tamanho_bytes: int
+
+
+class ArtefatosSubmissaoFinalResponse(BaseModel):
+    repositorio: RepositorioFinalResponse
+    relatorio: RelatorioFinalResponse
+
+
+class SubmissaoFinalResponse(ArtefatosSubmissaoFinalResponse):
+    id: UUID = Field(description="Identificador da entrega do marco FINAL.")
+    submissao_id: UUID = Field(description="Identificador da proposta científica aprovada.")
+    marco_id: UUID
+    equipe_id: UUID
+    hackathon_id: UUID
+    enviado_por: UUID
+    enviado_em: DataUtc
+    data_limite_no_envio: DataUtc

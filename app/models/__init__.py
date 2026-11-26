@@ -46,6 +46,7 @@ from .resultado import HomologacaoResultado, ResultadoProposta
 from .rubrica import Rubrica
 from .sessao_treinamento import SessaoTreinamento
 from .submissao import Submissao
+from .submissao_final import SubmissaoFinal
 from .tema import Tema
 from .termo import Termo
 from .token_usuario import TokenUsuario
@@ -86,6 +87,7 @@ __all__ = [
     "Rubrica",
     "SessaoTreinamento",
     "Submissao",
+    "SubmissaoFinal",
     "Tema",
     "Termo",
     "TokenUsuario",

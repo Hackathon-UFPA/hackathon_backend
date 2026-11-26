@@ -1,25 +1,20 @@
 """BE-S6-09: designação dos projetos finais ao Comitê Técnico (RF47, RF48, RN11, RN13, Q07).
 
-Projeto final = proposta aprovada na homologação do resultado científico (RF31). Segue o padrão
-da distribuição das propostas (BE-S4-09), mas em tabelas próprias: não se mistura com a
-avaliação científica. Diferenças:
+A designação usa o identificador da proposta aprovada (RF31) e pode antecipar o envio final.
+Segue o padrão da distribuição das propostas (BE-S4-09), com tabelas próprias. Regras:
 - só Comitê Técnico é elegível;
 - integrantes da equipe, mentores (atuais ou anteriores) e conflitos declarados ficam impedidos;
-- a redistribuição não apaga: marca a designação como removida (histórico auditável).
-
-Quando a avaliação técnica existir (BE-S6-10), distribuir deve pular projetos com avaliação
-iniciada e redistribuir deve recusá-los, como em `designacao_avaliacao`.
+- a redistribuição marca a designação como removida e preserva o histórico.
 """
 
+from collections import defaultdict
 from uuid import UUID
 
 from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.const.enums import StatusHackathon
 from app.controllers.designacao_projeto_final import (
     adicionar,
-    carga_por_avaliador,
     contar_tecnicos_entre,
     existe_vigente,
     get_avaliador_tecnico,
@@ -27,6 +22,7 @@ from app.controllers.designacao_projeto_final import (
     get_equipe_do_hackathon,
     get_projeto_designado,
     get_projeto_final,
+    get_relatorio_projeto_designado,
     impedidos_por_equipe,
     listar_avaliadores_tecnicos,
     listar_conflitos,
@@ -38,6 +34,7 @@ from app.controllers.designacao_projeto_final import (
     marcar_removida,
 )
 from app.controllers.hackathon import get_hackathon_para_atualizar
+from app.controllers.mentoria import projetos_com_submissao_final
 from app.controllers.resultado import get_homologacao
 from app.exceptions.convite import hackathon_nao_encontrado
 from app.exceptions.db import erro_de_integridade_sql
@@ -50,6 +47,7 @@ from app.exceptions.projeto_final import (
     conflito_ja_registrado,
     equipe_nao_encontrada_no_hackathon,
     hackathon_encerrado,
+    projeto_com_avaliacao_iniciada,
     projeto_final_nao_encontrado,
     quantidade_de_avaliadores_tecnicos_invalida,
     quantidade_tecnica_nao_configurada,
@@ -61,6 +59,7 @@ from app.models import (
     Hackathon,
     ResultadoProposta,
     Submissao,
+    SubmissaoFinal,
     Usuario,
 )
 from app.schemas.designacao_projeto_final import (
@@ -68,9 +67,10 @@ from app.schemas.designacao_projeto_final import (
     ConfiguracaoAvaliacaoTecnicaResponse,
     DistribuicaoProjetosFinaisResponse,
     ProjetoFinalDesignadoAdminResponse,
+    ProjetoFinalParaAvaliacaoResponse,
 )
-
-STATUS_ENCERRADOS = {StatusHackathon.FINALIZADO, StatusHackathon.CANCELADO}
+from app.services.hackathon import STATUS_ENCERRADOS
+from app.services.mentoria import artefatos_submissao_final
 
 
 async def _hackathon_travado(db: AsyncSession, hackathon_id: UUID) -> Hackathon:
@@ -94,6 +94,13 @@ async def _projetos(db: AsyncSession, hackathon_id: UUID) -> list[ResultadoPropo
     if homologacao is None:
         resultado_cientifico_nao_homologado()
     return await listar_projetos_finais(db, homologacao.id)
+
+
+async def _projetos_com_avaliacao_iniciada(
+    db: AsyncSession, submissao_ids: list[UUID]
+) -> set[UUID]:
+    # BE-S6-10: consultar avaliações iniciadas sob a mesma trava usada para iniciar uma avaliação.
+    return set()
 
 
 async def configurar(
@@ -126,33 +133,43 @@ async def distribuir(
         n = _exigir_quantidade(hackathon)
         projetos = await _projetos(db, hackathon.id)
 
-        existentes: dict[UUID, set[UUID]] = {p.submissao_id: set() for p in projetos}
+        projetos_ids = {p.submissao_id for p in projetos}
+        iniciados = await _projetos_com_avaliacao_iniciada(db, list(projetos_ids))
+        impedidos = await impedidos_por_equipe(db, [p.equipe_id for p in projetos])
+        elegiveis = {u.id for u in await listar_avaliadores_tecnicos(db, hackathon.organizacao_id)}
+        existentes: dict[UUID, set[UUID]] = defaultdict(set)
+        carga: dict[UUID, int] = defaultdict(int)
+        remover: list[DesignacaoProjetoFinal] = []
         for designacao in await listar_vigentes_do_hackathon(db, hackathon.id):
-            existentes.setdefault(designacao.submissao_id, set()).add(designacao.avaliador_id)
-        impedidos = await impedidos_por_equipe(db, hackathon.id, [p.equipe_id for p in projetos])
-        elegiveis = [u.id for u in await listar_avaliadores_tecnicos(db, hackathon.organizacao_id)]
-        carga = await carga_por_avaliador(db, hackathon.id)
+            projeto_id = designacao.submissao_id
+            if projeto_id not in projetos_ids:
+                continue
+            avaliador_id = designacao.avaliador_id
+            if avaliador_id in elegiveis and avaliador_id not in impedidos[designacao.equipe_id]:
+                existentes[projeto_id].add(avaliador_id)
+                carga[avaliador_id] += 1
+            elif projeto_id not in iniciados:
+                remover.append(designacao)
 
         novas: list[DesignacaoProjetoFinal] = []
         completos = 0
         distribuidos = 0
         for projeto in projetos:
+            if projeto.submissao_id in iniciados:
+                continue
             ja_designados = existentes[projeto.submissao_id]
             faltam = n - len(ja_designados)
             if faltam <= 0:
                 completos += 1
                 continue
-            bloqueados = ja_designados | impedidos.get(projeto.equipe_id, set())
-            candidatos = sorted(
-                (id_ for id_ in elegiveis if id_ not in bloqueados),
-                key=lambda id_: (carga.get(id_, 0), str(id_)),
-            )
+            candidatos_validos = elegiveis - ja_designados - impedidos[projeto.equipe_id]
+            candidatos = sorted(candidatos_validos, key=lambda id_: (carga[id_], str(id_)))
             if len(candidatos) < faltam:
                 avaliadores_tecnicos_insuficientes(
                     n, projeto.submissao_id, len(candidatos) + len(ja_designados)
                 )
             for avaliador_id in candidatos[:faltam]:
-                carga[avaliador_id] = carga.get(avaliador_id, 0) + 1
+                carga[avaliador_id] += 1
                 novas.append(
                     DesignacaoProjetoFinal(
                         submissao_id=projeto.submissao_id,
@@ -164,6 +181,8 @@ async def distribuir(
                 )
             distribuidos += 1
 
+        for designacao in remover:
+            marcar_removida(db, designacao, organizador.id)
         for designacao in novas:
             adicionar(db, designacao)
         await db.commit()
@@ -192,14 +211,14 @@ async def redistribuir(
         if projeto is None:
             projeto_final_nao_encontrado()
         hackathon = await _hackathon_travado(db, projeto.hackathon_id)
+        if await _projetos_com_avaliacao_iniciada(db, [submissao_id]):
+            projeto_com_avaliacao_iniciada()
         n = _exigir_quantidade(hackathon)
         if len(set(avaliador_ids)) != len(avaliador_ids) or len(avaliador_ids) != n:
             quantidade_de_avaliadores_tecnicos_invalida(n)
         if await contar_tecnicos_entre(db, avaliador_ids, hackathon.organizacao_id) != n:
             avaliadores_tecnicos_nao_elegiveis()
-        impedidos = (await impedidos_por_equipe(db, hackathon.id, [projeto.equipe_id])).get(
-            projeto.equipe_id, set()
-        )
+        impedidos = (await impedidos_por_equipe(db, [projeto.equipe_id]))[projeto.equipe_id]
         em_conflito = [id_ for id_ in avaliador_ids if id_ in impedidos]
         if em_conflito:
             avaliador_em_conflito(em_conflito)
@@ -236,6 +255,7 @@ async def _agrupar(
     db: AsyncSession, hackathon_id: UUID, projetos: list[ResultadoProposta]
 ) -> list[ProjetoFinalDesignadoAdminResponse]:
     designacoes = await listar_vigentes_do_hackathon(db, hackathon_id)
+    prontos = await projetos_com_submissao_final(db, hackathon_id)
     usuarios = await listar_usuarios_por_id(db, list({d.avaliador_id for d in designacoes}))
     por_projeto: dict[UUID, list[AvaliadorTecnicoDesignadoResponse]] = {}
     for designacao in designacoes:
@@ -254,6 +274,7 @@ async def _agrupar(
             equipe_id=projeto.equipe_id,
             titulo=projeto.titulo,
             avaliadores=por_projeto.get(projeto.submissao_id, []),
+            pronto_para_avaliacao=projeto.submissao_id in prontos,
         )
         for projeto in projetos
     ]
@@ -313,15 +334,38 @@ async def consultar_conflitos(db: AsyncSession, hackathon_id: UUID) -> list[Conf
     return await listar_conflitos(db, hackathon_id)
 
 
-async def listar_meus_projetos(db: AsyncSession, avaliador: Usuario) -> list[Submissao]:
-    return await listar_projetos_designados(db, avaliador.id)
+def _resposta_projeto_designado(
+    projeto: Submissao, submissao_final: SubmissaoFinal | None
+) -> ProjetoFinalParaAvaliacaoResponse:
+    resposta = ProjetoFinalParaAvaliacaoResponse.model_validate(projeto)
+    if submissao_final is not None:
+        resposta.submissao_final = artefatos_submissao_final(
+            submissao_final, f"/comite-tecnico/projetos-finais/{projeto.id}/relatorio"
+        )
+    return resposta
+
+
+async def listar_meus_projetos(
+    db: AsyncSession, avaliador: Usuario
+) -> list[ProjetoFinalParaAvaliacaoResponse]:
+    projetos = await listar_projetos_designados(db, avaliador.id)
+    return [_resposta_projeto_designado(*projeto) for projeto in projetos]
 
 
 async def consultar_meu_projeto(
     db: AsyncSession, avaliador: Usuario, submissao_id: UUID
-) -> Submissao:
+) -> ProjetoFinalParaAvaliacaoResponse:
     """Projeto não designado a quem consulta 'não existe': não revela projetos alheios."""
     projeto = await get_projeto_designado(db, submissao_id, avaliador.id)
     if projeto is None:
         projeto_final_nao_encontrado()
-    return projeto
+    return _resposta_projeto_designado(*projeto)
+
+
+async def baixar_relatorio_do_meu_projeto(
+    db: AsyncSession, avaliador: Usuario, submissao_id: UUID
+) -> bytes:
+    relatorio = await get_relatorio_projeto_designado(db, submissao_id, avaliador.id)
+    if relatorio is None:
+        projeto_final_nao_encontrado()
+    return relatorio

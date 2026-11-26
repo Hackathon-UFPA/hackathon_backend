@@ -6,7 +6,9 @@ tags = [
     },
     {
         "name": "Entregas da mentoria",
-        "description": "Calendário comum da edição e registro de entregas parciais (RF65, RF39).",
+        "description": (
+            "Calendário da edição, entregas parciais e submissão final (RF65, RF39, RF44)."
+        ),
     },
     {
         "name": "Painel do mentor",

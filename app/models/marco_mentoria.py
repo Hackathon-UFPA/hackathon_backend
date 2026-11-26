@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, Text, func
+from sqlalchemy import DateTime, Text, UniqueConstraint, func
 from sqlmodel import Field, SQLModel
 
 from app.const.enums import TipoMarcoMentoria, pg_enum
@@ -9,6 +9,9 @@ from app.const.enums import TipoMarcoMentoria, pg_enum
 
 class MarcoMentoria(SQLModel, table=True):
     __tablename__ = "marcos_mentoria"
+    __table_args__ = (
+        UniqueConstraint("id", "hackathon_id", "tipo", name="uq_marcos_mentoria_id_edicao_tipo"),
+    )
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     hackathon_id: UUID = Field(foreign_key="hackathon.id", nullable=False)

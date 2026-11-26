@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import ARRAY, SmallInteger, Text
+from sqlalchemy import ARRAY, SmallInteger, Text, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 from app.const.enums import StatusProposta, pg_enum
@@ -12,6 +12,9 @@ class Submissao(SQLModel, table=True):
     """Proposta da equipe (RF26); fica como rascunho até ser enviada (RF27)."""
 
     __tablename__ = "submissoes"
+    __table_args__ = (
+        UniqueConstraint("id", "equipe_id", "hackathon_id", name="uq_submissoes_id_equipe_edicao"),
+    )
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     equipe_id: UUID = Field(foreign_key="equipes.id", nullable=False, unique=True)

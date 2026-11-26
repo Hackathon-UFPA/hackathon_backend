@@ -5,7 +5,7 @@ O líder técnico registra as entregas parciais dentro desses prazos (RF39). A e
 reaproveita a inscrição homologada e o resultado da proposta usado na
 [atribuição de mentores](atribuicao-mentores.md) (RF38). Os envios são a parte de entregas do
 histórico previsto pelo RF42. Os registros e feedbacks feitos pelo mentor (RF40) entram na
-BE-S6-03. O RF44 vincula a futura submissão final ao último marco.
+BE-S6-03. O RF44 vincula a [submissão final](submissao-final.md) ao último marco.
 [Documento de Requisitos da Sprint 4](https://drive.google.com/file/d/1-9XQhZlE_ZbIGoY6Sw8Qb_a2PEcQ3d-Z/view)
 
 ## Modelagem
@@ -114,8 +114,6 @@ Exemplo de envio de uma entrega parcial
   feedbacks. Marco, equipe, data e atribuição vigente fornecem os dados para a linha
   do tempo e o acompanhamento de pendências, já usados no
   [painel do mentor](painel-mentor.md).
-- **Submissão final e versões (BE-S6-07 e BE-S6-08).** O marco `FINAL` fica reservado
-  para o fluxo de envio final. Ele pode usar a mesma entidade de entrega por equipe e
-  marco. As versões futuras podem apontar para essa entrega, mantendo sua identidade
-  e registrando versões dos materiais e dos protocolos. Os requisitos específicos de
-  repositório e relatório serão tratados nesse fluxo (RF44, Q13).
+- **Submissão final e versões (BE-S6-07 e BE-S6-08).** O marco `FINAL` recebe a
+  [submissão final](submissao-final.md) na mesma entidade de entrega por equipe e marco.
+  As versões futuras podem apontar para essa entrega e preservar o histórico de artefatos.

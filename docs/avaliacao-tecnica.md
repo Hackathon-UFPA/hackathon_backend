@@ -12,10 +12,23 @@ RF47, RF48, RN11, RN13 e Q07 (2 a 3 avaliadores por projeto). Todas as rotas exi
 | `GET /admin/hackathons/{id}/avaliacao-tecnica/designacoes` | Organizador (e DEV) | Cada projeto final com os avaliadores vigentes |
 | `POST /admin/hackathons/{id}/avaliacao-tecnica/conflitos` | Organizador (e DEV) | Registra conflito de interesse avaliador × equipe (`motivo` obrigatório) |
 | `GET /admin/hackathons/{id}/avaliacao-tecnica/conflitos` | Organizador (e DEV) | Conflitos declarados no hackathon |
-| `GET /comite-tecnico/projetos-finais` | Comitê Técnico (e DEV) | Só os projetos designados a quem está logado (sem a equipe) |
-| `GET /comite-tecnico/projetos-finais/{submissao_id}` | Comitê Técnico (e DEV) | Um projeto designado; qualquer outro responde 404 |
+| `GET /comite-tecnico/projetos-finais` | Avaliador elegível, sem conflito e com designação vigente | Projetos designados e artefatos validados, quando disponíveis |
+| `GET /comite-tecnico/projetos-finais/{submissao_id}` | Mesmas permissões da listagem | Um projeto designado, ou 404 se indisponível |
+| `GET /comite-tecnico/projetos-finais/{submissao_id}/relatorio` | Mesmas permissões da listagem, com submissão final válida | PDF do relatório final como anexo |
 
-**O que é projeto final.** Cada proposta **aprovada** na homologação do resultado científico (`resultados_proposta.aprovada = true`, RF31). Antes da homologação, distribuir e listar respondem 409. O identificador do projeto é o `submissao_id` da proposta aprovada; a submissão final (BE-S6-07) poderá ser ligada ao mesmo projeto depois.
+**Designação antecipada.** Cada proposta **aprovada** na homologação do resultado científico
+(`resultados_proposta.aprovada = true`, RF31) pode receber avaliadores. Antes da homologação,
+distribuir e listar as designações administrativas respondem 409. A designação usa o
+`submissao_id` da proposta científica e pode ser feita antes da submissão final da mentoria.
+As designações já registradas continuam vinculadas ao mesmo identificador.
+
+**Liberação para avaliação.** As respostas existentes acrescentam `pronto_para_avaliacao`.
+Nas rotas do Comitê Técnico, `submissao_final` contém `repositorio` e `relatorio` quando há
+uma submissão validada. Sem envio válido, `pronto_para_avaliacao` fica `false`,
+`submissao_final` fica `null` e o download retorna 404. Os campos existentes, como
+`documento_url` da proposta científica, mantêm seu significado. A consulta dos artefatos e
+o download conferem a designação vigente, a elegibilidade atual e os impedimentos RN13.
+Consulte [Submissão final](submissao-final.md).
 
 **Quantidade.** `hackathon.avaliadores_por_projeto_final` tem `CHECK` entre 2 e 3 e não tem valor padrão (409 enquanto `NULL`). Alterar vale só para as próximas distribuições.
 
@@ -28,10 +41,59 @@ RF47, RF48, RN11, RN13 e Q07 (2 a 3 avaliadores por projeto). Todas as rotas exi
 
 Registrar um conflito para quem já está designado ao projeto responde 409: redistribua antes. Conflito repetido também responde 409. Conflitos não são apagados.
 
-**Distribuição.** Completa cada projeto até N avaliadores, sempre com quem tem menos projetos no hackathon (desempate pelo id). Rodar de novo só completa o que falta. Se faltar avaliador sem conflito para qualquer projeto, responde 409 e **nada é gravado**. A linha do hackathon fica travada (`SELECT ... FOR UPDATE`) durante a operação, então distribuições simultâneas não duplicam designações.
+**Distribuição.** Completa cada projeto até N avaliadores, priorizando quem tem menos
+designações elegíveis no hackathon (desempate pelo id). A distribuição revalida as designações
+vigentes e recompõe as vagas de avaliadores inelegíveis. Se faltarem avaliadores para qualquer
+projeto, a operação inteira retorna 409 e a transação é revertida. A linha do hackathon fica
+travada (`SELECT ... FOR UPDATE`) durante a operação.
 
 **Redistribuição e auditoria.** O `PUT` recebe exatamente N ids distintos (422 caso contrário), todos elegíveis (409) e sem conflito com a equipe (409, com os ids no `detail`). Quem continua mantém a designação original. **Nada é apagado:** quem sai fica em `designacoes_projeto_final` com `removida_em` e `removida_por`. O índice parcial `uq_designacoes_projeto_final_vigente` impede duas designações vigentes iguais.
 
 **Bloqueios.** Hackathon `FINALIZADO` ou `CANCELADO` bloqueia configurar, distribuir, redistribuir e registrar conflito (409).
 
-**Pendente para a BE-S6-10.** Quando existir a avaliação técnica, distribuir deve pular projetos com avaliação iniciada e redistribuir deve recusá-los (como a avaliação científica faz), e a avaliação deve exigir designação vigente.
+**Pendente para a BE-S6-10.** A criação da avaliação deverá exigir submissão final válida e
+designação elegível sem conflito. Na mesma trava do hackathon, a consulta de avaliações iniciadas
+deverá alimentar `_projetos_com_avaliacao_iniciada`. A distribuição pula esses projetos e a
+redistribuição responde 409 quando essa consulta informar que o projeto já iniciou a avaliação.
+
+## Correções complementares da BE-S6-09 (PR #32)
+
+As correções foram identificadas durante a revisão do PR #32 e incorporadas à implementação
+da BE-S6-07 para consolidar a integração entre a submissão final e a avaliação técnica. Os
+ajustes revalidam a elegibilidade dos avaliadores, reforçam a integridade referencial das
+designações e dos conflitos de interesse e uniformizam o bloqueio de alterações em edições
+encerradas. A implementação original da BE-S6-09 foi preservada, assim como o histórico de
+designações e a separação entre avaliação científica e técnica.
+
+### FIX 01 — Revalidar avaliadores técnicos
+
+Antes, a distribuição contava todas as designações vigentes e a consulta individual
+dependia apenas da designação. Agora, a distribuição e a consulta conferem perfil, situação e
+estado da conta, organização e impedimentos RN13. Uma recomposição bem-sucedida registra data
+e responsável de cada remoção. Se faltarem substitutos, as designações históricas e vigentes
+permanecem como estavam. A correção afeta
+[`services/designacao_projeto_final.py`](../app/services/designacao_projeto_final.py),
+[`controllers/designacao_projeto_final.py`](../app/controllers/designacao_projeto_final.py)
+e [`exceptions/projeto_final.py`](../app/exceptions/projeto_final.py).
+
+### FIX 02 — Garantir a integridade das referências
+
+Antes, cada chave estrangeira validava apenas a existência da referência. Agora, uma chave
+composta obriga a designação a referenciar a combinação correta de proposta, equipe e edição.
+Outra chave composta obriga a equipe do conflito a pertencer à edição informada. A migration
+confere inclusive as designações removidas e falha com o identificador do primeiro registro
+inconsistente. Os índices únicos e o histórico são preservados. A correção afeta
+[`V202611251200`](../migrations/V202611251200__integridade_designacoes_projeto_final.sql),
+[`models/designacao_projeto_final.py`](../app/models/designacao_projeto_final.py) e
+[`models/submissao.py`](../app/models/submissao.py).
+
+### FIX 03 — Bloquear alterações de configuração em edições encerradas
+
+Antes, apenas o endpoint específico bloqueava alterações em edições encerradas. Agora, o
+PATCH genérico retorna 409 se `avaliadores_por_projeto_final` muda e o estado atual ou o
+estado solicitado é `FINALIZADO` ou `CANCELADO`. O bloqueio inclui limpar uma configuração
+com `null` ou preencher uma configuração nula. Enviar o valor já persistido, inclusive
+`null`, permite que o frontend continue enviando os demais campos na mesma requisição.
+A correção afeta [`services/hackathon.py`](../app/services/hackathon.py),
+[`views/hackathons.py`](../app/views/hackathons.py) e
+[`services/designacao_projeto_final.py`](../app/services/designacao_projeto_final.py).
