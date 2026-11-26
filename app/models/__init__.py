@@ -27,6 +27,7 @@ from .convite import Convite
 from .convite_mentor import ConviteMentor
 from .criterio_rubrica import CriterioRubrica
 from .designacao_avaliacao import DesignacaoAvaliacao
+from .designacao_projeto_final import ConflitoProjetoFinal, DesignacaoProjetoFinal
 from .email_outbox import EmailOutbox
 from .entrega_mentoria import EntregaMentoria
 from .equipe import Equipe
@@ -63,6 +64,8 @@ __all__ = [
     "ConviteMentor",
     "CriterioRubrica",
     "DesignacaoAvaliacao",
+    "DesignacaoProjetoFinal",
+    "ConflitoProjetoFinal",
     "EmailOutbox",
     "EntregaMentoria",
     "Equipe",
