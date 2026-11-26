@@ -26,6 +26,7 @@ API de uma plataforma multi-organização de hackathons, construída com **FastA
 - [Propostas](docs/propostas.md): envio definitivo, protocolo, reenvio e histórico de versões (BE-S5-09)
 - [Temas e rubrica](docs/temas-e-rubrica.md): catálogo público, Comitê Científico e uma rubrica por fase (BE-S5-08)
 - [Avaliação](docs/avaliacao.md): distribuição e registro da avaliação científica pela rubrica
+- [Avaliação técnica](docs/avaliacao-tecnica.md): designação dos projetos finais ao Comitê Técnico e conflitos de interesse
 - [Resultado](docs/resultado.md): homologação do resultado e propostas aprovadas públicas
 - [Notificações e somente leitura](docs/notificacoes-e-somente-leitura.md): aviso do resultado às equipes e bloqueio de escrita das não aprovadas
 - [E-mails](docs/emails.md): fila de envio, provedor SMTP, templates em português e acompanhamento

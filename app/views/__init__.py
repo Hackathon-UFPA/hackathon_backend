@@ -5,6 +5,8 @@ from app.views.auth import router as auth
 from app.views.autodeclaracao import router as autodeclaracao
 from app.views.avaliacao import router_admin as avaliacao_admin
 from app.views.avaliacao import router_avaliador as avaliacao_avaliador
+from app.views.avaliacao_tecnica import router_admin as avaliacao_tecnica_admin
+from app.views.avaliacao_tecnica import router_avaliador as avaliacao_tecnica_avaliador
 from app.views.cadastro_convite import router as cadastro_convite
 from app.views.comprovantes import router as comprovantes
 from app.views.conteudo import router as conteudo
@@ -75,6 +77,8 @@ router.include_router(rubrica)
 router.include_router(emails)
 router.include_router(avaliacao_admin)
 router.include_router(avaliacao_avaliador)
+router.include_router(avaliacao_tecnica_admin)
+router.include_router(avaliacao_tecnica_avaliador)
 router.include_router(resultado_admin)
 router.include_router(resultado_publico)
 router.include_router(resultado_equipe)
