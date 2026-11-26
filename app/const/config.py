@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     EMAIL_CONFIRMACAO_MINUTOS: int = Field(default=1440, gt=0)
     # BE-S5-02: validade do link de cadastro próprio enviado a quem é convidado sem ter conta
     CONVITE_CADASTRO_MINUTOS: int = Field(default=10080, gt=0)
+    # BE-S5-06: reenvio do convite pendente. Intervalo mínimo entre dois reenvios e máximo de
+    # renovações do aviso por convite (a troca de e-mail conta no máximo, não no intervalo)
+    CONVITE_REENVIO_INTERVALO_SEGUNDOS: int = Field(default=300, ge=0)
+    CONVITE_REENVIO_MAX: int = Field(default=5, gt=0)
 
     # E-mail transacional (RNF28, RF60). As credenciais vêm só do ambiente.
     # `console` só registra no log (desenvolvimento); `smtp` envia de verdade.
