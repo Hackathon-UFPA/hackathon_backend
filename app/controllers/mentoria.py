@@ -58,7 +58,7 @@ async def listar_entregas(
 ) -> list[EntregaMentoria]:
     consulta = (
         select(EntregaMentoria)
-        .where(EntregaMentoria.equipe_id == equipe_id, ~_tem_artefatos_finais())
+        .where(EntregaMentoria.equipe_id == equipe_id, ~tem_artefatos_finais())
         .order_by(col(EntregaMentoria.enviado_em).desc(), EntregaMentoria.id)
         .limit(limite)
         .offset(deslocamento)
@@ -72,12 +72,12 @@ async def get_entrega(
     consulta = select(EntregaMentoria).where(
         EntregaMentoria.equipe_id == equipe_id,
         EntregaMentoria.id == entrega_id,
-        ~_tem_artefatos_finais(),
+        ~tem_artefatos_finais(),
     )
     return (await db.exec(consulta)).first()
 
 
-def _tem_artefatos_finais():
+def tem_artefatos_finais():
     return (
         select(SubmissaoFinal.entrega_id)
         .where(SubmissaoFinal.entrega_id == EntregaMentoria.id)

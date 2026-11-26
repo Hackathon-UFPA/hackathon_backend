@@ -15,6 +15,7 @@ from app.views.convites import router as convites
 from app.views.emails import router as emails
 from app.views.equipe import router as equipes
 from app.views.equipe import router_publico as equipes_publico
+from app.views.feedback_mentoria import router as feedback_mentoria
 from app.views.hackathons import router as hackathons
 from app.views.hackathons import router_publico as hackathons_publico
 from app.views.health import router as health
@@ -50,6 +51,7 @@ router.include_router(perfil)
 router.include_router(autodeclaracao)
 router.include_router(atribuicoes_mentor)
 router.include_router(mentoria)
+router.include_router(feedback_mentoria)
 router.include_router(painel_mentor)
 router.include_router(usuarios)
 router.include_router(mentores)

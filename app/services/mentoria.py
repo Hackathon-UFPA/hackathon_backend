@@ -6,6 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.const.enums import PapelUsuario, SituacaoEquipe, StatusHackathon, TipoMarcoMentoria
+from app.controllers import feedback_mentoria as feedbacks
 from app.controllers import mentoria as controller
 from app.controllers.atribuicao_mentor import equipe_aprovada, vigente
 from app.controllers.conteudo import get_item, listar_itens
@@ -144,6 +145,8 @@ async def excluir_marco(db: AsyncSession, hackathon_id: UUID, marco_id: UUID) ->
     marco = await _marco(db, hackathon_id, marco_id)
     if await controller.marco_tem_entregas(db, marco.id):
         conflito_mentoria("Um marco com entregas registradas não pode ser excluído.")
+    if await feedbacks.marco_tem_feedbacks(db, marco.id):
+        conflito_mentoria("Um marco com feedbacks do mentor não pode ser excluído.")
     await db.delete(marco)
     await _confirmar(db)
 
