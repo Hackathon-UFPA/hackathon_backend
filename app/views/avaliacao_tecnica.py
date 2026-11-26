@@ -1,12 +1,11 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Response, status
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.const.enums import PapelUsuario
 from app.db.db import get_session
 from app.models import Usuario
-from app.schemas.designacao_avaliacao import PropostaParaAvaliacaoResponse
 from app.schemas.designacao_projeto_final import (
     ConfiguracaoAvaliacaoTecnicaResponse,
     ConfiguracaoAvaliacaoTecnicaUpdate,
@@ -14,11 +13,13 @@ from app.schemas.designacao_projeto_final import (
     ConflitoProjetoFinalResponse,
     DistribuicaoProjetosFinaisResponse,
     ProjetoFinalDesignadoAdminResponse,
+    ProjetoFinalParaAvaliacaoResponse,
     RedistribuicaoProjetoFinalCreate,
 )
 from app.security.dependencias import exigir_papeis
 from app.security.organizacao import gestor_da_proposta, gestor_do_hackathon
 from app.services.designacao_projeto_final import (
+    baixar_relatorio_do_meu_projeto,
     configurar,
     consultar_conflitos,
     consultar_meu_projeto,
@@ -29,6 +30,7 @@ from app.services.designacao_projeto_final import (
     registrar_conflito,
 )
 from app.utils.openapi import respostas_de_erro
+from app.views.mentoria import RelatorioPDF, resposta_relatorio_pdf
 
 router_admin = APIRouter(tags=["Avaliação técnica"])
 router_avaliador = APIRouter(prefix="/comite-tecnico/projetos-finais", tags=["Avaliação técnica"])
@@ -74,13 +76,13 @@ async def configurar_avaliacao_tecnica(
     response_model=DistribuicaoProjetosFinaisResponse,
     summary="Distribuir projetos finais ao Comitê Técnico",
     description=(
-        "RF47, RF48, RN13. Organizador (e DEV). Projeto final é cada proposta aprovada na "
-        "homologação do resultado científico; antes dela responde 409. Cada projeto recebe a "
-        "quantidade configurada de avaliadores do Comitê Técnico (conta ativa, mesma "
-        "organização), sempre escolhendo quem tem menos projetos (desempate pelo id). Ficam "
+        "RF47, RF48, RN13. Organizador (e DEV). Propostas aprovadas na homologação científica "
+        "podem receber designações antecipadas. Antes da homologação, retorna 409. Cada "
+        "projeto recebe a quantidade configurada de avaliadores do Comitê Técnico (conta ativa, "
+        "mesma organização), sempre escolhendo quem tem menos projetos (desempate pelo id). Ficam "
         "de fora os integrantes da equipe, os mentores dela (inclusive atribuições encerradas) "
-        "e os conflitos declarados. Rodar de novo só completa projetos incompletos. Se faltar "
-        "avaliador para algum projeto, responde 409 e não grava nada."
+        "e os conflitos declarados. A operação revalida as designações vigentes e recompõe "
+        "vagas de avaliadores inelegíveis. A falta de avaliadores retorna 409 e reverte a operação."
     ),
     responses=respostas_de_erro(
         {
@@ -139,8 +141,8 @@ async def redistribuir_projeto_final(
     response_model=list[ProjetoFinalDesignadoAdminResponse],
     summary="Listar designações dos projetos finais",
     description=(
-        "Organizador (e DEV). Cada projeto final com os avaliadores vigentes; `avaliadores` "
-        "vem vazio enquanto o projeto não foi distribuído."
+        "Organizador (e DEV). Lista as propostas aprovadas, as designações vigentes e se "
+        "cada projeto já possui uma submissão final válida (`pronto_para_avaliacao`)."
     ),
     responses=respostas_de_erro(
         {
@@ -207,11 +209,12 @@ async def listar_conflitos_projeto_final(
 
 @router_avaliador.get(
     "",
-    response_model=list[PropostaParaAvaliacaoResponse],
+    response_model=list[ProjetoFinalParaAvaliacaoResponse],
     summary="Listar meus projetos finais designados",
     description=(
-        "Comitê Técnico (e DEV, que vê só o que foi designado a ele). Somente os projetos com "
-        "designação vigente para quem está logado. Não traz a equipe."
+        "Projetos com designação vigente para o avaliador elegível e sem conflito de interesse. "
+        "Quando já existe uma submissão final validada, inclui seus artefatos. Designações "
+        "antecipadas aparecem com pronto_para_avaliacao=false."
     ),
     responses=respostas_de_erro({401: ERRO_401, 403: ERRO_403}),
 )
@@ -224,11 +227,11 @@ async def meus_projetos_finais(
 
 @router_avaliador.get(
     "/{submissao_id}",
-    response_model=PropostaParaAvaliacaoResponse,
+    response_model=ProjetoFinalParaAvaliacaoResponse,
     summary="Consultar um projeto final designado",
     description=(
-        "Comitê Técnico (e DEV). Retorna o projeto só se estiver designado a quem está logado; "
-        "qualquer outro responde 404, sem revelar que ele existe."
+        "Somente o avaliador elegível com designação vigente e sem conflito de interesse "
+        "pode consultar. Os artefatos ficam disponíveis depois de validar a submissão final."
     ),
     responses=respostas_de_erro(
         {401: ERRO_401, 403: ERRO_403, 404: "Projeto não encontrado ou não designado a você"}
@@ -240,3 +243,26 @@ async def meu_projeto_final(
     avaliador: Usuario = Depends(AVALIADOR_TECNICO),
 ):
     return await consultar_meu_projeto(db, avaliador, submissao_id)
+
+
+@router_avaliador.get(
+    "/{submissao_id}/relatorio",
+    response_class=Response,
+    summary="Baixar o relatório de um projeto final designado",
+    description=(
+        "Requer designação vigente, avaliador elegível sem conflito e submissão final válida."
+    ),
+    responses={
+        200: {"description": "PDF do relatório final", "content": RelatorioPDF},
+        **respostas_de_erro(
+            {401: ERRO_401, 403: ERRO_403, 404: "Projeto ou relatório indisponível ao avaliador."}
+        ),
+    },
+)
+async def baixar_relatorio_do_projeto(
+    submissao_id: UUID,
+    db: AsyncSession = Depends(get_session),
+    avaliador: Usuario = Depends(AVALIADOR_TECNICO),
+):
+    pdf = await baixar_relatorio_do_meu_projeto(db, avaliador, submissao_id)
+    return resposta_relatorio_pdf(pdf)

@@ -2,24 +2,28 @@ from collections import defaultdict
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import func
+from sqlalchemy import and_, func
+from sqlalchemy.orm import defer
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.const.enums import PapelUsuario, SituacaoConta
+from app.controllers.mentoria import submissao_final_habilitada_para_avaliacao
 from app.models import (
     AtribuicaoMentor,
     ConflitoProjetoFinal,
     DesignacaoProjetoFinal,
     Equipe,
+    Hackathon,
     MembroEquipe,
     ResultadoProposta,
     Submissao,
+    SubmissaoFinal,
     Usuario,
 )
 
 
-def _elegivel(organizacao_id: UUID | None):
+def _elegivel(organizacao_id):
     """Comitê Técnico com conta ativa da organização dona do hackathon (RF47)."""
     return (
         Usuario.papel == PapelUsuario.COMITE_TECNICO,
@@ -84,25 +88,21 @@ async def get_equipe_do_hackathon(
     return (await db.exec(consulta)).first()
 
 
-async def impedidos_por_equipe(
-    db: AsyncSession, hackathon_id: UUID, equipe_ids: list[UUID]
-) -> dict[UUID, set[UUID]]:
-    """RN13: quem não pode avaliar o projeto de cada equipe. Integrantes, mentores (inclusive
-    atribuições já encerradas) e conflitos declarados pelo Organizador."""
+def _vinculos_impeditivos():
+    """RN13: integrantes, mentores atuais ou antigos e conflitos declarados."""
+    return (
+        (MembroEquipe.equipe_id, MembroEquipe.usuario_id),
+        (AtribuicaoMentor.equipe_id, AtribuicaoMentor.mentor_id),
+        (ConflitoProjetoFinal.equipe_id, ConflitoProjetoFinal.avaliador_id),
+    )
+
+
+async def impedidos_por_equipe(db: AsyncSession, equipe_ids: list[UUID]) -> dict[UUID, set[UUID]]:
     impedidos: dict[UUID, set[UUID]] = defaultdict(set)
     if not equipe_ids:
         return impedidos
-    membros = select(MembroEquipe.equipe_id, MembroEquipe.usuario_id).where(
-        col(MembroEquipe.equipe_id).in_(equipe_ids)
-    )
-    mentores = select(AtribuicaoMentor.equipe_id, AtribuicaoMentor.mentor_id).where(
-        col(AtribuicaoMentor.equipe_id).in_(equipe_ids)
-    )
-    declarados = select(ConflitoProjetoFinal.equipe_id, ConflitoProjetoFinal.avaliador_id).where(
-        ConflitoProjetoFinal.hackathon_id == hackathon_id,
-        col(ConflitoProjetoFinal.equipe_id).in_(equipe_ids),
-    )
-    for consulta in (membros, mentores, declarados):
+    for equipe, avaliador in _vinculos_impeditivos():
+        consulta = select(equipe, avaliador).where(col(equipe).in_(equipe_ids))
         for equipe_id, usuario_id in (await db.exec(consulta)).all():
             impedidos[equipe_id].add(usuario_id)
     return impedidos
@@ -139,21 +139,6 @@ async def existe_vigente(db: AsyncSession, equipe_id: UUID, avaliador_id: UUID) 
         col(DesignacaoProjetoFinal.removida_em).is_(None),
     )
     return (await db.exec(consulta)).first() is not None
-
-
-async def carga_por_avaliador(db: AsyncSession, hackathon_id: UUID) -> dict[UUID, int]:
-    consulta = (
-        select(DesignacaoProjetoFinal.avaliador_id, func.count())
-        .where(
-            DesignacaoProjetoFinal.hackathon_id == hackathon_id,
-            col(DesignacaoProjetoFinal.removida_em).is_(None),
-        )
-        .group_by(DesignacaoProjetoFinal.avaliador_id)
-    )
-    carga: dict[UUID, int] = defaultdict(int)
-    for avaliador_id, total in (await db.exec(consulta)).all():
-        carga[avaliador_id] = total
-    return carga
 
 
 async def listar_usuarios_por_id(db: AsyncSession, ids: list[UUID]) -> dict[UUID, Usuario]:
@@ -194,35 +179,66 @@ async def get_conflito(
     return (await db.exec(consulta)).first()
 
 
-async def listar_projetos_designados(db: AsyncSession, avaliador_id: UUID) -> list[Submissao]:
-    consulta = (
-        select(Submissao)
+def _consulta_projetos_designados(consulta, avaliador_id: UUID):
+    """Consulta do avaliador, com designação vigente, elegibilidade e RN13."""
+    designacao = DesignacaoProjetoFinal
+    impedimentos = (
+        ~select(equipe)
+        .where(equipe == designacao.equipe_id, avaliador == designacao.avaliador_id)
+        .correlate(designacao)
+        .exists()
+        for equipe, avaliador in _vinculos_impeditivos()
+    )
+    return (
+        consulta.select_from(Submissao)
         .join(
-            DesignacaoProjetoFinal,
-            col(DesignacaoProjetoFinal.submissao_id) == col(Submissao.id),
+            designacao,
+            col(designacao.submissao_id) == col(Submissao.id),
         )
+        .join(Hackathon, col(Hackathon.id) == col(designacao.hackathon_id))
+        .join(Usuario, col(Usuario.id) == col(designacao.avaliador_id))
         .where(
-            DesignacaoProjetoFinal.avaliador_id == avaliador_id,
-            col(DesignacaoProjetoFinal.removida_em).is_(None),
+            designacao.avaliador_id == avaliador_id,
+            col(designacao.removida_em).is_(None),
+            *_elegivel(Hackathon.organizacao_id),
+            *impedimentos,
         )
-        .order_by(col(Submissao.enviado_em), col(Submissao.id))
+    )
+
+
+def _vinculo_submissao_final_validada():
+    return and_(
+        SubmissaoFinal.submissao_id == Submissao.id,
+        submissao_final_habilitada_para_avaliacao(),
+    )
+
+
+def _consulta_projetos_com_artefatos(avaliador_id: UUID):
+    return (
+        _consulta_projetos_designados(select(Submissao, SubmissaoFinal), avaliador_id)
+        .outerjoin(SubmissaoFinal, _vinculo_submissao_final_validada())
+        .options(defer(SubmissaoFinal.relatorio_pdf, raiseload=True))
+    )
+
+
+async def listar_projetos_designados(db: AsyncSession, avaliador_id: UUID):
+    consulta = _consulta_projetos_com_artefatos(avaliador_id).order_by(
+        col(Submissao.enviado_em), col(Submissao.id)
     )
     return list((await db.exec(consulta)).all())
 
 
-async def get_projeto_designado(
+async def get_projeto_designado(db: AsyncSession, submissao_id: UUID, avaliador_id: UUID):
+    consulta = _consulta_projetos_com_artefatos(avaliador_id).where(Submissao.id == submissao_id)
+    return (await db.exec(consulta)).first()
+
+
+async def get_relatorio_projeto_designado(
     db: AsyncSession, submissao_id: UUID, avaliador_id: UUID
-) -> Submissao | None:
+) -> bytes | None:
     consulta = (
-        select(Submissao)
-        .join(
-            DesignacaoProjetoFinal,
-            col(DesignacaoProjetoFinal.submissao_id) == col(Submissao.id),
-        )
-        .where(
-            Submissao.id == submissao_id,
-            DesignacaoProjetoFinal.avaliador_id == avaliador_id,
-            col(DesignacaoProjetoFinal.removida_em).is_(None),
-        )
+        _consulta_projetos_designados(select(SubmissaoFinal.relatorio_pdf), avaliador_id)
+        .join(SubmissaoFinal, _vinculo_submissao_final_validada())
+        .where(Submissao.id == submissao_id)
     )
     return (await db.exec(consulta)).first()

@@ -1,7 +1,10 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
+
+from app.schemas.designacao_avaliacao import PropostaParaAvaliacaoResponse
+from app.schemas.mentoria import ArtefatosSubmissaoFinalResponse
 
 
 class ConfiguracaoAvaliacaoTecnicaUpdate(BaseModel):
@@ -45,6 +48,20 @@ class ProjetoFinalDesignadoAdminResponse(BaseModel):
     equipe_id: UUID
     titulo: str | None = None
     avaliadores: list[AvaliadorTecnicoDesignadoResponse]
+    pronto_para_avaliacao: bool = Field(
+        default=False, description="A proposta aprovada possui uma submissão final validada."
+    )
+
+
+class ProjetoFinalParaAvaliacaoResponse(PropostaParaAvaliacaoResponse):
+    submissao_final: ArtefatosSubmissaoFinalResponse | None = Field(
+        default=None, description="Artefatos validados do marco FINAL, quando já enviados."
+    )
+
+    @computed_field
+    @property
+    def pronto_para_avaliacao(self) -> bool:
+        return self.submissao_final is not None
 
 
 class ConflitoProjetoFinalCreate(BaseModel):

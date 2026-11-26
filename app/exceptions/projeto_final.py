@@ -60,6 +60,13 @@ def avaliadores_tecnicos_insuficientes(n: int, submissao_id: UUID, disponiveis: 
     )
 
 
+def projeto_com_avaliacao_iniciada():
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail="O projeto já tem avaliação técnica iniciada.",
+    )
+
+
 def quantidade_de_avaliadores_tecnicos_invalida(n: int):
     raise HTTPException(
         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,

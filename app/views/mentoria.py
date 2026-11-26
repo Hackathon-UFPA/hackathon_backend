@@ -1,7 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, Response, status
+from fastapi import APIRouter, Depends, Query, Request, Response, status
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.db.db import get_session
@@ -12,6 +12,8 @@ from app.schemas.mentoria import (
     MarcoMentoriaCreate,
     MarcoMentoriaResponse,
     MarcoMentoriaUpdate,
+    SubmissaoFinalResponse,
+    UrlRepositorio,
 )
 from app.security.dependencias import usuario_ativo
 from app.security.organizacao import gestor_do_hackathon
@@ -31,6 +33,8 @@ router = APIRouter(
 MarcosAdmin = "/admin/hackathons/{hackathon_id}/mentoria/marcos"
 MarcosEdicao = "/hackathons/{hackathon_id}/mentoria/marcos"
 EntregasEquipe = "/equipes/{equipe_id}/mentoria/entregas"
+SubmissaoFinalEquipe = "/equipes/{equipe_id}/mentoria/submissao-final"
+RelatorioPDF = {"application/pdf": {"schema": {"type": "string", "format": "binary"}}}
 Db = Annotated[AsyncSession, Depends(get_session)]
 Gestor = Annotated[Usuario, Depends(gestor_do_hackathon(*service.GESTORES_MENTORIA))]
 UsuarioAtivo = Annotated[Usuario, Depends(usuario_ativo)]
@@ -194,3 +198,83 @@ async def listar_entregas(
 async def consultar_entrega(equipe_id: UUID, entrega_id: UUID, db: Db, usuario: UsuarioAtivo):
     """Integrantes da equipe, mentor vigente, gestores da organização proprietária e DEV."""
     return await service.consultar_entrega(db, usuario, equipe_id, entrega_id)
+
+
+def resposta_relatorio_pdf(pdf: bytes) -> Response:
+    return Response(
+        pdf,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": 'attachment; filename="relatorio-final.pdf"',
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@router.post(
+    SubmissaoFinalEquipe,
+    response_model=SubmissaoFinalResponse,
+    status_code=status.HTTP_201_CREATED,
+    openapi_extra={"requestBody": {"required": True, "content": RelatorioPDF}},
+    responses=respostas_de_erro(
+        {
+            404: "Equipe, hackathon ou marco final inexistente.",
+            409: "Equipe ou edição inelegível, prazo indisponível ou submissão duplicada.",
+            413: "PDF com mais de 10 MB.",
+            415: "Content-Type diferente de application/pdf.",
+            422: "Link inválido, repositório inacessível ou PDF ilegível.",
+            503: "Falha temporária ao validar o repositório no GitHub.",
+        }
+    ),
+)
+async def registrar_submissao_final(
+    equipe_id: UUID,
+    request: Request,
+    db: Db,
+    usuario: UsuarioAtivo,
+    repositorio_url: Annotated[
+        UrlRepositorio,
+        Query(description="URL HTTPS do repositório GitHub público, no formato dono/repositório."),
+    ],
+):
+    """Líder técnico ou DEV. Envia os bytes do relatório (PDF de até 10 MB) no corpo.
+
+    O envio usa o marco FINAL da edição e exige equipe homologada, proposta aprovada
+    no resultado homologado, treinamento concluído e período aberto.
+    """
+    return await service.registrar_submissao_final(
+        db,
+        usuario,
+        equipe_id,
+        repositorio_url,
+        request.stream(),
+        request.headers.get("content-type", ""),
+    )
+
+
+@router.get(
+    SubmissaoFinalEquipe,
+    response_model=SubmissaoFinalResponse,
+    responses=respostas_de_erro({404: "Equipe, edição acessível ou submissão final inexistente."}),
+)
+async def consultar_submissao_final(equipe_id: UUID, db: Db, usuario: UsuarioAtivo):
+    """Integrantes da equipe, mentor vigente, gestores da organização proprietária e DEV.
+
+    Consulta os artefatos, a autoria, o horário e o prazo do envio, inclusive após o encerramento.
+    """
+    return await service.consultar_submissao_final(db, usuario, equipe_id)
+
+
+@router.get(
+    SubmissaoFinalEquipe + "/relatorio",
+    response_class=Response,
+    responses={
+        200: {"description": "PDF do relatório final", "content": RelatorioPDF},
+        **respostas_de_erro({404: "Equipe, edição acessível ou relatório final inexistente."}),
+    },
+)
+async def baixar_relatorio_final(equipe_id: UUID, db: Db, usuario: UsuarioAtivo):
+    """Baixa o PDF com as mesmas permissões da consulta da submissão final da equipe."""
+    pdf = await service.baixar_relatorio_final(db, usuario, equipe_id)
+    return resposta_relatorio_pdf(pdf)

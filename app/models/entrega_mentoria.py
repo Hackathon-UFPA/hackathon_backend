@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, ForeignKeyConstraint, Text
+from sqlalchemy import DateTime, ForeignKeyConstraint, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlmodel import Field, SQLModel
 
@@ -18,6 +18,9 @@ class EntregaMentoria(SQLModel, table=True):
             ["equipe_id", "hackathon_id"],
             ["equipes.id", "equipes.hackathon_id"],
             name="fk_entregas_mentoria_equipe_edicao",
+        ),
+        UniqueConstraint(
+            "id", "marco_id", "equipe_id", "hackathon_id", name="uq_entregas_mentoria_vinculo"
         ),
     )
 

@@ -55,10 +55,17 @@ async def cadastrar_hackathon(
         "as regras de datas e de "
         "tamanho da equipe valem para o resultado final. `status`, `min_integrantes` e "
         "`max_integrantes` não aceitam null. Para encerrar uma edição que já tem dados, use "
-        "`status = CANCELADO` em vez de excluí-la."
+        "`status = CANCELADO` em vez de excluí-la. Alterar `avaliadores_por_projeto_final` "
+        "exige uma edição aberta antes e depois da operação."
     ),
     responses=respostas_de_erro(
-        {401: ERRO_401, 403: ERRO_403_ORG, 404: "Hackathon não encontrado", 422: ERRO_422_DATAS}
+        {
+            401: ERRO_401,
+            403: ERRO_403_ORG,
+            404: "Hackathon não encontrado",
+            409: "Alteração da configuração técnica em edição finalizada ou cancelada",
+            422: ERRO_422_DATAS,
+        }
     ),
 )
 async def editar_hackathon(
