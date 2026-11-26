@@ -2,6 +2,8 @@
 
 # Banco de dados
 
+BE-S6-03: `V202611261100__feedbacks_mentoria.sql` adiciona `feedbacks_mentoria` (só inserção: trigger bloqueia `UPDATE` e `DELETE`, correção por `corrige_id`, idempotência por autor e chaves compostas para equipe, marco, entrega e correção). Detalhes em [Feedbacks do mentor](feedbacks-mentoria.md).
+
 BE-S5-02: `V202611161500__cadastro_por_convite_idempotencia.sql` adiciona `convites.token_hash` (SHA-256 do token do link de cadastro próprio), `token_expira_em` e `token_utilizado_em`, e `equipes.criada_por`, `chave_idempotencia` e `hash_requisicao` (único por `criada_por` e chave, para o `POST /equipes` idempotente). Detalhes em [Cadastro da equipe e dos integrantes](cadastro-equipe-integrantes.md).
 
 BE-S5-03: `V202611161400__autodeclaracao_comprovantes.sql` adiciona `autodeclaracoes_vinculo` (declaração da própria pessoa por edição, só inserção: trigger barra `UPDATE`), `comprovantes_vinculo.tipo_vinculo` (legado = `ESTUDANTE`) e `autodeclaracao_id`, move o limite de comprovante em aberto ou aprovado para `(usuario, hackathon, tipo_vinculo)` e adiciona a política `hackathon.exige_autodeclaracao`, `exige_comprovante_estudante` e `exige_comprovante_profissional`. Detalhes em [Autodeclaração e comprovantes](autodeclaracao-e-comprovantes.md).

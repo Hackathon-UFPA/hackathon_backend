@@ -69,15 +69,30 @@ A situação é calculada na hora da consulta:
 - `PENDENTE` indica que o prazo está aberto. O envio ainda segue as validações de
   [registro de entrega](mentoria-entregas.md#registro-e-consulta-de-entregas).
 
+## Feedbacks no painel (BE-S6-03)
+
+Só campos aditivos: os campos anteriores não mudaram.
+
+| Onde | Campo | Conteúdo |
+| --- | --- | --- |
+| Cada equipe | `ultimo_feedback` | `{id, criado_em, status_acompanhamento}` do feedback mais recente de qualquer mentor, ou `null` |
+| Cada equipe | `dias_sem_feedback` | Dias inteiros (UTC) desde o último feedback, ou `null` se nunca houve |
+| `resumo` | `equipes_sem_feedback` | Equipes filtradas que nunca receberam feedback |
+| Detalhe | `feedbacks_recentes` | Até 5 feedbacks, com `trecho` de até 140 caracteres e sem o texto completo |
+
+O texto completo está em `GET /equipes/{equipe_id}/mentoria/feedbacks`. O último feedback vem de
+uma consulta agrupada (`DISTINCT ON` por equipe), sem N+1.
+
 ## Consultas
 
-A lista usa três consultas, qualquer que seja a quantidade de equipes
+A lista usa quatro consultas, qualquer que seja a quantidade de equipes
 ([controller](../app/controllers/painel_mentor.py)):
 
 1. Equipes autorizadas, em uma consulta que junta atribuições, equipes e edições e aplica as
    quatro condições de visibilidade (índice `ix_atribuicoes_mentor_vigentes`).
 2. Marcos das edições dessas equipes (índice `ix_marcos_mentoria_calendario`).
 3. Entregas dessas equipes (índice `ix_entregas_mentoria_equipe_historico`).
+4. Último feedback de cada equipe (índice `ix_feedbacks_mentoria_equipe`).
 
 O detalhe acrescenta uma consulta de integrantes. A paginação é aplicada depois da agregação,
 porque o resumo precisa de todas as equipes. A quantidade de vínculos vigentes é limitada pela
@@ -90,7 +105,10 @@ capacidade do mentor (`max_equipes`).
 - **Sessões individuais de mentoria.** A atualização de escopo de 19/11 pede sessões no painel
   quando a modelagem da BE-S6-01 estiver pronta. Elas ainda não estão modeladas, por isso o
   painel não as traz, nem o estado de sessão cancelada.
-- **Feedbacks (BE-S6-03) e chat (BE-S6-05).** Ficam fora deste card.
+- **Feedbacks (BE-S6-03).** Os campos de feedback do painel estão na seção seguinte. As
+  decisões pendentes de status, Q24, e-mail e correção estão em
+  [Feedbacks do mentor](feedbacks-mentoria.md#decisões-pendentes).
+- **Chat (BE-S6-05).** Fica fora deste card.
 - **Contrato com o frontend.** Precisa de revisão com o time de frontend.
 
 ## Testes
