@@ -8,6 +8,10 @@ tags = [
         "name": "Entregas da mentoria",
         "description": "Calendário comum da edição e registro de entregas parciais (RF65, RF39).",
     },
+    {
+        "name": "Painel do mentor",
+        "description": "Acompanhamento das equipes designadas ao mentor (RF41)",
+    },
     {"name": "Mentores", "description": "Cadastro e ativação de mentores (RF37, RN24, RN33)"},
     {"name": "Health", "description": "Verificação de saúde da API e do banco de dados"},
     {
