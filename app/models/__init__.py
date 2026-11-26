@@ -34,6 +34,7 @@ from .equipe import Equipe
 from .evento_mentoria import EventoNotificacaoMentoria
 from .faq_item import FaqItem
 from .fase_cronograma import FaseCronograma
+from .feedback_mentoria import FeedbackMentoria
 from .hackathon import Hackathon
 from .marco_mentoria import MarcoMentoria
 from .material_treinamento import MaterialTreinamento
@@ -71,6 +72,7 @@ __all__ = [
     "EntregaMentoria",
     "Equipe",
     "FaqItem",
+    "FeedbackMentoria",
     "FaseCronograma",
     "EventoNotificacaoMentoria",
     "Hackathon",
