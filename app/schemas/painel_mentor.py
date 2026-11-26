@@ -13,6 +13,7 @@ from app.const.enums import (
     TipoMarcoMentoria,
 )
 from app.schemas.conteudo import DataUtc
+from app.schemas.feedback_mentoria import StatusAcompanhamento
 
 
 class SituacaoMarcoEquipe(StrEnum):
@@ -35,6 +36,9 @@ class ProgressoMarcos(BaseModel):
 
 class ResumoPainel(ProgressoMarcos):
     equipes_com_nao_entregues: int
+    equipes_sem_feedback: int = Field(
+        description="Equipes que nunca receberam feedback de nenhum mentor"
+    )
 
 
 class ProximoMarco(BaseModel):
@@ -43,6 +47,14 @@ class ProximoMarco(BaseModel):
     id: UUID
     titulo: str
     data_limite: DataUtc
+
+
+class UltimoFeedback(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    criado_em: DataUtc
+    status_acompanhamento: StatusAcompanhamento
 
 
 class EquipeNoPainel(BaseModel):
@@ -57,6 +69,13 @@ class EquipeNoPainel(BaseModel):
     progresso: ProgressoMarcos
     proximo_marco: ProximoMarco | None = Field(
         description="Marco parcial pendente com o prazo mais próximo"
+    )
+    ultimo_feedback: UltimoFeedback | None = Field(
+        default=None, description="Feedback mais recente da equipe, de qualquer mentor"
+    )
+    dias_sem_feedback: int | None = Field(
+        default=None,
+        description="Dias inteiros (UTC) desde o último feedback. Nulo se nunca houve feedback",
     )
 
 
@@ -98,6 +117,21 @@ class MarcoNoPainel(BaseModel):
     entrega: EntregaNoPainel | None
 
 
+class FeedbackRecenteNoPainel(BaseModel):
+    id: UUID
+    criado_em: DataUtc
+    status_acompanhamento: StatusAcompanhamento
+    autor_nome: str | None
+    marco_id: UUID | None
+    entrega_id: UUID | None
+    trecho: str = Field(
+        description="Início do texto (até 140 caracteres). O texto completo fica na listagem"
+    )
+
+
 class DetalheEquipeNoPainel(EquipeNoPainel):
     integrantes: list[IntegranteNoPainel]
     marcos: list[MarcoNoPainel] = Field(description="Calendário completo da edição, por prazo")
+    feedbacks_recentes: list[FeedbackRecenteNoPainel] = Field(
+        default_factory=list, description="Até 5 feedbacks mais recentes, sem o texto completo"
+    )

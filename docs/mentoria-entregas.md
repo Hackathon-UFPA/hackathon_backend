@@ -4,8 +4,8 @@ O Comitê Científico configura os prazos comuns às equipes de uma edição (RF
 O líder técnico registra as entregas parciais dentro desses prazos (RF39). A elegibilidade
 reaproveita a inscrição homologada e o resultado da proposta usado na
 [atribuição de mentores](atribuicao-mentores.md) (RF38). Os envios são a parte de entregas do
-histórico previsto pelo RF42. Os registros e feedbacks feitos pelo mentor (RF40) entram na
-BE-S6-03. O RF44 vincula a [submissão final](submissao-final.md) ao último marco.
+histórico previsto pelo RF42. Os feedbacks do mentor (RF40) e a linha do tempo que junta
+entregas e feedbacks estão em [Feedbacks do mentor](feedbacks-mentoria.md). O RF44 vincula a [submissão final](submissao-final.md) ao último marco.
 [Documento de Requisitos da Sprint 4](https://drive.google.com/file/d/1-9XQhZlE_ZbIGoY6Sw8Qb_a2PEcQ3d-Z/view)
 
 ## Modelagem
@@ -110,10 +110,10 @@ Exemplo de envio de uma entrega parcial
   limites disponíveis da edição e o registro de conclusão do treinamento como referência
   para o início da mentoria. A BE-S7-05 poderá usar uma fase própria quando houver
   abertura e encerramento de fases no calendário.
-- **Feedback e painel (BE-S6-03 e BE-S6-04).** O UUID da entrega permite associar
-  feedbacks. Marco, equipe, data e atribuição vigente fornecem os dados para a linha
-  do tempo e o acompanhamento de pendências, já usados no
-  [painel do mentor](painel-mentor.md).
+- **Feedback e painel (BE-S6-03 e BE-S6-04).** O feedback referencia o marco e a entrega da
+  equipe (chaves compostas) e entra no histórico unificado de
+  [feedbacks e histórico](feedbacks-mentoria.md). Um marco com feedbacks não pode ser excluído
+  (409), como um marco com entregas. O [painel do mentor](painel-mentor.md) usa os mesmos dados.
 - **Submissão final e versões (BE-S6-07 e BE-S6-08).** O marco `FINAL` recebe a
   [submissão final](submissao-final.md) na mesma entidade de entrega por equipe e marco.
   As versões futuras podem apontar para essa entrega e preservar o histórico de artefatos.
