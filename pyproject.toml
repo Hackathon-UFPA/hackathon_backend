@@ -15,6 +15,8 @@ greenlet = ">=3.1"  # exigido pelo SQLAlchemy async
 argon2-cffi = ">=23.1"
 pyjwt = ">=2.9"
 jinja2 = ">=3.1.5"  # templates dos e-mails (já vem com fastapi[standard]; declarado por uso direto)
+httpx = ">=0.28,<1"
+pypdf = ">=7.1.1,<8"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.3"

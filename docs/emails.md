@@ -22,7 +22,7 @@ ação do sistema (convite, inscrição, protocolo...)
 1. **Outbox transacional.** O e-mail é gravado em `emails_outbox` na **mesma transação** da ação que o originou. Ele só existe se a ação for confirmada, e nenhum aviso se perde se a API cair logo depois.
 2. **A ação principal nunca depende do provedor.** O envio acontece depois, no worker. Se o provedor estiver fora do ar, a ação já foi concluída e o e-mail espera na fila.
 3. **Quem enfileira não derruba a ação.** Se o aviso não puder ser gravado (destinatário inválido, template quebrado, erro no banco), o problema vai para o log e a ação segue. A gravação roda num savepoint, então o erro não invalida a transação de quem chamou.
-4. **Sem duplicar.** Cada aviso tem uma chave de idempotência (ex.: `convite:{id}`). Repetir a ação não enfileira o mesmo aviso duas vezes.
+4. **Sem duplicar.** Cada aviso tem uma chave de idempotência (ex.: `convite:{id}`; cada reenvio de convite usa `convite:{id}:envio:{n}`). Repetir a ação não enfileira o mesmo aviso duas vezes.
 
 ## Eventos que geram e-mail
 

@@ -27,12 +27,16 @@ from .convite import Convite
 from .convite_mentor import ConviteMentor
 from .criterio_rubrica import CriterioRubrica
 from .designacao_avaliacao import DesignacaoAvaliacao
+from .designacao_projeto_final import ConflitoProjetoFinal, DesignacaoProjetoFinal
 from .email_outbox import EmailOutbox
+from .entrega_mentoria import EntregaMentoria
 from .equipe import Equipe
 from .evento_mentoria import EventoNotificacaoMentoria
 from .faq_item import FaqItem
 from .fase_cronograma import FaseCronograma
+from .feedback_mentoria import FeedbackMentoria
 from .hackathon import Hackathon
+from .marco_mentoria import MarcoMentoria
 from .material_treinamento import MaterialTreinamento
 from .membro_equipe import MembroEquipe
 from .nota_criterio_avaliacao import NotaCriterioAvaliacao
@@ -43,6 +47,7 @@ from .resultado import HomologacaoResultado, ResultadoProposta
 from .rubrica import Rubrica
 from .sessao_treinamento import SessaoTreinamento
 from .submissao import Submissao
+from .submissao_final import SubmissaoFinal
 from .tema import Tema
 from .termo import Termo
 from .token_usuario import TokenUsuario
@@ -61,13 +66,18 @@ __all__ = [
     "ConviteMentor",
     "CriterioRubrica",
     "DesignacaoAvaliacao",
+    "DesignacaoProjetoFinal",
+    "ConflitoProjetoFinal",
     "EmailOutbox",
+    "EntregaMentoria",
     "Equipe",
     "FaqItem",
+    "FeedbackMentoria",
     "FaseCronograma",
     "EventoNotificacaoMentoria",
     "Hackathon",
     "HomologacaoResultado",
+    "MarcoMentoria",
     "MaterialTreinamento",
     "MembroEquipe",
     "NotaCriterioAvaliacao",
@@ -79,6 +89,7 @@ __all__ = [
     "Rubrica",
     "SessaoTreinamento",
     "Submissao",
+    "SubmissaoFinal",
     "Tema",
     "Termo",
     "TokenUsuario",

@@ -2,6 +2,8 @@
 
 # Banco de dados
 
+BE-S6-03: `V202611261100__feedbacks_mentoria.sql` adiciona `feedbacks_mentoria` (só inserção: trigger bloqueia `UPDATE` e `DELETE`, correção por `corrige_id`, idempotência por autor e chaves compostas para equipe, marco, entrega e correção). Detalhes em [Feedbacks do mentor](feedbacks-mentoria.md).
+
 BE-S5-02: `V202611161500__cadastro_por_convite_idempotencia.sql` adiciona `convites.token_hash` (SHA-256 do token do link de cadastro próprio), `token_expira_em` e `token_utilizado_em`, e `equipes.criada_por`, `chave_idempotencia` e `hash_requisicao` (único por `criada_por` e chave, para o `POST /equipes` idempotente). Detalhes em [Cadastro da equipe e dos integrantes](cadastro-equipe-integrantes.md).
 
 BE-S5-03: `V202611161400__autodeclaracao_comprovantes.sql` adiciona `autodeclaracoes_vinculo` (declaração da própria pessoa por edição, só inserção: trigger barra `UPDATE`), `comprovantes_vinculo.tipo_vinculo` (legado = `ESTUDANTE`) e `autodeclaracao_id`, move o limite de comprovante em aberto ou aprovado para `(usuario, hackathon, tipo_vinculo)` e adiciona a política `hackathon.exige_autodeclaracao`, `exige_comprovante_estudante` e `exige_comprovante_profissional`. Detalhes em [Autodeclaração e comprovantes](autodeclaracao-e-comprovantes.md).
@@ -34,6 +36,9 @@ erDiagram
     usuarios ||--o{ avaliacoes : avalia
     submissoes ||--o{ designacoes_avaliacao : designada
     usuarios ||--o{ designacoes_avaliacao : avalia_se_designado
+    submissoes ||--o{ designacoes_projeto_final : projeto_final
+    usuarios ||--o{ designacoes_projeto_final : avalia_projeto_final
+    equipes ||--o{ conflitos_projeto_final : conflito
     hackathon ||--o{ temas : oferece
     temas ||--o{ submissoes : escolhido
     hackathon ||--o{ rubricas : avalia_com
@@ -60,7 +65,7 @@ erDiagram
 |------------------------|-----------------------------------------------------------------------------------------------|
 | `usuarios`             | Pessoas do sistema; `email` único, `papel`, `ativo`, instituição, curso e período; dados do mentor (empresa, área, máx. de equipes); `senha_hash` (Argon2), `tentativas_login`, `bloqueado_ate`, `situacao_conta`, `email_confirmado_em` e `versao_sessao` |
 | `tokens_usuario`       | Token de uso único de redefinição de senha e confirmação de e-mail (BE-S5-07): `finalidade`, `token_hash` (SHA-256, único), `email` (só na confirmação), `expira_em` e `utilizado_em` |
-| `hackathon`            | Edição do evento: datas, `status`, tamanho da equipe (`min/max_integrantes`), categorias de equipe aceitas (`aceita_equipe_*`), prazos da Fase 1 e `avaliadores_por_proposta` (2 a 3, sem padrão) |
+| `hackathon`            | Edição do evento: datas, `status`, tamanho da equipe (`min/max_integrantes`), categorias de equipe aceitas (`aceita_equipe_*`), prazos da Fase 1 e `avaliadores_por_proposta` e `avaliadores_por_projeto_final` (2 a 3, sem padrão) |
 | `equipes`              | Equipes de um hackathon, com a `categoria` indicada pelo líder e a `situacao` (Em formação → Homologada) |
 | `membros_equipe`       | Usuário ↔ equipe com a `funcao` e o `tipo_integrante` indicado pelo líder; uma equipe por pessoa em cada hackathon e um único `LIDER` |
 | `autodeclaracoes_vinculo` | Declaração de vínculo da própria pessoa por edição (estudante ou profissional); só inserção, sem `UPDATE` (trigger) |
@@ -83,6 +88,8 @@ erDiagram
 | `avaliacoes`           | Avaliação única por proposta/avaliador, rubrica, estado, parecer, recomendação e nota ponderada final |
 | `notas_criterio_avaliacao` | Nota Decimal por critério; `unique(avaliacao_id, criterio_id)` |
 | `designacoes_avaliacao` | Proposta designada a um avaliador (RF29); `unique(submissao_id, avaliador_id)`. A nota continua em `avaliacoes` |
+| `designacoes_projeto_final` | Projeto final (proposta aprovada) designado a um avaliador do Comitê Técnico (RF47, RF48). Nunca apagada: redistribuir preenche `removida_em`/`removida_por`; índice único parcial nas vigentes |
+| `conflitos_projeto_final` | Conflito de interesse declarado avaliador × equipe (RN13); `unique(equipe_id, avaliador_id)`, `motivo` obrigatório |
 | `homologacoes_resultado` | Homologação do resultado da avaliação (RF31): quem, quando e totais; uma por hackathon, sem `UPDATE` (trigger) |
 | `resultados_proposta` | Retrato de cada proposta na homologação: equipe, tema, título, média, classificação, recomendações e `aprovada`; sem `UPDATE` (trigger) |
 | `notificacoes_resultado` | Aviso do resultado a cada integrante (RF33): `canal`, `status_envio` (`PENDENTE`, `ENVIADO`, `FALHA` com `erro`), `aprovada` e `mensagem`; única por `(homologacao_id, usuario_id, canal)` |

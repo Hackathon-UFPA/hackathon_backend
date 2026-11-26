@@ -16,6 +16,7 @@ from app.controllers.hackathon import (
 from app.exceptions.convite import hackathon_nao_encontrado
 from app.exceptions.db import erro_de_integridade_sql
 from app.exceptions.hackathon import hackathon_com_dados_ligados, periodo_invalido
+from app.exceptions.projeto_final import hackathon_encerrado
 from app.models import Hackathon, Usuario
 from app.schemas.hackathon import HackathonCreate, HackathonResponse, HackathonUpdate
 from app.security.organizacao import mesma_organizacao
@@ -31,6 +32,7 @@ CAMPOS_DE_DATA = (
     "propostas_inicio",
     "propostas_fim",
 )
+STATUS_ENCERRADOS = {StatusHackathon.FINALIZADO, StatusHackathon.CANCELADO}
 
 # (início, fim, aceita fim igual ao início, mensagem). Espelha os CHECKs da tabela hackathon.
 PERIODOS = (
@@ -115,6 +117,12 @@ async def editar(db: AsyncSession, hackathon_id: UUID, dados: HackathonUpdate) -
         hackathon = await get_hackathon_para_atualizar(db, hackathon_id)
         if hackathon is None:
             hackathon_nao_encontrado()
+        if (
+            "avaliadores_por_projeto_final" in dados.model_fields_set
+            and dados.avaliadores_por_projeto_final != hackathon.avaliadores_por_projeto_final
+            and (hackathon.status in STATUS_ENCERRADOS or dados.status in STATUS_ENCERRADOS)
+        ):
+            hackathon_encerrado()
         await atualizar_instancia(hackathon, dados)
         _normalizar_datas(hackathon)
         _validar(hackathon)

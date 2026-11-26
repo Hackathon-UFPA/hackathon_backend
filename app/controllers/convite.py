@@ -86,6 +86,12 @@ async def criar_convite(db: AsyncSession, convite: Convite) -> Convite:
     return convite
 
 
+async def salvar_convite(db: AsyncSession, convite: Convite) -> Convite:
+    """Grava as alterações de um convite existente (sem commit). Um e-mail que já tem convite em
+    aberto ou aceito na equipe vira 409, mesmo com pedidos simultâneos (índice único parcial)."""
+    return await criar_convite(db, convite)
+
+
 async def listar_usuarios_com_convite_aceito(db: AsyncSession, equipe_id: UUID) -> set[UUID]:
     consulta = select(Convite.usuario_id).where(
         Convite.equipe_id == equipe_id, Convite.status == StatusConvite.ACEITO

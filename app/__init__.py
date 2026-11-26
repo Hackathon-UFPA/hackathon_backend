@@ -4,6 +4,16 @@ tags = [
         "name": "Atribuições de mentores",
         "description": "Mentoria de equipes aprovadas (RF38, RN16)",
     },
+    {
+        "name": "Entregas da mentoria",
+        "description": (
+            "Calendário da edição, entregas parciais e submissão final (RF65, RF39, RF44)."
+        ),
+    },
+    {
+        "name": "Painel do mentor",
+        "description": "Acompanhamento das equipes designadas ao mentor (RF41)",
+    },
     {"name": "Mentores", "description": "Cadastro e ativação de mentores (RF37, RN24, RN33)"},
     {"name": "Health", "description": "Verificação de saúde da API e do banco de dados"},
     {
@@ -95,6 +105,13 @@ tags = [
     {
         "name": "Avaliação",
         "description": "Distribuição e avaliação científica de propostas pela rubrica (RF29, RF30)",
+    },
+    {
+        "name": "Avaliação técnica",
+        "description": (
+            "Designação dos projetos finais ao Comitê Técnico e conflitos de interesse "
+            "(RF47, RF48, RN13)"
+        ),
     },
     {
         "name": "Resultado",

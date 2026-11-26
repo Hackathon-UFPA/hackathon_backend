@@ -195,3 +195,30 @@ async def recolocar_na_fila(db: AsyncSession, email: EmailOutbox) -> EmailOutbox
     )
     await db.refresh(email)
     return email
+
+
+async def cancelar_aviso_pendente(db: AsyncSession, chave: str) -> bool:
+    """Retira da fila o aviso de `chave` que o worker ainda não pegou (sem commit). Só o que está
+    `PENDENTE` é cancelado; reservado (`ENVIANDO`), `ENVIADO` ou em `FALHA` fica como está e a
+    chamada não faz nada. O corpo é descartado, então o token antigo some da tabela. O UPDATE
+    condicional e o `FOR UPDATE SKIP LOCKED` do worker não se pisam: quem chega depois vê o
+    estado do outro. Devolve se cancelou."""
+    cancelado = await db.exec(
+        update(EmailOutbox)
+        .where(
+            EmailOutbox.chave_idempotencia == chave,
+            EmailOutbox.status == StatusEmail.PENDENTE,
+            col(EmailOutbox.cancelado_em).is_(None),
+        )
+        .values(
+            status=StatusEmail.FALHA,
+            cancelado_em=AGORA_UTC,
+            reservado_ate=None,
+            corpo_texto=None,
+            corpo_html=None,
+            ultimo_erro="Aviso substituído por um reenvio ou pela troca do e-mail do convite.",
+            atualizado_em=AGORA_UTC,
+        )
+        .returning(col(EmailOutbox.id))
+    )
+    return cancelado.first() is not None

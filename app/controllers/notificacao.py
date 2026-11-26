@@ -112,3 +112,20 @@ async def marcar_todas_como_lidas(db: AsyncSession, usuario_id: UUID) -> int:
         .returning(col(Notificacao.id))
     )
     return len((await db.exec(comando)).all())
+
+
+async def marcar_do_convite_como_lidas(db: AsyncSession, usuario_id: UUID, convite_id: UUID) -> int:
+    """Marca como lidas (sem commit) as notificações de um convite para a pessoa: a original
+    (`convite:{id}`) e as dos reenvios (`convite:{id}:envio:{n}`). Já lidas mantêm o `lida_em`."""
+    chave = col(Notificacao.chave_idempotencia)
+    comando = (
+        update(Notificacao)
+        .where(
+            Notificacao.usuario_id == usuario_id,
+            (chave == f"convite:{convite_id}") | chave.like(f"convite:{convite_id}:envio:%"),
+            col(Notificacao.lida_em).is_(None),
+        )
+        .values(lida_em=AGORA_UTC)
+        .returning(col(Notificacao.id))
+    )
+    return len((await db.exec(comando)).all())

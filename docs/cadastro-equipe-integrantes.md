@@ -38,7 +38,7 @@ Ao convidar um e-mail sem conta, o convite ganha um token aleatório de uso úni
 - Se já existe conta com o e-mail do convite: **409**. A pessoa entra com ela e responde ao convite.
 - A resposta é o `UsuarioResponse` (sem senha nem hash). Para entrar, a pessoa usa `POST /auth/login`.
 
-Se o link vencer, o líder cancela o convite e convida de novo (convite cancelado libera o e-mail), ou substitui a composição (`PUT /equipes/{id}/composicao`); o novo convite sai com um link novo.
+Se o link vencer, o líder [reenvia o convite](#reenvio-e-correção-de-convite-pendente--be-s5-06): o link novo sai sem cancelar nada. Cancelar e convidar de novo (convite cancelado libera o e-mail) e substituir a composição (`PUT /equipes/{id}/composicao`) continuam valendo.
 
 ### Conta pendente responde ao convite
 
@@ -70,19 +70,60 @@ A chave vale **por líder** (`equipes.criada_por`) e fica na equipe junto com o 
 
 O tipo `CONVITE_EQUIPE` ganhou uma variante para quem não tem conta: o texto explica que a pessoa ainda não tem acesso, o botão vira "Criar meu acesso" e o endereço leva ao cadastro com o token. A variante é escolhida pelo valor opcional `novo_usuario` do contexto; para quem tem conta nada muda. Como no restante da fila ([E-mails](emails.md)), o corpo renderizado fica em `emails_outbox`, onde o token puro também aparece: o acesso à fila é restrito ao Organizador.
 
+## Reenvio e correção de convite pendente — BE-S5-06
+
+RF01, RF18, RF19, RF20, RF60. O líder renova o aviso de um convite que ainda não foi respondido, ou corrige o nome e o e-mail dele, sem cancelar e convidar de novo.
+
+| Rota | Quem acessa | O que faz |
+|------|-------------|-----------|
+| `POST /convites/{id}/reenviar` | Líder da equipe (DEV passa) | Reenvia ao mesmo e-mail, inclusive com o link vencido. `200` com o `ConviteResponse` |
+| `PATCH /convites/{id}` | Líder da equipe (DEV passa) | Corrige `nome` e/ou `email` (ao menos um; campo extra dá 422). `200` com o `ConviteResponse` |
+
+**Erros.** `401` sem token; `403` conta pendente ou integrante da equipe que não é o líder; `404` convite inexistente **ou** de uma equipe da qual quem pede não faz parte (a resposta é a mesma, para não revelar convites alheios); `409` convite já aceito, recusado ou cancelado, inscrições fechadas, equipe fora de `EM_FORMACAO` ou limite de renovações esgotado; `429` reenvio antes do intervalo mínimo, com o cabeçalho `Retry-After` (segundos). No `PATCH`, ainda `409` para e-mail já convidado na equipe, e-mail de quem já é integrante e equipe sem vagas, e `422` para corpo vazio ou e-mail inválido.
+
+**Fluxo do token.** O convite é travado (`FOR UPDATE`) e, depois, a equipe, na mesma ordem do aceite. Dois pedidos simultâneos se enfileiram e sobra um único token válido.
+
+- *E-mail sem conta:* gera um token novo, grava só o hash (`convites.token_hash`), renova `token_expira_em` e zera `token_utilizado_em`. O link anterior deixa de existir e passa a dar o mesmo `400` genérico dos links inválidos. O valor puro só vai no e-mail.
+- *E-mail com conta:* o convite é ligado à conta (`usuario_id`), o link de cadastro anterior é invalidado e a pessoa responde logada, em `/convites`. A conta é buscada pelo e-mail **no momento do reenvio**: quem criou conta depois do convite também cai neste caminho.
+
+**Avisos.** Cada envio tem a própria chave de idempotência, `convite:{id}` no primeiro e `convite:{id}:envio:{n}` nos seguintes (`n` = `convites.reenvios`), senão a fila e a central tratariam o aviso novo como repetido. Quem tem conta recebe a notificação na central **e** o e-mail; quem não tem recebe o e-mail com o link novo. O aviso anterior que ainda estava `PENDENTE` em `emails_outbox` é retirado (`FALHA` com `cancelado_em`, sem corpo, então o token antigo some da tabela). Se o worker já o pegou (`ENVIANDO`), enviou (`ENVIADO`) ou ele falhou, nada é feito e não há erro: o link daquele e-mail já está invalidado pelo hash novo.
+
+**Anti-abuso.**
+
+| Regra | Variável | Padrão | Resposta |
+|-------|----------|--------|----------|
+| Intervalo mínimo entre reenvios simples | `CONVITE_REENVIO_INTERVALO_SEGUNDOS` | 300 | `429` + `Retry-After` |
+| Máximo de renovações por convite (reenvios **e** trocas de e-mail) | `CONVITE_REENVIO_MAX` | 5 | `409` |
+
+O intervalo conta a partir do último aviso (a criação do convite também conta). A **troca de e-mail** pelo `PATCH` gasta uma renovação do máximo, mas **não** respeita o intervalo, para o líder corrigir um endereço errado na hora; depois dela, o reenvio simples espera o intervalo normalmente. O `PATCH` só de nome não envia nada, não gasta renovação e não mexe no token.
+
+**Correção (`PATCH`).** Só vale com o convite `PENDENTE`. Trocar o e-mail revalida: e-mail já convidado na equipe (`409`, inclusive em pedidos simultâneos, pelo índice único), e-mail de quem já é integrante (`409`), máximo de integrantes contando os convites pendentes (`409`) e o período de inscrições (`409`). O e-mail antigo deixa de poder usar o link. Se o novo e-mail já tem conta, o convite é ligado a ela e a notificação vai à central; a notificação que a conta antiga já tinha recebido é marcada como lida, e o convite deixa de ser dela (responder dá `404`). **A tabela `usuarios` nunca é alterada:** trocar o e-mail de uma conta confirmada exige um processo de segurança próprio e não faz parte disto.
+
+**Privacidade.** A resposta e os logs não trazem token nem e-mail de terceiros; as mensagens de `409` não citam e-mails.
+
+**Contrato para o frontend.** As rotas são novas; nada do que existia mudou. O `ConviteResponse` (criação, listagem, cancelamento, reenvio e correção) ganhou dois campos, ambos aditivos:
+
+| Campo | Tipo | Significado |
+|-------|------|-------------|
+| `reenvios` | inteiro | Quantas vezes o aviso foi renovado (reenvio ou troca de e-mail) |
+| `proximo_reenvio_em` | data e hora com fuso, ou `null` | Quando o reenvio simples volta a valer. Considera **só o intervalo mínimo**; uma data no passado significa que já pode reenviar. É `null` quando o limite de renovações se esgotou **ou o convite já não está pendente** |
+
+Trate o `429` lendo o `Retry-After`; os 409 de limite esgotado sugerem cancelar o convite e convidar de novo.
+
 ## Compatibilidade
 
 - Migration `V202611161500__cadastro_por_convite_idempotencia.sql`: `convites.token_hash`, `token_expira_em` e `token_utilizado_em`; `equipes.criada_por`, `chave_idempotencia` e `hash_requisicao`. Convites e equipes anteriores seguem válidos (campos nulos).
 - Sem `Idempotency-Key`, o `POST /equipes` se comporta como antes. As respostas não ganharam campos; o token nunca aparece em resposta da API.
 - `app/services/equipe.py`: `criar` passa a devolver `(equipe, criada)`.
 - Nova variável de ambiente `CONVITE_CADASTRO_MINUTOS` (padrão 10080).
+- Migration `V202611261000__reenvio_convites.sql` (BE-S5-06): `convites.reenvios` (`smallint`, padrão 0) e `convites.ultimo_envio_em` (`timestamptz`, UTC, preenchido com `enviado_em` nos convites antigos). As variáveis `CONVITE_REENVIO_INTERVALO_SEGUNDOS` e `CONVITE_REENVIO_MAX` estão no `.env.example`.
 
 ## Pontos em aberto
 
 - **Comprovante opcional no cadastro por convite:** diverge do RF01, que o exige no cadastro. Foi escolhido para o convidado preencher o vínculo depois, junto com a autodeclaração (BE-S5-03). Se o grupo preferir exigi-lo já aqui, basta tornar `comprovante_url` obrigatório em `CadastroPorConviteRequest`.
 - **Tipo do comprovante no cadastro:** no cadastro por convite, o comprovante opcional nasce com o tipo de vínculo que o líder indicou no convite (`ESTUDANTE` ou `PROFISSIONAL`), que é o que a homologação confere ([BE-S5-03](autodeclaracao-e-comprovantes.md)). O cadastro público continua registrando o comprovante como `ESTUDANTE`.
 - **Edição do cadastro (BE-S6-14):** no link de convite, o hackathon vem sempre da equipe, mesmo com outras edições abertas. O corpo continua recusando `hackathon_id` (422). Quem optar pelo cadastro público informa o ID da edição no corpo; para declarar depois ou enviar comprovante, deve selecionar a mesma edição explicitamente. Veja [contratos por hackathon](cadastro-por-hackathon.md).
-- **Reenvio de link vencido:** não há rota de reenvio; o líder cancela e convida de novo ou substitui a composição.
+- **Reenvio e correção:** veja a [seção própria](#reenvio-e-correção-de-convite-pendente--be-s5-06). Fica em aberto com o grupo se a Squad 1 validou a regra de corrigir só enquanto o convite está pendente (foi o que o escopo de 19/11 descreveu).
 - **Notificação retroativa:** o convite vira aviso na central quando a conta passa a existir; a central em si continua exigindo conta ativa.
 
 ---

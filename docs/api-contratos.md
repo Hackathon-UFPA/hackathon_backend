@@ -91,7 +91,10 @@ Cada rota lista no Swagger os códigos que ela pode devolver.
 | Rascunho e envio da proposta    | [propostas.md](propostas.md)                                |
 | Temas e rubrica                 | [temas-e-rubrica.md](temas-e-rubrica.md)                    |
 | Distribuição e avaliação científica | [avaliacao.md](avaliacao.md)                             |
+| Designação dos projetos finais (Comitê Técnico) | [avaliacao-tecnica.md](avaliacao-tecnica.md) |
 | E-mails transacionais e fila de envio | [emails.md](emails.md)                                |
+| Painel do mentor                | [painel-mentor.md](painel-mentor.md)                        |
+| Feedbacks do mentor e histórico | [feedbacks-mentoria.md](feedbacks-mentoria.md)              |
 
 ---
 

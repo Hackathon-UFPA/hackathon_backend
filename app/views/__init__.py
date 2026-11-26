@@ -5,6 +5,8 @@ from app.views.auth import router as auth
 from app.views.autodeclaracao import router as autodeclaracao
 from app.views.avaliacao import router_admin as avaliacao_admin
 from app.views.avaliacao import router_avaliador as avaliacao_avaliador
+from app.views.avaliacao_tecnica import router_admin as avaliacao_tecnica_admin
+from app.views.avaliacao_tecnica import router_avaliador as avaliacao_tecnica_avaliador
 from app.views.cadastro_convite import router as cadastro_convite
 from app.views.comprovantes import router as comprovantes
 from app.views.conteudo import router as conteudo
@@ -13,6 +15,7 @@ from app.views.convites import router as convites
 from app.views.emails import router as emails
 from app.views.equipe import router as equipes
 from app.views.equipe import router_publico as equipes_publico
+from app.views.feedback_mentoria import router as feedback_mentoria
 from app.views.hackathons import router as hackathons
 from app.views.hackathons import router_publico as hackathons_publico
 from app.views.health import router as health
@@ -20,8 +23,10 @@ from app.views.inscricao import router as inscricao
 from app.views.membro_equipe import router as membros_equipe
 from app.views.mentores import router as mentores
 from app.views.mentores import router_publico as mentores_publico
+from app.views.mentoria import router as mentoria
 from app.views.notificacoes import router as notificacoes
 from app.views.organizacoes import router as organizacoes
+from app.views.painel_mentor import router as painel_mentor
 from app.views.perfil import router as perfil
 from app.views.regulamento import router as regulamento
 from app.views.resultado import router_admin as resultado_admin
@@ -45,6 +50,9 @@ router.include_router(cadastro_convite)
 router.include_router(perfil)
 router.include_router(autodeclaracao)
 router.include_router(atribuicoes_mentor)
+router.include_router(mentoria)
+router.include_router(feedback_mentoria)
+router.include_router(painel_mentor)
 router.include_router(usuarios)
 router.include_router(mentores)
 router.include_router(mentores_publico)
@@ -71,6 +79,8 @@ router.include_router(rubrica)
 router.include_router(emails)
 router.include_router(avaliacao_admin)
 router.include_router(avaliacao_avaliador)
+router.include_router(avaliacao_tecnica_admin)
+router.include_router(avaliacao_tecnica_avaliador)
 router.include_router(resultado_admin)
 router.include_router(resultado_publico)
 router.include_router(resultado_equipe)

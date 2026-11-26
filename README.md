@@ -26,6 +26,7 @@ API de uma plataforma multi-organização de hackathons, construída com **FastA
 - [Propostas](docs/propostas.md): envio definitivo, protocolo, reenvio e histórico de versões (BE-S5-09)
 - [Temas e rubrica](docs/temas-e-rubrica.md): catálogo público, Comitê Científico e uma rubrica por fase (BE-S5-08)
 - [Avaliação](docs/avaliacao.md): distribuição e registro da avaliação científica pela rubrica
+- [Avaliação técnica](docs/avaliacao-tecnica.md): designação dos projetos finais ao Comitê Técnico e conflitos de interesse
 - [Resultado](docs/resultado.md): homologação do resultado e propostas aprovadas públicas
 - [Notificações e somente leitura](docs/notificacoes-e-somente-leitura.md): aviso do resultado às equipes e bloqueio de escrita das não aprovadas
 - [E-mails](docs/emails.md): fila de envio, provedor SMTP, templates em português e acompanhamento
@@ -63,6 +64,8 @@ Com a API no ar, a documentação interativa das rotas fica em `http://localhost
 | E-mails transacionais (fila, worker e templates) | RNF28, RF60, BE-S5-05 | Concluído (ver [E-mails](docs/emails.md)) |
 | Central de notificações in-app | RF19, RF22, RF28, RF33, RF38, RF53, RF60, RF61, BE-S5-04 | Concluído (produtores de chat e prazo: BE-S6-06 e BE-S7-06/07) |
 | Atribuição de mentores | RF38, RN16, RN24, RN33, BE-S5-11 | Concluído (publicado na central in-app) |
+| Feedbacks do mentor e histórico da mentoria | RF40, RF42, RN16, RN17, BE-S6-03 | Concluído, com lista de status e Q24 pendentes (ver [Feedbacks do mentor](docs/feedbacks-mentoria.md)) |
+| Painel do mentor | RF41, RF39, RF42, RN16, BE-S6-04 | Concluído, com visibilidade restrita até a Q24 e sem sessões individuais, ainda não modeladas (ver [Painel do mentor](docs/painel-mentor.md)) |
 
 ### Notificação do resultado e somente leitura (BE-S4-12)
 

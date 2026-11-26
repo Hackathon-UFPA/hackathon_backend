@@ -23,7 +23,7 @@ Enum `tipo_notificacao` (Postgres, como `tipo_email`). Adicionar um tipo é uma 
 
 | Tipo | Quando | Quem recebe | Chave de idempotência |
 |------|--------|-------------|-----------------------|
-| `CONVITE` | Convite criado (RF19) | Convidado, **só se já tem conta** | `convite:{convite_id}` |
+| `CONVITE` | Convite criado (RF19) | Convidado, **só se já tem conta** | `convite:{convite_id}` (reenvio: `convite:{convite_id}:envio:{n}`) |
 | `ACEITE` | Convite aceito ou recusado; `dados.resposta` = `ACEITO` ou `RECUSADO` | Líder que convidou | `convite-resposta:{convite_id}:{status}` |
 | `INSCRICAO` | Inscrição concluída (`dados.evento = CONCLUIDA`) e equipe homologada (`HOMOLOGADA`) (RF22, RF23) | Todos os integrantes | `inscricao:{protocolo_id}` e `equipe_homologada:{equipe_id}:{homologada_em}` |
 | `PROPOSTA` | Proposta enviada (RF28) | Líder | `protocolo_proposta:{protocolo_id}` |

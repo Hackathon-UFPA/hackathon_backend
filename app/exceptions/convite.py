@@ -109,3 +109,22 @@ def conta_ja_existe_para_o_convite():
         status_code=status.HTTP_409_CONFLICT,
         detail="Já existe uma conta com o e-mail deste convite. Entre com ela para responder.",
     )
+
+
+def reenvio_muito_cedo(segundos_restantes: int):
+    """Anti-abuso: o aviso do mesmo convite não sai de novo antes do intervalo mínimo."""
+    raise HTTPException(
+        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+        detail="Este convite foi reenviado há pouco. Aguarde para reenviar de novo.",
+        headers={"Retry-After": str(segundos_restantes)},
+    )
+
+
+def limite_de_reenvios(maximo: int):
+    raise HTTPException(
+        status_code=status.HTTP_409_CONFLICT,
+        detail=(
+            f"Este convite já foi reenviado ou corrigido {maximo} vezes. "
+            "Cancele-o e convide a pessoa de novo."
+        ),
+    )

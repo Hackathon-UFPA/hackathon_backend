@@ -24,6 +24,7 @@ class HackathonCreate(BaseModel):
     propostas_inicio: datetime | None = None
     propostas_fim: datetime | None = None
     avaliadores_por_proposta: int | None = Field(default=None, ge=2, le=3)
+    avaliadores_por_projeto_final: int | None = Field(default=None, ge=2, le=3)
     # Categorias de equipe aceitas na edição (política provisória, BE-S5-01); ao menos uma
     aceita_equipe_estudantes: bool = True
     aceita_equipe_profissionais: bool = True
@@ -65,6 +66,7 @@ class HackathonUpdate(BaseModel):
     propostas_inicio: datetime | None = None
     propostas_fim: datetime | None = None
     avaliadores_por_proposta: int | None = Field(default=None, ge=2, le=3)
+    avaliadores_por_projeto_final: int | None = Field(default=None, ge=2, le=3)
     aceita_equipe_estudantes: bool | None = None
     aceita_equipe_profissionais: bool | None = None
     aceita_equipe_mista: bool | None = None
