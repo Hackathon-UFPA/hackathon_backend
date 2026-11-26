@@ -13,6 +13,7 @@ from app.const.enums import FuncaoMembro, StatusConvite, TipoNotificacao
 from app.controllers.membro_equipe import listar_membros
 from app.models import Convite, Equipe, Protocolo, Submissao, Usuario
 from app.services.notificacao import notificar
+from app.utils.convite import chave_do_envio
 
 
 def _nome_equipe(equipe: Equipe) -> str:
@@ -35,8 +36,9 @@ async def notificar_convite(
         [convite.usuario_id],
         TipoNotificacao.CONVITE,
         "Convite para uma equipe",
-        f"{lider.nome or 'O líder'} convidou você para a equipe {_nome_equipe(equipe)}.",
-        chave=f"convite:{convite.id}",
+        f"{lider.nome or 'O líder'} {'reenviou o convite' if convite.reenvios else 'convidou você'}"
+        f" para a equipe {_nome_equipe(equipe)}.",
+        chave=chave_do_envio(convite.id, convite.reenvios),
         referencia_tipo="CONVITE",
         referencia_id=convite.id,
         dados={"convite_id": convite.id, "equipe_id": equipe.id},

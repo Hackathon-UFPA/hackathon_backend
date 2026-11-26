@@ -11,6 +11,7 @@ from app.const.enums import FuncaoMembro, TipoEmail
 from app.controllers.membro_equipe import listar_membros_com_usuario
 from app.models import Convite, Equipe, Protocolo, ResultadoProposta, Submissao, Usuario
 from app.services.email import enfileirar, link_front
+from app.utils.convite import chave_do_envio
 
 
 def _nome(usuario: Usuario) -> str:
@@ -43,7 +44,7 @@ async def avisar_convite(
             "link": link,
             "novo_usuario": token_cadastro is not None,
         },
-        chave=f"convite:{convite.id}",
+        chave=chave_do_envio(convite.id, convite.reenvios),
     )
 
 

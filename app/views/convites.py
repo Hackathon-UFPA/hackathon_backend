@@ -7,6 +7,7 @@ from app.db.db import get_session
 from app.models import Usuario
 from app.schemas.convite import (
     ConviteAceite,
+    ConviteCorrecao,
     ConviteEnvio,
     ConviteRecebidoResponse,
     ConviteResponse,
@@ -20,6 +21,7 @@ from app.services.convite import (
     listar_convites_recebidos,
     recusar_convite,
 )
+from app.services.convite_reenvio import corrigir_convite, reenviar_convite
 from app.utils.openapi import respostas_de_erro
 
 router = APIRouter(tags=["Convites"])
@@ -170,3 +172,71 @@ async def cancelar(
     lider: Usuario = Depends(usuario_ativo),
 ):
     return await cancelar_convite(db, lider, convite_id)
+
+
+@router.post(
+    "/convites/{convite_id}/reenviar",
+    response_model=ConviteResponse,
+    summary="Reenviar convite",
+    description=(
+        "O **líder técnico** reenvia um convite `PENDENTE` ao mesmo e-mail, inclusive com o link "
+        "vencido (BE-S5-06). Quem **não tem conta** recebe um link de cadastro novo: o anterior "
+        "deixa de valer e dá o mesmo 400 dos links inválidos; o token só vai no e-mail, nunca na "
+        "resposta. Quem **já tem conta** recebe a notificação na central e o e-mail que leva a "
+        "`/convites`. Limite anti-abuso: intervalo mínimo entre reenvios "
+        "(`CONVITE_REENVIO_INTERVALO_SEGUNDOS`, padrão 300; 429 com `Retry-After`) e máximo por "
+        "convite (`CONVITE_REENVIO_MAX`, padrão 5, contando também as trocas de e-mail; 409). "
+        "`proximo_reenvio_em` na resposta diz quando o botão volta a valer. Só durante as "
+        "inscrições, com a equipe em formação."
+    ),
+    responses=respostas_de_erro(
+        {
+            401: ERRO_401,
+            403: "Conta pendente, ou integrante da equipe que não é o líder",
+            404: "Convite não encontrado, ou de equipe da qual quem pede não faz parte",
+            409: "Convite já respondido ou cancelado, inscrições fechadas, equipe fora de "
+            "formação, ou limite de reenvios do convite esgotado",
+            429: "Reenvio pedido antes do intervalo mínimo (veja o cabeçalho `Retry-After`)",
+        }
+    ),
+)
+async def reenviar(
+    convite_id: UUID,
+    db: AsyncSession = Depends(get_session),
+    lider: Usuario = Depends(usuario_ativo),
+):
+    return await reenviar_convite(db, lider, convite_id)
+
+
+@router.patch(
+    "/convites/{convite_id}",
+    response_model=ConviteResponse,
+    summary="Corrigir convite",
+    description=(
+        "O **líder técnico** corrige o `nome` e/ou o `email` de um convite **`PENDENTE`** "
+        "(BE-S5-06). Só o nome não envia nada. Trocar o e-mail invalida o link do endereço "
+        "antigo e envia um novo ao corrigido, com as mesmas regras do reenvio; conta no máximo "
+        "de reenvios do convite, mas **não** no intervalo mínimo, para corrigir um endereço "
+        "errado na hora. Revalida e-mail repetido na equipe, quem já é integrante, o máximo de "
+        "integrantes e o período de inscrições. Se o novo e-mail já tem conta, o convite é "
+        "ligado a ela e o aviso vai à central. Nenhuma conta é alterada."
+    ),
+    responses=respostas_de_erro(
+        {
+            401: ERRO_401,
+            403: "Conta pendente, ou integrante da equipe que não é o líder",
+            404: "Convite não encontrado, ou de equipe da qual quem pede não faz parte",
+            409: "Convite já respondido ou cancelado, inscrições fechadas, equipe fora de "
+            "formação, e-mail já convidado ou integrante, equipe sem vagas, ou limite de "
+            "reenvios esgotado (quando o e-mail muda)",
+            422: "Corpo vazio, campo desconhecido ou e-mail inválido",
+        }
+    ),
+)
+async def corrigir(
+    convite_id: UUID,
+    dados: ConviteCorrecao,
+    db: AsyncSession = Depends(get_session),
+    lider: Usuario = Depends(usuario_ativo),
+):
+    return await corrigir_convite(db, lider, convite_id, dados)
