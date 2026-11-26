@@ -3,56 +3,64 @@ from collections import defaultdict
 
 import pytest
 
-# Média por cenário, em milissegundos, estimada pelo progresso de duas execuções do CI.
+# Média por cenário, em milissegundos, estimada pelo progresso do pytest no CI 44942635832.
 # O custo por cenário permite que arquivos novos ou ampliados entrem no balanceamento.
 MILLISECONDS_PER_TEST = {
-    "tests/test_atribuicoes_mentor.py": 800,
-    "tests/test_auth.py": 190,
-    "tests/test_autodeclaracao.py": 650,
-    "tests/test_avaliacao_cientifica.py": 490,
-    "tests/test_avaliacao_designacoes.py": 420,
+    "tests/test_atribuicoes_mentor.py": 680,
+    "tests/test_auth.py": 220,
+    "tests/test_autodeclaracao.py": 540,
+    "tests/test_avaliacao_cientifica.py": 500,
+    "tests/test_avaliacao_designacoes.py": 450,
     "tests/test_banco_de_teste.py": 10,
-    "tests/test_cadastro_equipe_integrantes.py": 490,
-    "tests/test_cadastro_por_hackathon.py": 940,
-    "tests/test_cadastro_profissional.py": 170,
+    "tests/test_cadastro_equipe_integrantes.py": 510,
+    "tests/test_cadastro_por_hackathon.py": 980,
+    "tests/test_cadastro_profissional.py": 180,
     "tests/test_categoria_equipe.py": 10,
-    "tests/test_comprovantes.py": 370,
-    "tests/test_conteudo_institucional.py": 390,
-    "tests/test_convites.py": 440,
-    "tests/test_criar_usuario.py": 140,
-    "tests/test_email_api.py": 120,
-    "tests/test_email_envio.py": 150,
-    "tests/test_email_eventos.py": 690,
+    "tests/test_comprovantes.py": 320,
+    "tests/test_confirmacao_email_service.py": 10,
+    "tests/test_conteudo_institucional.py": 430,
+    "tests/test_convites.py": 470,
+    "tests/test_criar_usuario.py": 150,
+    "tests/test_email_api.py": 100,
+    "tests/test_email_envio.py": 140,
+    "tests/test_email_eventos.py": 680,
     "tests/test_email_fila.py": 60,
     "tests/test_email_provedores.py": 10,
     "tests/test_email_templates.py": 10,
-    "tests/test_envio_proposta.py": 370,
-    "tests/test_equipes.py": 270,
-    "tests/test_equipes_categoria.py": 460,
-    "tests/test_equipes_publicas.py": 830,
-    "tests/test_gestao_usuarios.py": 260,
+    "tests/test_envio_proposta.py": 360,
+    "tests/test_equipes.py": 280,
+    "tests/test_equipes_categoria.py": 470,
+    "tests/test_equipes_publicas.py": 860,
+    "tests/test_gestao_usuarios.py": 290,
     "tests/test_hackathon.py": 30,
     "tests/test_hackathons_admin.py": 260,
     "tests/test_health.py": 10,
-    "tests/test_inscricao.py": 610,
-    "tests/test_membros_equipe.py": 490,
-    "tests/test_mentores.py": 270,
+    "tests/test_inscricao.py": 500,
+    "tests/test_membros_equipe.py": 470,
+    "tests/test_mentores.py": 220,
     "tests/test_migrations.py": 20,
-    "tests/test_notificacoes.py": 390,
-    "tests/test_organizacoes.py": 680,
-    "tests/test_perfil_senha.py": 250,
-    "tests/test_permissoes.py": 100,
-    "tests/test_resultado.py": 870,
+    "tests/test_notificacao_service.py": 10,
+    "tests/test_notificacoes.py": 330,
+    "tests/test_organizacoes.py": 720,
+    "tests/test_perfil_senha.py": 220,
+    "tests/test_permissoes.py": 80,
+    "tests/test_resultado.py": 800,
+    "tests/test_resultado_service.py": 10,
     "tests/test_rubrica.py": 380,
     "tests/test_senha.py": 40,
-    "tests/test_somente_leitura.py": 1070,
-    "tests/test_submissoes.py": 400,
-    "tests/test_temas.py": 630,
-    "tests/test_temas_rubricas_comite.py": 520,
+    "tests/test_somente_leitura.py": 1010,
+    "tests/test_submissoes.py": 320,
+    "tests/test_temas.py": 520,
+    "tests/test_temas_rubricas_comite.py": 530,
     "tests/test_token.py": 10,
+    "tests/test_token_usuario.py": 50,
+    "tests/test_validacao_links.py": 10,
+    "tests/test_validacao_submissao.py": 10,
     "tests/test_versionamento_proposta.py": 640,
 }
 DEFAULT_MILLISECONDS_PER_TEST = 400
+# Esse arquivo é o mais demorado e usa fixtures de função, com dados próprios por cenário.
+SPLIT_BY_FUNCTION = {"tests/test_conteudo_institucional.py"}
 
 
 class TestShard:
@@ -62,23 +70,24 @@ class TestShard:
 
     @pytest.hookimpl(trylast=True)
     def pytest_collection_modifyitems(self, config, items):
-        modules = defaultdict(list)
+        test_groups = defaultdict(list)
         for item in items:
             path = item.path.relative_to(config.rootpath).as_posix()
-            modules[path].append(item)
+            # Os IDs de parâmetros podem conter UUIDs gerados durante a coleta.
+            function = item.originalname if path in SPLIT_BY_FUNCTION else ""
+            test_groups[path, function].append(item)
 
         estimated_times = {
-            path: len(tests) * MILLISECONDS_PER_TEST.get(path, DEFAULT_MILLISECONDS_PER_TEST)
-            for path, tests in modules.items()
+            group: len(tests) * MILLISECONDS_PER_TEST.get(group[0], DEFAULT_MILLISECONDS_PER_TEST)
+            for group, tests in test_groups.items()
         }
         shard_times = [0] * self.count
         selected = set()
-        # Mantém cada arquivo inteiro e coloca o próximo mais lento no grupo com menor custo.
-        for path in sorted(modules, key=lambda path: (-estimated_times[path], path)):
+        for group in sorted(test_groups, key=lambda group: (-estimated_times[group], group)):
             shard = min(range(self.count), key=shard_times.__getitem__)
-            shard_times[shard] += estimated_times[path]
+            shard_times[shard] += estimated_times[group]
             if shard == self.index:
-                selected.update(modules[path])
+                selected.update(test_groups[group])
 
         deselected = [item for item in items if item not in selected]
         config.hook.pytest_deselected(items=deselected)

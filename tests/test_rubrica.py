@@ -99,16 +99,19 @@ def rubrica(sql, usuario_no_banco, novo_email):
 # --- Regras puras ---
 
 
+@pytest.mark.unit
 def test_normalizar_nome_ignora_acentos_maiusculas_e_espacos():
     assert normalizar_nome("  Viabilidade   TÉCNICA ") == "viabilidade tecnica"
 
 
+@pytest.mark.unit
 def test_criterios_minimos_faltantes():
     assert criterios_minimos_faltantes(["inovacao", "Outro"], ["Inovação", "Impacto"]) == [
         "Impacto"
     ]
 
 
+@pytest.mark.unit
 def test_pendencias_para_publicar():
     assert pendencias_para_publicar([], [], minimos=[]) == [
         "A rubrica precisa de pelo menos um critério.",
@@ -118,6 +121,14 @@ def test_pendencias_para_publicar():
     assert "99.99" in pendencias_para_publicar(["A"], [Decimal("99.99")], [])[0]
 
 
+@pytest.mark.unit
+def test_rubrica_lista_criterios_obrigatorios_ausentes_mesmo_com_peso_total_correto():
+    assert pendencias_para_publicar(
+        ["Inovacao"], [Decimal("100")], ["Inovação", "Impacto", "Viabilidade"]
+    ) == ["Critérios obrigatórios da RN10 ausentes: Impacto, Viabilidade."]
+
+
+@pytest.mark.unit
 def test_prazo_de_publicacao():
     agora = datetime(2026, 11, 3, 12, tzinfo=UTC)
     assert pode_publicar_no_prazo(None, agora)

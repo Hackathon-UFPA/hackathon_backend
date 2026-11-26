@@ -305,6 +305,7 @@ def test_normalizacao_limites_e_arredondamento_final(client, cientifica, notas, 
     assert Decimal(resposta.json()["nota_final"]) == Decimal(esperado)
 
 
+@pytest.mark.unit
 def test_calculo_usa_decimal_com_escalas_diferentes():
     criterios = [
         CriterioRubrica(

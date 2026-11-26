@@ -210,6 +210,7 @@ def test_erro_do_banco_ao_gravar_o_email_nao_perde_o_resto_da_transacao(
     assert emails_de(sql, com_erro) == []
 
 
+@pytest.mark.unit
 def test_link_do_front_nao_duplica_barras(monkeypatch):
     monkeypatch.setattr(settings, "FRONTEND_URL", "https://app.example.org/")
 

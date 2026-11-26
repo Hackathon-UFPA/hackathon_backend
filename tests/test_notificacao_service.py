@@ -11,6 +11,8 @@ from app.const.enums import CanalNotificacao, StatusEnvioNotificacao, TipoNotifi
 from app.models import Notificacao, NotificacaoResultado, ResultadoProposta
 from app.services import notificacao
 
+pytestmark = pytest.mark.unit
+
 
 @pytest.fixture
 def db():

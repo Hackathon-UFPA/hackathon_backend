@@ -30,52 +30,14 @@ jobs:
           poetry run ruff check .
           poetry run ruff format --check .
 
-  test_shards:
-    name: Testes (${{ matrix.shard }}/${{ strategy.job-total }})
+  unit:
+    name: Testes unitários
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3]
-
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: app_db
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d app_db"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-
     env:
-      POSTGRES_HOST: localhost
-      POSTGRES_PORT: 5432
-      POSTGRES_DB: app_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
       JWT_SECRET: chave-de-teste-do-ci-com-mais-de-32-caracteres
 
     steps:
       - uses: actions/checkout@v4
-
-      # Os testes usam o banco <POSTGRES_DB>_test, então é nele que as migrations são aplicadas
-      - name: Criar o banco de testes
-        run: PGPASSWORD=postgres createdb -h localhost -U postgres app_db_test
-
-      - name: Aplicar migrations (Flyway)
-        run: |
-          docker run --rm --network host \
-            -v "$PWD/migrations:/flyway/sql:ro" \
-            flyway/flyway:11 \
-            -url=jdbc:postgresql://localhost:5432/app_db_test \
-            -user=postgres -password=postgres \
-            -connectRetries=10 migrate
 
       - uses: actions/setup-python@v5
         with:
@@ -86,26 +48,80 @@ jobs:
           pip install poetry==2.1.3
           poetry install --no-root
 
+      - name: Testes unitários
+        run: poetry run pytest -m unit
+
+  test_shards:
+    name: Integração (${{ matrix.shard }}/${{ strategy.job-total }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app_db_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U postgres -d app_db_test"
+          --health-interval 1s
+          --health-timeout 5s
+          --health-retries 30
+
+    env:
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: app_db_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      JWT_SECRET: chave-de-teste-do-ci-com-mais-de-32-caracteres
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Instalar dependências e aplicar migrations
+        run: |
+          (pip install poetry==2.1.3 && poetry install --no-root) &
+          dependencias_pid=$!
+          docker run --rm --network host \
+            -v "$PWD/migrations:/flyway/sql:ro" \
+            flyway/flyway:11 \
+            -url=jdbc:postgresql://localhost:5432/app_db_test \
+            -user=postgres -password=postgres \
+            -connectRetries=10 migrate
+          wait "$dependencias_pid"
+
       - name: Testes
         env:
           CI_TEST_SHARD: ${{ matrix.shard }}
           CI_TEST_SHARD_COUNT: ${{ strategy.job-total }}
         run: >-
           poetry run python .github/scripts/run_test_shard.py
-          "$CI_TEST_SHARD" "$CI_TEST_SHARD_COUNT" --durations=30 --durations-min=0.1
+          "$CI_TEST_SHARD" "$CI_TEST_SHARD_COUNT" -m "not unit" --durations=30 --durations-min=0.1
 
   test:
     name: Lint e testes
     runs-on: ubuntu-latest
-    needs: [lint, test_shards]
+    needs: [lint, unit, test_shards]
     if: ${{ always() }}
     steps:
       - name: Verificar resultado do lint e dos testes
         env:
           LINT_RESULT: ${{ needs.lint.result }}
+          UNIT_RESULT: ${{ needs.unit.result }}
           TEST_RESULT: ${{ needs.test_shards.result }}
         run: |
-          if [[ "$LINT_RESULT" != success || "$TEST_RESULT" != success ]]; then
-            echo "Lint: $LINT_RESULT. Testes: $TEST_RESULT."
+          if [[ "$LINT_RESULT" != success || "$UNIT_RESULT" != success || "$TEST_RESULT" != success ]]; then
+            echo "Lint=$LINT_RESULT Unitários=$UNIT_RESULT Integração=$TEST_RESULT"
             exit 1
           fi

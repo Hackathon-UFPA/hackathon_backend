@@ -12,6 +12,8 @@ from app.services.email_template import (
     renderizar,
 )
 
+pytestmark = pytest.mark.unit
+
 LINK = "https://hackathon.example/entrar?x=1&y=2"
 
 VALORES = {

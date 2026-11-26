@@ -5,6 +5,7 @@ O provedor é sempre o falso (`ProvedorMemoria`): nenhum teste envia e-mail de v
 
 import asyncio
 
+import pytest
 from sqlalchemy import text
 
 from app.const.config import settings
@@ -20,6 +21,7 @@ DESTINATARIO = "envio@testes.com"
 # --- Espera entre tentativas ---
 
 
+@pytest.mark.unit
 def test_espera_dobra_a_cada_tentativa_e_para_no_teto(monkeypatch):
     monkeypatch.setattr(settings, "EMAIL_BACKOFF_BASE_SEGUNDOS", 30)
     monkeypatch.setattr(settings, "EMAIL_BACKOFF_MAX_SEGUNDOS", 1800)

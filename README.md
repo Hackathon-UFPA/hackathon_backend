@@ -135,6 +135,10 @@ Os testes usam outro banco, o `<POSTGRES_DB>_test` (ex.: `app_db_test`), criado 
 make test
 ```
 
+Com as dependências de desenvolvimento instaladas pelo Poetry e o `.env` configurado, rode
+`poetry run pytest -m unit` para executar os testes unitários sem subir o PostgreSQL.
+No CI, os unitários rodam em paralelo com o lint e os oito grupos de integração.
+
 ## Estrutura do projeto
 
 ```

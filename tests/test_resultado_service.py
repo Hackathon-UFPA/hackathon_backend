@@ -6,6 +6,8 @@ import pytest
 
 from app.services.resultado import _classificar, _Consolidado, media_das_notas
 
+pytestmark = pytest.mark.unit
+
 
 def proposta(id_, *, enviado_em=None, notas=("8",)):
     return _Consolidado(

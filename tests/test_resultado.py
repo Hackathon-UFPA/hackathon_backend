@@ -132,6 +132,7 @@ def _codigos(resposta):
     return [p["codigo"] for p in resposta.json()["pendencias"]]
 
 
+@pytest.mark.unit
 def test_media_arredonda_so_no_fim_com_half_up():
     assert media_das_notas([]) is None
     assert media_das_notas([Decimal("8"), Decimal("7.35")]) == Decimal("7.68")

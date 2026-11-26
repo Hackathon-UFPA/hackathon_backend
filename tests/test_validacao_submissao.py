@@ -6,6 +6,17 @@ import pytest
 from app.models import Hackathon, Submissao
 from app.validations.submissao import campos_obrigatorios_pendentes, propostas_abertas
 
+pytestmark = pytest.mark.unit
+
+
+@pytest.mark.parametrize("limite_ausente", ["propostas_inicio", "propostas_fim"])
+def test_envio_exige_os_dois_limites_do_prazo(limite_ausente):
+    agora = datetime(2026, 11, 7, 12, tzinfo=UTC)
+    edicao = Hackathon(propostas_inicio=agora, propostas_fim=agora)
+    setattr(edicao, limite_ausente, None)
+
+    assert propostas_abertas(edicao, agora) is False
+
 
 @pytest.fixture
 def proposta():

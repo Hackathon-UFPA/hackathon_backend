@@ -7,6 +7,8 @@ import pytest
 from app.const.config import settings
 from app.security.token import ALGORITMO, criar_token, ler_sessao, ler_token, segundos_restantes
 
+pytestmark = pytest.mark.unit
+
 
 def token_com(claims: dict, chave: str = settings.JWT_SECRET) -> str:
     return jwt.encode(claims, chave, algorithm=ALGORITMO)

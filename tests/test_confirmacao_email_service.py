@@ -10,6 +10,8 @@ from app.const.enums import FinalidadeToken, PapelUsuario, TipoEmail
 from app.models import Usuario
 from app.services import confirmacao_email
 
+pytestmark = pytest.mark.unit
+
 
 @pytest.mark.parametrize(
     "nome,destinatario,saudacao",

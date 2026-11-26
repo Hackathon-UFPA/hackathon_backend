@@ -2,6 +2,21 @@ import pytest
 
 from app.validations.links import validar_link_de_imagem, validar_link_https
 
+pytestmark = pytest.mark.unit
+
+
+@pytest.mark.parametrize("valor", ["http://example.com/a", "https:///sem-host"])
+def test_link_exige_https_e_host(valor):
+    with pytest.raises(ValueError, match="deve usar https"):
+        validar_link_https(valor)
+
+
+@pytest.mark.parametrize("autenticacao", ["usuario", "usuario:senha", ":senha"])
+def test_link_rejeita_credenciais_embutidas(autenticacao):
+    with pytest.raises(ValueError, match="não pode conter usuário e senha"):
+        validar_link_https(f"https://{autenticacao}@example.com/a")
+
+
 BASE = "https://assets.example.com/"
 
 

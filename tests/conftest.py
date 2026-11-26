@@ -1,5 +1,6 @@
 import asyncio
 from datetime import UTC, datetime, timedelta
+from functools import lru_cache
 from uuid import uuid4
 
 import pytest
@@ -15,6 +16,12 @@ from app.security.senha import gerar_hash
 from app.services import email_envio
 
 SENHA_PADRAO = "segredo123"
+
+
+@lru_cache(maxsize=32)
+def _hash_senha_da_fixture(senha: str) -> str:
+    """Reutiliza hashes das senhas fixas sem mudar o Argon2 usado pela API."""
+    return gerar_hash(senha)
 
 
 @pytest.fixture(scope="session")
@@ -185,7 +192,7 @@ def usuario_no_banco(novo_email):
             " CAST(:situacao_conta AS situacao_conta)) RETURNING id",
             email=email,
             papel=papel,
-            senha_hash=gerar_hash(senha) if senha else None,
+            senha_hash=_hash_senha_da_fixture(senha) if senha else None,
             ativo=ativo,
             situacao_conta=situacao_conta,
         )[0]["id"]
