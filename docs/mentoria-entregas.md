@@ -112,7 +112,8 @@ Exemplo de envio de uma entrega parcial
   abertura e encerramento de fases no calendário.
 - **Feedback e painel (BE-S6-03 e BE-S6-04).** O UUID da entrega permite associar
   feedbacks. Marco, equipe, data e atribuição vigente fornecem os dados para a linha
-  do tempo e o acompanhamento de pendências.
+  do tempo e o acompanhamento de pendências, já usados no
+  [painel do mentor](painel-mentor.md).
 - **Submissão final e versões (BE-S6-07 e BE-S6-08).** O marco `FINAL` fica reservado
   para o fluxo de envio final. Ele pode usar a mesma entidade de entrega por equipe e
   marco. As versões futuras podem apontar para essa entrega, mantendo sua identidade

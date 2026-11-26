@@ -25,6 +25,7 @@ from app.views.mentores import router_publico as mentores_publico
 from app.views.mentoria import router as mentoria
 from app.views.notificacoes import router as notificacoes
 from app.views.organizacoes import router as organizacoes
+from app.views.painel_mentor import router as painel_mentor
 from app.views.perfil import router as perfil
 from app.views.regulamento import router as regulamento
 from app.views.resultado import router_admin as resultado_admin
@@ -49,6 +50,7 @@ router.include_router(perfil)
 router.include_router(autodeclaracao)
 router.include_router(atribuicoes_mentor)
 router.include_router(mentoria)
+router.include_router(painel_mentor)
 router.include_router(usuarios)
 router.include_router(mentores)
 router.include_router(mentores_publico)
