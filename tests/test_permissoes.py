@@ -12,7 +12,7 @@ import pytest
 
 from app.const.config import settings
 from app.const.enums import PapelUsuario
-from app.security.permissoes import perfis_cadastraveis, pode_cadastrar
+from app.security.permissoes import perfis_cadastraveis, pode_cadastrar, pode_trocar_papel
 from app.security.token import ALGORITMO, criar_token
 
 SENHA = "segredo123"
@@ -342,6 +342,7 @@ PODE_CADASTRAR = {
 }
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize("quem", PAPEIS)
 @pytest.mark.parametrize("perfil", PAPEIS)
 def test_hierarquia_de_cadastro(quem, perfil):
@@ -377,9 +378,29 @@ def test_lista_de_perfis_sem_token(client):
     assert client.get("/admin/usuarios/perfis").status_code == 401
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize("quem", PAPEIS)
 def test_todo_perfil_listado_pode_ser_cadastrado(quem):
     """A lista que a interface mostra e a regra que a API aplica não podem divergir."""
     for perfil in PAPEIS:
         listado = PapelUsuario(perfil) in perfis_cadastraveis(PapelUsuario(quem))
         assert listado == pode_cadastrar(PapelUsuario(quem), PapelUsuario(perfil))
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("gestor", "origem", "destino", "permitido"),
+    [
+        ("ORGANIZADOR", "COMITE_TECNICO", "COMITE_CIENTIFICO", True),
+        ("COMITE_CIENTIFICO", "COMITE_TECNICO", "ORGANIZADOR", False),
+        ("COMITE_CIENTIFICO", "ORGANIZADOR", "COMITE_TECNICO", False),
+        ("DEV", "PARTICIPANTE", "ORGANIZADOR", False),
+        ("DEV", "ORGANIZADOR", "MENTOR", False),
+    ],
+)
+def test_gestor_precisa_poder_gerenciar_a_origem_e_o_destino_da_troca(
+    gestor, origem, destino, permitido
+):
+    assert pode_trocar_papel(PapelUsuario(gestor), PapelUsuario(origem), PapelUsuario(destino)) is (
+        permitido
+    )

@@ -14,6 +14,7 @@ from tests.test_migrations import rodar
 from tests.test_migrations import sql as sql_na_transacao
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize("edital_sem_fuso", [False, True])
 @pytest.mark.parametrize("agora_sem_fuso", [False, True])
 @pytest.mark.parametrize(

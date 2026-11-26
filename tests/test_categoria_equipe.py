@@ -18,6 +18,8 @@ from app.validations.categoria_equipe import (
     tipo_padrao,
 )
 
+pytestmark = pytest.mark.unit
+
 E, P = TipoIntegrante.ESTUDANTE, TipoIntegrante.PROFISSIONAL
 ESTUDANTES, PROFISSIONAIS, MISTA = (
     CategoriaEquipe.ESTUDANTES,

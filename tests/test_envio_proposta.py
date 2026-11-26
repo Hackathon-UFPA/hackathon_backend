@@ -201,6 +201,7 @@ def test_prazo_de_propostas(client, envio, inicio, fim, permitido, dev):
     assert len(envio.protocolos()) == int(permitido)
 
 
+@pytest.mark.unit
 @pytest.mark.parametrize("fuso", [None, UTC, timezone(timedelta(hours=-3))])
 @pytest.mark.parametrize(
     "offset,permitido", [(-1, False), (0, True), (1, True), (2, True), (3, False)]
@@ -219,6 +220,7 @@ def test_prazo_normaliza_fusos_e_inclui_limites(fuso, offset, permitido):
     assert propostas_abertas(hackathon, agora.replace(tzinfo=None)) is permitido
 
 
+@pytest.mark.unit
 def test_periodo_invertido_nao_abre_envio():
     agora = datetime.now(UTC)
     hackathon = Hackathon(

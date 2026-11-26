@@ -18,6 +18,8 @@ from app.integrations.email import (
     ProvedorSmtp,
 )
 
+pytestmark = pytest.mark.unit
+
 SENHA_SMTP = "senha-super-secreta-do-smtp"
 
 MENSAGEM = MensagemEmail(

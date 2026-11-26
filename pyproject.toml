@@ -35,3 +35,4 @@ ignore = ["B008"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["unit: testa regras de forma isolada, sem PostgreSQL ou serviços externos"]

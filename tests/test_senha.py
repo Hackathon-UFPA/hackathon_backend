@@ -7,6 +7,8 @@ from app.security.senha import (
     validar_forca_da_senha,
 )
 
+pytestmark = pytest.mark.unit
+
 
 def test_senha_valida():
     assert validar_forca_da_senha("segredo123") == "segredo123"

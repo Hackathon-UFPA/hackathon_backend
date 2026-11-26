@@ -12,6 +12,8 @@ from app.const.enums import FinalidadeToken
 from app.models import TokenUsuario
 from app.services import token_usuario
 
+pytestmark = pytest.mark.unit
+
 AGORA = datetime(2026, 11, 21, 12, tzinfo=UTC)
 TOKEN = "token-de-teste"
 HASH = hashlib.sha256(TOKEN.encode()).hexdigest()
