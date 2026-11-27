@@ -139,6 +139,8 @@ Com as dependências de desenvolvimento instaladas pelo Poetry e o `.env` config
 `poetry run pytest -m unit` para executar os testes unitários sem subir o PostgreSQL.
 No CI, os unitários rodam em paralelo com o lint e os oito grupos de integração.
 
+O mapa da suíte reúne os cenários existentes, as fixtures reutilizáveis e as orientações para acrescentar testes. [Mapa dos testes](docs/testes.md)
+
 ## Estrutura do projeto
 
 ```
